@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const { Pool } = require('pg');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -1761,6 +1762,13 @@ app.post('/autopilot/schedule', async (req, res) => {
     await auditLog('autopilot_schedule', `Auto-pilot ${enabled ? 'enabled' : 'disabled'} at ${hour ?? 2}:00`);
     res.json({ enabled: !!enabled, hour: Number(hour ?? 2) });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── Static files (React build) ───────────────────────────────────────────────
+
+app.use(express.static(path.join(__dirname, 'frontend/build')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
 });
 
 // ─── Server ───────────────────────────────────────────────────────────────────
