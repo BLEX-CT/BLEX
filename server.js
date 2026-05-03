@@ -18,8 +18,17 @@ const CJ_BASE    = 'https://developers.cjdropshipping.com/api2.0/v1';
 
 const pool = new Pool(
   process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
-    : { host: 'localhost', port: 5432, database: 'blex_db', user: 'postgres', password: 'postgres' }
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : false
+      }
+    : {
+        host: 'localhost',
+        port: 5432,
+        database: 'blex_db',
+        user: 'postgres',
+        password: 'postgres'
+      }
 );
 
 // ─── Create tables ───────────────────────────────────────────────────────────
