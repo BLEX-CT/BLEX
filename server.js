@@ -15,13 +15,11 @@ const CJ_EMAIL   = process.env.CJ_EMAIL || '';
 const CJ_API_KEY = process.env.CJ_API_KEY || '';
 const CJ_BASE    = 'https://developers.cjdropshipping.com/api2.0/v1';
 
-const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'store',
-  user: 'admin',
-  password: '123456'
-});
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+    : { host: 'localhost', port: 5432, database: 'blex_db', user: 'postgres', password: 'postgres' }
+);
 
 // ─── Create tables ───────────────────────────────────────────────────────────
 
