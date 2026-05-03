@@ -403,7 +403,7 @@ export default function App() {
   };
 
   /* admin */
-  const fetchOrders=()=>fetch(API+"/orders").then(r=>r.json()).then(setAllOrders).catch(()=>{});
+  const fetchOrders=()=>fetch(API+"/orders").then(r=>r.json()).then(d=>setAllOrders(Array.isArray(d)?d:[])).catch(()=>{});
   const ADMIN_PWD=process.env.REACT_APP_ADMIN_PASSWORD||"BLEX2026";
   const loginAdmin=()=>{if(adminPwd===ADMIN_PWD){setAdminAuth(true);setPwdErr(false);fetchOrders();}else setPwdErr(true);};
   const saveProduct=async()=>{
