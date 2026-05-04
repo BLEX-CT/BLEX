@@ -245,7 +245,7 @@ export default function App() {
   useEffect(()=>{fetch("http://ip-api.com/json").then(r=>r.json()).then(d=>{if(d?.countryCode){setDetectedCountry(d.countryCode);if(!userManualLang.current)setCurrCode(COUNTRY_CURRENCY[d.countryCode]||'USD');}}).catch(()=>{});},[]);
   useEffect(()=>{if(userManualLang.current)setCurrCode(LANG_CURRENCY[lang]||'USD');},[lang]);
   useEffect(()=>{const t=setTimeout(()=>setSearch(searchRaw),300);return()=>clearTimeout(t);},[searchRaw]);
-  useEffect(()=>{let buf="";const h=e=>{buf=(buf+e.key).slice(-8);if(buf==="BLEX2026"){setMaintBypass(true);setMaintPreview(false);LSS('bx_maint_bypass',1);}};document.addEventListener("keypress",h);return()=>document.removeEventListener("keypress",h);},[]);
+  useEffect(()=>{let buf="";const h=e=>{buf=(buf+e.key).slice(-8);if(buf==="BLEX2026"){setMaintBypass(true);setMaintPreview(false);LSS('bx_maint_bypass',1);}};document.addEventListener("keydown",h);return()=>document.removeEventListener("keydown",h);},[]);
   useEffect(()=>{if(!maintenance?.launch_date)return;const tick=()=>{const diff=new Date(maintenance.launch_date)-Date.now();setMCountdown(diff<=0?{d:0,h:0,m:0,s:0}:{d:Math.floor(diff/86400000),h:Math.floor((diff%86400000)/3600000),m:Math.floor((diff%3600000)/60000),s:Math.floor((diff%60000)/1000)});};tick();const iv=setInterval(tick,1000);return()=>clearInterval(iv);},[maintenance?.launch_date]);
 
   /* b2b tiered pricing */
