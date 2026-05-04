@@ -63,7 +63,6 @@ function injectCSS(){
   const s=document.createElement("style");
   s.textContent=`
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{overflow-x:hidden;max-width:100vw}
     body{transition:background .35s,color .35s;-webkit-font-smoothing:antialiased}
     input,select,textarea{outline:none;font-family:inherit}
     ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
@@ -91,24 +90,9 @@ function injectCSS(){
     .hero-title-l{font-size:clamp(56px,12vw,128px);font-weight:900;letter-spacing:14px;background:linear-gradient(135deg,#111 0%,#555 50%,#111 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite}
     .float-blob{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none}
     .mq-track{display:flex;animation:marquee 22s linear infinite}.mq-track:hover{animation-play-state:paused}
-    @keyframes slideD{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-    @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    .page-in{animation:pageIn .25s ease both}
-    .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;height:60px;align-items:center;justify-content:space-around;border-top-width:1px;border-top-style:solid}
-    @media(max-width:700px){
-      .hide-mob{display:none!important}.show-mob{display:flex!important}
-      .g3{grid-template-columns:1fr 1fr!important}
-      .mob-nav{display:flex!important}
-      .mob-bod{padding-bottom:68px}
-      .mob-drawer{animation:slideD .3s cubic-bezier(.4,0,.2,1) both}
-      input,select,textarea{font-size:16px!important}
-      .btn-t{min-height:44px}
-      .chat-fab{bottom:82px!important}
-      .top-fab{bottom:142px!important}
-      .toast-wrap{bottom:82px!important}
-      .chk-foot{position:sticky;bottom:0;padding:10px 0 16px;z-index:10}
-    }
-    @media(min-width:701px) and (max-width:1100px){.g3{grid-template-columns:repeat(3,1fr)!important}}
+    @media(max-width:700px){.hide-mob{display:none!important}.show-mob{display:flex!important}.g3{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}}
+    @media(max-width:440px){.g3{grid-template-columns:1fr 1fr!important}}
+    @media(max-width:360px){.g3{grid-template-columns:1fr!important}}
   `;
   document.head.appendChild(s);
 }
@@ -469,7 +453,7 @@ export default function App() {
   /* currency */
   const fmt=(price,d)=>{const v=Number(price)*(rates[currCode]||1);const dec=d??(['KRW','JPY'].includes(currCode)?0:2);return`${CURRENCY_SYMS[currCode]||currCode}${v.toFixed(dec)}`;};
   /* style helpers */
-  const inp=err=>({width:"100%",padding:"12px 14px",minHeight:"44px",borderRadius:"9px",border:`1.5px solid ${err?c.error:c.inputBorder}`,background:c.input,color:c.text,fontSize:"14px",transition:"border .2s"});
+  const inp=err=>({width:"100%",padding:"10px 13px",borderRadius:"9px",border:`1.5px solid ${err?c.error:c.inputBorder}`,background:c.input,color:c.text,fontSize:"14px",transition:"border .2s"});
   const btnP=(x={})=>({background:c.accent,color:c.accentTxt,border:"none",padding:"11px 22px",borderRadius:"9px",cursor:"pointer",fontWeight:"700",fontSize:"14px",width:"100%",...x});
   const btnS=(x={})=>({background:"transparent",color:c.text,border:`1.5px solid ${c.border}`,padding:"9px 18px",borderRadius:"9px",cursor:"pointer",fontWeight:"600",fontSize:"13px",...x});
   const userPts=user?(user.wallet_balance||user.points||0):0;
@@ -490,7 +474,7 @@ export default function App() {
     </div>
   </div>);
   return (
-    <div className="mob-bod" style={{background:c.bg,color:c.text,minHeight:"100vh",fontFamily:"'Segoe UI',system-ui,sans-serif",transition:"background .35s,color .35s"}}>
+    <div style={{background:c.bg,color:c.text,minHeight:"100vh",fontFamily:"'Segoe UI',system-ui,sans-serif",transition:"background .35s,color .35s"}}>
     {splash&&<div className="fi" style={{position:"fixed",inset:0,background:c.bg,zIndex:9999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"18px",transition:"opacity .4s"}}>
       <h1 className={theme==="dark"?"hero-title":"hero-title-l"} style={{fontSize:"clamp(52px,14vw,110px)",letterSpacing:"18px",animation:"shimmer 1.8s linear infinite"}}>BLEX</h1>
       <div style={{width:"52px",height:"3px",borderRadius:"2px",overflow:"hidden",background:c.chip}}>
@@ -558,26 +542,16 @@ export default function App() {
         <button onClick={()=>setMobileMenuOpen(o=>!o)} className="show-mob btn-t" style={{display:"none",background:c.chip,border:`1px solid ${c.border}`,color:c.text,borderRadius:"7px",padding:"5px 8px",cursor:"pointer",fontSize:"16px",lineHeight:1,flexShrink:0}}>{mobileMenuOpen?"×":"☰"}</button>
       </div>
     </nav>
-    {mobileMenuOpen&&<>
-      <div onClick={()=>setMobileMenuOpen(false)} className="fi" style={{position:"fixed",inset:0,background:c.overlay,zIndex:150}}/>
-      <div className="mob-drawer" style={{position:"fixed",top:0,left:0,width:"72vw",maxWidth:"280px",height:"100vh",background:c.surface,zIndex:151,display:"flex",flexDirection:"column",padding:"28px 22px",boxShadow:"6px 0 32px rgba(0,0,0,.45)",overflowY:"auto"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"32px"}}>
-          <span style={{fontWeight:"900",fontSize:"19px",letterSpacing:"5px"}}>BLEX</span>
-          <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",color:c.muted,fontSize:"22px",cursor:"pointer",lineHeight:1,padding:"4px"}}>✕</button>
-        </div>
-        {[{i:"🏠",l:t.store,v:"store"},{i:"📦",l:"Track Order",v:"tracking"},{i:"💳",l:"Wallet",v:"wallet",show:!!(flags.wallet&&user)},{i:"👤",l:t.myAccount,v:"profile",show:!!user}].filter(x=>x.show!==false).map(x=>(
-          <button key={x.v} onClick={()=>{setView(x.v);setMobileMenuOpen(false);}} style={{background:view===x.v?c.accent+"18":"none",border:"none",borderRadius:"10px",color:view===x.v?c.accent:c.text,cursor:"pointer",textAlign:"left",padding:"13px 12px",fontWeight:"700",fontSize:"14px",display:"flex",alignItems:"center",gap:"11px",marginBottom:"4px"}}><span style={{fontSize:"18px"}}>{x.i}</span>{x.l}</button>
-        ))}
-        <div style={{marginTop:"auto",paddingTop:"24px",borderTop:`1px solid ${c.border}`}}>
-          <button onClick={()=>setTheme(th=>th==="dark"?"light":"dark")} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,borderRadius:"10px",padding:"11px 16px",cursor:"pointer",fontSize:"13px",fontWeight:"700",width:"100%"}}>{theme==="dark"?"☀ Light Mode":"☾ Dark Mode"}</button>
-        </div>
-      </div>
-    </>}
+    {mobileMenuOpen&&<div className="fi" style={{position:"sticky",top:"58px",zIndex:99,background:c.surface,borderBottom:`1px solid ${c.border}`,padding:"10px 18px",display:"flex",flexDirection:"column",gap:"6px"}}>
+      <button onClick={()=>{setView("store");setMobileMenuOpen(false);}} style={{background:"none",border:"none",color:c.text,cursor:"pointer",textAlign:"left",padding:"8px 0",fontWeight:"700",fontSize:"13px"}}>{t.store}</button>
+      {flags.wallet&&user&&<button onClick={()=>{setView("wallet");setMobileMenuOpen(false);}} style={{background:"none",border:"none",color:c.text,cursor:"pointer",textAlign:"left",padding:"8px 0",fontWeight:"700",fontSize:"13px"}}>💳 Wallet</button>}
+      <button onClick={()=>{setView("tracking");setMobileMenuOpen(false);}} style={{background:"none",border:"none",color:c.text,cursor:"pointer",textAlign:"left",padding:"8px 0",fontWeight:"700",fontSize:"13px"}}>📦 Track Order</button>
+    </div>}
 
     {/* CART SIDEBAR */}
     {cartOpen&&<>
       <div onClick={()=>setCartOpen(false)} className="fi" style={{position:"fixed",inset:0,background:c.overlay,zIndex:199}}/>
-      <div className={isRtl?"sl":"sr"} style={{position:"fixed",top:0,[isRtl?"left":"right"]:0,width:"min(380px,100vw)",height:"100vh",background:c.surface,zIndex:200,display:"flex",flexDirection:"column",boxShadow:isRtl?"4px 0 40px rgba(0,0,0,.4)":"-4px 0 40px rgba(0,0,0,.4)"}}>
+      <div className={isRtl?"sl":"sr"} style={{position:"fixed",top:0,[isRtl?"left":"right"]:0,width:"350px",maxWidth:"100vw",height:"100vh",background:c.surface,zIndex:200,display:"flex",flexDirection:"column",boxShadow:isRtl?"4px 0 40px rgba(0,0,0,.4)":"-4px 0 40px rgba(0,0,0,.4)"}}>
         <div style={{padding:"16px 20px",borderBottom:`1px solid ${c.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <h2 style={{fontWeight:"800",fontSize:"16px"}}>{t.yourCart} ({cartCount})</h2>
           <button onClick={()=>setCartOpen(false)} style={{background:"none",border:"none",color:c.muted,fontSize:"22px",cursor:"pointer",lineHeight:1}}>×</button>
@@ -595,9 +569,9 @@ export default function App() {
                   <p style={{color:c.muted,fontSize:"11px"}}>{fmt(item.price)}</p>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:"3px"}}>
-                  <button onClick={()=>updQty(item.id,-1)} style={{background:c.chip,border:"none",color:c.text,width:"30px",height:"30px",borderRadius:"6px",cursor:"pointer",fontWeight:"700",fontSize:"14px"}}>−</button>
-                  <span style={{fontWeight:"700",minWidth:"22px",textAlign:"center",fontSize:"13px"}}>{item.qty}</span>
-                  <button onClick={()=>updQty(item.id,1)} style={{background:c.chip,border:"none",color:c.text,width:"30px",height:"30px",borderRadius:"6px",cursor:"pointer",fontWeight:"700",fontSize:"14px"}}>+</button>
+                  <button onClick={()=>updQty(item.id,-1)} style={{background:c.chip,border:"none",color:c.text,width:"20px",height:"20px",borderRadius:"4px",cursor:"pointer",fontWeight:"700",fontSize:"12px"}}>−</button>
+                  <span style={{fontWeight:"700",minWidth:"16px",textAlign:"center",fontSize:"12px"}}>{item.qty}</span>
+                  <button onClick={()=>updQty(item.id,1)} style={{background:c.chip,border:"none",color:c.text,width:"20px",height:"20px",borderRadius:"4px",cursor:"pointer",fontWeight:"700",fontSize:"12px"}}>+</button>
                 </div>
                 <button onClick={()=>remItem(item.id)} style={{background:"none",border:"none",color:c.muted,cursor:"pointer",fontSize:"16px",lineHeight:1}}>×</button>
               </div>
@@ -630,7 +604,7 @@ export default function App() {
     </>}
 
     {/* STORE VIEW */}
-    {view==="store"&&<div className="page-in">
+    {view==="store"&&<div>
       <div style={{position:"relative",overflow:"hidden",minHeight:"500px",background:heroImage?`url(${heroImage}) center/cover`:theme==="dark"?"linear-gradient(145deg,#080808 0%,#0f0f0f 50%,#111 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
         <div className="float-blob" style={{width:"480px",height:"480px",top:"-200px",left:"-140px",background:theme==="dark"?"rgba(255,255,255,0.022)":"rgba(0,0,0,0.028)",animation:"floatA 12s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"360px",height:"360px",bottom:"-130px",right:"-80px",background:theme==="dark"?"rgba(255,255,255,0.018)":"rgba(0,0,0,0.022)",animation:"floatB 10s ease-in-out infinite"}}/>
@@ -687,7 +661,7 @@ export default function App() {
             {filtered.map((p,idx)=>(
               <div key={p.id} className="card-wrap fu" onMouseEnter={()=>setHovered(p.id)} onMouseLeave={()=>setHovered(null)} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");}}
                 style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,overflow:"hidden",animationDelay:`${idx*.04}s`,boxShadow:hovered===p.id?(theme==="dark"?"0 18px 56px rgba(0,0,0,.55)":"0 10px 36px rgba(0,0,0,.1)"):"0 2px 6px rgba(0,0,0,.05)"}}>
-                <div style={{height:"188px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}} onTouchStart={e=>{e.currentTarget.dataset.sx=e.touches[0].clientX;}} onTouchEnd={e=>{const dx=e.changedTouches[0].clientX-parseFloat(e.currentTarget.dataset.sx||0);if(Math.abs(dx)>35){const _g=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};const _imgs=[p.image,_g.cleaned].filter(Boolean);if(_imgs.length>1){e.stopPropagation();if(dx<0)setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)+1)%_imgs.length}));else setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)-1+_imgs.length)%_imgs.length}));}};}}>
+                <div style={{height:"188px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
                   {(()=>{const g=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};const imgs=[p.image,g.cleaned].filter(Boolean);const ci=(cardImgIdx[p.id]||0)%Math.max(1,imgs.length);return<>
                     {imgs[ci]?<img src={imgs[ci]} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",transition:"opacity .25s"}} onError={e=>{e.target.style.display="none"}}/>:<span style={{fontSize:"50px",opacity:.65,color:CAT_CLR[p.category]||c.muted}}>{CAT_ICONS[p.category]||"◈"}</span>}
                     {imgs.length>1&&hovered===p.id&&<><button onClick={e=>{e.stopPropagation();setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)-1+imgs.length)%imgs.length}));}} style={{position:"absolute",left:"6px",top:"83px",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:"22px",height:"22px",cursor:"pointer",fontSize:"14px",zIndex:3,lineHeight:1,padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button><button onClick={e=>{e.stopPropagation();setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)+1)%imgs.length}));}} style={{position:"absolute",right:"6px",top:"83px",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:"22px",height:"22px",cursor:"pointer",fontSize:"14px",zIndex:3,lineHeight:1,padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button><div style={{position:"absolute",bottom:"42px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"3px",zIndex:3}}>{imgs.map((_,i)=><span key={i} style={{width:"5px",height:"5px",borderRadius:"50%",background:i===ci?"#fff":"rgba(255,255,255,.4)",display:"block"}}/>)}</div></>}
@@ -709,7 +683,7 @@ export default function App() {
                   <p style={{color:c.muted,fontSize:"11px",marginBottom:"11px",lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.description}</p>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"900",fontSize:"17px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"800",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span style={{fontWeight:"900",fontSize:"19px"}}>{fmt(p.price)}</span></div>}</div>
-                    <button className="btn-t" onClick={e=>{e.stopPropagation();(p.stock>0||p.is_preorder)&&addToCart(p);}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"8px 13px",borderRadius:"7px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"11px",fontWeight:"700",opacity:(p.stock>0||p.is_preorder)?1:.4,minHeight:"36px"}}>+ {t.cart}</button>
+                    <button className="btn-t" onClick={e=>{e.stopPropagation();(p.stock>0||p.is_preorder)&&addToCart(p);}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"6px 11px",borderRadius:"7px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"11px",fontWeight:"700",opacity:(p.stock>0||p.is_preorder)?1:.4}}>+ {t.cart}</button>
                   </div>
                   {flags.b2b&&<p style={{fontSize:"8px",color:c.muted,marginTop:"3px",letterSpacing:".3px"}}>★ B2B tiers: 5–9 ▸ 10% off · 10+ ▸ 20% off</p>}
                   {hovered===p.id&&(()=>{const rel=products.filter(x=>x.category===p.category&&x.id!==p.id&&x.stock>0).slice(0,2);return rel.length?<div style={{marginTop:"8px",paddingTop:"8px",borderTop:`1px solid ${c.border}`}}><p style={{fontSize:"9px",color:c.muted,fontWeight:"700",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>You may also like</p>{rel.map(r=><button key={r.id} className="btn-t" onClick={e=>{e.stopPropagation();addToCart(r);}} style={{display:"block",width:"100%",background:c.chip,border:"none",borderRadius:"5px",padding:"4px 7px",marginBottom:"3px",cursor:"pointer",textAlign:"left"}}><span style={{fontSize:"10px",fontWeight:"600",color:c.text}}>{r.name.substring(0,22)}</span><span style={{float:"right",fontSize:"10px",color:c.muted}}>{fmt(r.price)}</span></button>)}</div>:null;})()}
@@ -897,7 +871,7 @@ export default function App() {
 
     {/* CHECKOUT VIEW */}
     {view==="checkout"&&(
-      <div className="fu page-in" style={{padding:"24px 18px",maxWidth:"520px",margin:"0 auto",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+      <div className="fu" style={{padding:"36px 22px",maxWidth:"520px",margin:"0 auto"}}>
         {ordered?(
           <div className="si" style={{textAlign:"center",padding:"64px 0"}}>
             <div style={{width:"80px",height:"80px",borderRadius:"50%",background:c.success+"22",border:`3px solid ${c.success}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"34px",margin:"0 auto 20px",animation:"checkpop .6s cubic-bezier(.175,.885,.32,1.275) both"}}>{"✓"}</div>
@@ -941,9 +915,7 @@ export default function App() {
                 {errors[f.k]&&<p style={{color:c.error,fontSize:"10px",marginTop:"2px"}}>{errors[f.k]}</p>}
               </div>
             ))}
-            <div className="chk-foot" style={{background:c.bg,marginTop:"8px"}}>
-              <button className="btn-t" onClick={submitOrder} style={btnP()}>{t.placeOrder}</button>
-            </div>
+            <button className="btn-t" onClick={submitOrder} style={btnP({marginTop:"6px"})}>{t.placeOrder}</button>
           </>
         )}
       </div>
@@ -1471,20 +1443,11 @@ export default function App() {
         {promos.length>0&&<><p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginTop:"12px",marginBottom:"8px",textTransform:"uppercase",letterSpacing:".5px"}}>AI Promo Images</p><div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>{promos.map((im,i)=><div key={i} style={{background:c.card,borderRadius:"9px",border:`1px solid ${p.image===im.url?c.accent:c.border}`,padding:"10px",flex:"1 1 200px"}}><div style={{display:"flex",gap:"8px",marginBottom:"8px",alignItems:"center"}}><img src={im.url} alt={im.label} style={{width:"44px",height:"44px",objectFit:"contain",background:"#fff",borderRadius:"6px",border:`1px solid ${c.border}`}} onError={e=>e.target.style.display="none"}/><div><p style={{fontWeight:"700",fontSize:"11px"}}>{im.label}</p>{im.text&&<p style={{fontSize:"10px",color:c.muted,marginTop:"2px",lineHeight:1.3}}>{im.text.substring(0,50)}</p>}</div></div><button onClick={()=>setMain(im.url)} disabled={p.image===im.url} style={{background:p.image===im.url?c.success:c.chip,color:p.image===im.url?"#fff":c.text,border:`1px solid ${c.border}`,borderRadius:"6px",padding:"4px 10px",cursor:"pointer",fontSize:"10px",fontWeight:"700",width:"100%"}}>{p.image===im.url?"✓ Current Main":"Use as Main"}</button></div>)}</div></>}
       </div></>;
     })()}
-    {/* MOBILE BOTTOM NAV */}
-    <div className="mob-nav" style={{background:c.nav,borderTopColor:c.navBorder}}>
-      {[{i:"🏠",l:"Home",v:"store",action:()=>{setView("store");setCartOpen(false);}},{i:"⌕",l:"Search",v:"search",action:()=>{setView("store");setCartOpen(false);setTimeout(()=>document.querySelector('input')?.focus(),100);}},{i:"🛒",l:"Cart",v:"cart",action:()=>setCartOpen(o=>!o)},{i:"👤",l:user?user.name.split(" ")[0]:"Sign In",v:"profile",action:()=>user?setView("profile"):(setAuthOpen(true),setAuthMode("login"))}].map(x=>(
-        <button key={x.v} onClick={x.action} style={{background:"none",border:"none",color:((x.v==="store"&&view==="store")||(x.v==="profile"&&view==="profile"))?c.accent:c.muted,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:"3px",padding:"4px 12px",fontSize:"18px",lineHeight:1,position:"relative",minWidth:"50px"}}>
-          {x.i==="🛒"&&cartCount>0&&<span style={{position:"absolute",top:"-2px",right:"6px",background:"#ef4444",color:"#fff",borderRadius:"50%",width:"16px",height:"16px",fontSize:"9px",fontWeight:"900",display:"flex",alignItems:"center",justifyContent:"center"}}>{cartCount}</span>}
-          {x.i}<span style={{fontSize:"9px",fontWeight:"700",letterSpacing:".2px"}}>{x.l}</span>
-        </button>
-      ))}
-    </div>
-    <button onClick={()=>window.scrollTo({top:0,behavior:"smooth"})} className="btn-t top-fab" title="Back to top" style={{position:"fixed",bottom:"76px",[isRtl?"right":"left"]:"18px",zIndex:997,background:c.chip,color:c.text,border:`1px solid ${c.border}`,borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",fontSize:"13px",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 12px rgba(0,0,0,.2)"}}>↑</button>
-    {toasts.length>0&&<div className="toast-wrap" style={{position:"fixed",bottom:"22px",[isRtl?"right":"left"]:"22px",zIndex:999,display:"flex",flexDirection:"column-reverse",gap:"7px",pointerEvents:"none"}}>
+    <button onClick={()=>window.scrollTo({top:0,behavior:"smooth"})} className="btn-t" title="Back to top" style={{position:"fixed",bottom:"76px",[isRtl?"right":"left"]:"18px",zIndex:997,background:c.chip,color:c.text,border:`1px solid ${c.border}`,borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",fontSize:"13px",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 12px rgba(0,0,0,.2)"}}>↑</button>
+    {toasts.length>0&&<div style={{position:"fixed",bottom:"22px",[isRtl?"right":"left"]:"22px",zIndex:999,display:"flex",flexDirection:"column-reverse",gap:"7px",pointerEvents:"none"}}>
       {toasts.map(to=><div key={to.id} className="si" style={{background:to.type==="success"?c.success:to.type==="error"?c.error:c.surface,color:"#fff",padding:"10px 16px",borderRadius:"10px",fontSize:"13px",fontWeight:"600",boxShadow:"0 4px 20px rgba(0,0,0,.3)",maxWidth:"280px"}}>{to.type==="success"?"✓ ":to.type==="error"?"✕ ":""}{to.msg}</div>)}
     </div>}
-    <button onClick={()=>setChatOpen(o=>!o)} className="btn-t chat-fab" style={{position:"fixed",bottom:"22px",right:"22px",zIndex:998,width:"52px",height:"52px",borderRadius:CHAT_STYLES[chatTheme]?.br||"50%",background:CHAT_STYLES[chatTheme]?.bg||"linear-gradient(135deg,#7c3aed,#3b82f6)",border:"none",color:"#fff",fontSize:"22px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 24px rgba(124,58,237,.45)",flexShrink:0}}>{chatOpen?"✕":"💬"}</button>
+    <button onClick={()=>setChatOpen(o=>!o)} className="btn-t" style={{position:"fixed",bottom:"22px",right:"22px",zIndex:998,width:"52px",height:"52px",borderRadius:CHAT_STYLES[chatTheme]?.br||"50%",background:CHAT_STYLES[chatTheme]?.bg||"linear-gradient(135deg,#7c3aed,#3b82f6)",border:"none",color:"#fff",fontSize:"22px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 24px rgba(124,58,237,.45)",flexShrink:0}}>{chatOpen?"✕":"💬"}</button>
     {chatOpen&&<div className="si" style={{position:"fixed",bottom:"86px",right:"22px",width:"320px",height:"440px",background:c.surface,border:`1px solid ${c.border}`,borderRadius:CHAT_STYLES[chatTheme]?.br||"18px",boxShadow:"0 8px 40px rgba(0,0,0,.4)",display:"flex",flexDirection:"column",zIndex:998,overflow:"hidden"}}>
       <div style={{background:CHAT_STYLES[chatTheme]?.bg||"linear-gradient(135deg,#7c3aed,#3b82f6)",padding:"13px 16px",display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
         <div style={{width:"34px",height:"34px",borderRadius:"50%",background:"rgba(255,255,255,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>🤖</div>
