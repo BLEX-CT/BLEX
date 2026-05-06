@@ -281,6 +281,16 @@ async function initDB() {
   await pool.query(`ALTER TABLE b2b_applications ADD COLUMN IF NOT EXISTS credit_used DECIMAL(10,2) DEFAULT 0`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_ref VARCHAR(50)`);
   await pool.query(`ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS meta JSONB`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS rating DECIMAL(3,1) DEFAULT 0`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS response_time INTEGER DEFAULT 24`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS return_rate DECIMAL(5,2) DEFAULT 0`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS max_shipping_days INTEGER DEFAULT 14`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS min_order INTEGER DEFAULT 1`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS return_policy VARCHAR(100) DEFAULT '30 days'`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS bulk_discount_threshold INTEGER DEFAULT 10`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS payment_terms VARCHAR(100) DEFAULT 'Net 30'`);
+  await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS password_hash TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS routed_supplier_id INTEGER`);
 
   // Seed all 11 feature flags enabled by default
   const FLAGS = ['loyalty_points','wallet','b2b','trade_in','group_cart','back_in_stock','smart_bundles','digital_warranty','coupons','vat','cod'];
@@ -1040,11 +1050,11 @@ app.get('/suppliers', async (req, res) => {
 
 app.post('/suppliers', async (req, res) => {
   try {
-    const { name, email, phone, webhook_url } = req.body;
+    const { name, email, phone, webhook_url, max_shipping_days, min_order, return_policy, bulk_discount_threshold, payment_terms } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const result = await pool.query(
-      'INSERT INTO suppliers (name, email, phone, webhook_url) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, email || null, phone || null, webhook_url || null]
+      'INSERT INTO suppliers (name, email, phone, webhook_url, max_shipping_days, min_order, return_policy, bulk_discount_threshold, payment_terms) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+      [name, email||null, phone||null, webhook_url||null, max_shipping_days||14, min_order||1, return_policy||'30 days', bulk_discount_threshold||10, payment_terms||'Net 30']
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1052,10 +1062,17 @@ app.post('/suppliers', async (req, res) => {
 
 app.put('/suppliers/:id', async (req, res) => {
   try {
-    const { name, email, phone, webhook_url, product_ids } = req.body;
+    const { name, email, phone, webhook_url, product_ids, max_shipping_days, min_order, return_policy, bulk_discount_threshold, payment_terms, return_rate, response_time } = req.body;
     const result = await pool.query(
-      'UPDATE suppliers SET name=COALESCE($1,name), email=COALESCE($2,email), phone=COALESCE($3,phone), webhook_url=COALESCE($4,webhook_url), product_ids=COALESCE($5,product_ids) WHERE id=$6 RETURNING *',
-      [name||null, email||null, phone||null, webhook_url||null, product_ids?JSON.stringify(product_ids):null, req.params.id]
+      `UPDATE suppliers SET name=COALESCE($1,name), email=COALESCE($2,email), phone=COALESCE($3,phone),
+       webhook_url=COALESCE($4,webhook_url), product_ids=COALESCE($5,product_ids),
+       max_shipping_days=COALESCE($6,max_shipping_days), min_order=COALESCE($7,min_order),
+       return_policy=COALESCE($8,return_policy), bulk_discount_threshold=COALESCE($9,bulk_discount_threshold),
+       payment_terms=COALESCE($10,payment_terms), return_rate=COALESCE($11,return_rate),
+       response_time=COALESCE($12,response_time) WHERE id=$13 RETURNING *`,
+      [name||null, email||null, phone||null, webhook_url||null, product_ids?JSON.stringify(product_ids):null,
+       max_shipping_days||null, min_order||null, return_policy||null, bulk_discount_threshold||null,
+       payment_terms||null, return_rate||null, response_time||null, req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Supplier not found' });
     res.json(result.rows[0]);
@@ -1066,6 +1083,111 @@ app.delete('/suppliers/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM suppliers WHERE id=$1', [req.params.id]);
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/suppliers/:id/rate', async (req, res) => {
+  try {
+    const { rating } = req.body;
+    if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating 1–5 required' });
+    const result = await pool.query('UPDATE suppliers SET rating=$1 WHERE id=$2 RETURNING *', [Number(rating), req.params.id]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Supplier not found' });
+    await auditLog('supplier_rated', `Supplier ${req.params.id} rated ${rating}`);
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/suppliers/:id/set-password', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: 'password required' });
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const { rows } = await pool.query('UPDATE suppliers SET password_hash=$1 WHERE id=$2 RETURNING id,name,email', [hash, req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Supplier not found' });
+    res.json(rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/suppliers/analytics', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT s.id, s.name, s.rating, s.return_rate, s.response_time, s.max_shipping_days,
+             COUNT(DISTINCT ps.product_id) AS products_count,
+             COALESCE(SUM(ps.stock_available),0) AS total_stock,
+             COUNT(DISTINCT o.id) AS routed_orders
+      FROM suppliers s
+      LEFT JOIN product_suppliers ps ON ps.supplier_id = s.id
+      LEFT JOIN orders o ON o.routed_supplier_id = s.id
+      GROUP BY s.id ORDER BY s.rating DESC NULLS LAST
+    `);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/orders/:id/route', async (req, res) => {
+  try {
+    const { customer_country } = req.body;
+    const ord = await pool.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
+    if (!ord.rows[0]) return res.status(404).json({ error: 'Order not found' });
+    const items = Array.isArray(ord.rows[0].items) ? ord.rows[0].items : JSON.parse(ord.rows[0].items || '[]');
+    const productId = items[0]?.id;
+    if (!productId) return res.json({ routed: false, reason: 'no items' });
+    const cc = (customer_country || 'SA').toUpperCase();
+    const { rows } = await pool.query(`
+      SELECT ps.supplier_id, s.name AS supplier_name, sr.country_codes, sr.avg_shipping_days, s.max_shipping_days
+      FROM product_suppliers ps
+      JOIN suppliers s ON s.id = ps.supplier_id
+      LEFT JOIN supplier_regions sr ON sr.supplier_id = ps.supplier_id
+      WHERE ps.product_id=$1 AND ps.stock_available>0
+      ORDER BY (CASE WHEN $2=ANY(sr.country_codes) THEN 0 ELSE 1 END), sr.avg_shipping_days ASC NULLS LAST LIMIT 1
+    `, [productId, cc]);
+    if (!rows.length) return res.json({ routed: false, reason: 'no supplier with stock' });
+    const best = rows[0];
+    await pool.query('UPDATE orders SET routed_supplier_id=$1 WHERE id=$2', [best.supplier_id, req.params.id]);
+    await pool.query('UPDATE product_suppliers SET stock_available=GREATEST(0,stock_available-1) WHERE supplier_id=$1 AND product_id=$2', [best.supplier_id, productId]);
+    await auditLog('order_routed', `Order ${req.params.id} → ${best.supplier_name}`);
+    res.json({ routed: true, supplier_name: best.supplier_name, estimated_days: best.avg_shipping_days || best.max_shipping_days || 14 });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── Supplier Portal ──────────────────────────────────────────────────────────
+
+app.post('/supplier-portal/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+    const { rows } = await pool.query('SELECT * FROM suppliers WHERE email=$1', [email]);
+    const s = rows[0];
+    if (!s?.password_hash || !(await bcrypt.compare(password, s.password_hash))) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const token = jwt.sign({ id: s.id, email: s.email, role: 'supplier', name: s.name }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, supplier: { id: s.id, name: s.name, email: s.email } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/supplier-portal/orders', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'supplier') return res.status(403).json({ error: 'Supplier access only' });
+    const { rows } = await pool.query(
+      'SELECT id,customer,email,total,status,created_at,items FROM orders WHERE routed_supplier_id=$1 ORDER BY created_at DESC LIMIT 50',
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/supplier-portal/stock', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'supplier') return res.status(403).json({ error: 'Supplier access only' });
+    const { product_id, stock_available } = req.body;
+    if (!product_id || stock_available == null) return res.status(400).json({ error: 'product_id and stock_available required' });
+    const { rows } = await pool.query(
+      'UPDATE product_suppliers SET stock_available=$1 WHERE supplier_id=$2 AND product_id=$3 RETURNING *',
+      [stock_available, req.user.id, product_id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Product-supplier link not found' });
+    res.json(rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

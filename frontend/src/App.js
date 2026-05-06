@@ -168,9 +168,14 @@ export default function App() {
   const [apiKeys,setApiKeys]=useState([]);
   const [apiKeyName,setApiKeyName]=useState("");
   const [suppliers,setSuppliers]=useState([]);
-  const [supplierForm,setSupplierForm]=useState({name:"",email:"",phone:"",webhook_url:""});
+  const [supplierForm,setSupplierForm]=useState({name:"",email:"",phone:"",webhook_url:"",max_shipping_days:"14",payment_terms:"Net 30",return_policy:"30 days",min_order:"1",bulk_discount_threshold:"10"});
   const [geoSupplier,setGeoSupplier]=useState(null);
   const [productSuppliers,setProductSuppliers]=useState([]);
+  const [supplierAnalytics,setSupplierAnalytics]=useState([]);
+  const [supplierPortalUser,setSupplierPortalUser]=useState(()=>LS('bx_sp_user'));
+  const [supplierPortalOrders,setSupplierPortalOrders]=useState([]);
+  const [spLoginForm,setSpLoginForm]=useState({email:"",password:""});
+  const [spLoginErr,setSpLoginErr]=useState("");
   const [financialReport,setFinancialReport]=useState([]);
   const [searchRaw,setSearchRaw]=useState("");
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
@@ -251,6 +256,8 @@ export default function App() {
   useEffect(()=>{let buf="";const h=e=>{buf=(buf+e.key).slice(-8);if(buf==="BLEX2026"){setMaintBypass(true);setMaintPreview(false);LSS('bx_maint_bypass',1);}};document.addEventListener("keydown",h);return()=>document.removeEventListener("keydown",h);},[]);
   useEffect(()=>{if(!maintenance?.launch_date)return;const tick=()=>{const diff=new Date(maintenance.launch_date)-Date.now();setMCountdown(diff<=0?{d:0,h:0,m:0,s:0}:{d:Math.floor(diff/86400000),h:Math.floor((diff%86400000)/3600000),m:Math.floor((diff%3600000)/60000),s:Math.floor((diff%60000)/1000)});};tick();const iv=setInterval(tick,1000);return()=>clearInterval(iv);},[maintenance?.launch_date]);
   useEffect(()=>{setGeoSupplier(null);if(selectedProduct?.id)fetchGeoSupplier(selectedProduct.id,detectedCountry||'US');},[selectedProduct,detectedCountry]); // eslint-disable-line
+  useEffect(()=>{if(window.location.pathname.startsWith('/supplier-portal'))setView('supplier-portal');},[]);
+  useEffect(()=>{if(view==='supplier-portal'&&supplierPortalUser)fetchSpOrders();},[view]); // eslint-disable-line
 
   /* b2b tiered pricing */
   const getTieredPrice=(price,qty)=>qty>=10?Number(price)*.8:qty>=5?Number(price)*.9:Number(price);
@@ -369,10 +376,15 @@ export default function App() {
   const revokeApiKey=async id=>{await fetch(`${API}/api-keys/${id}`,{method:"DELETE"});fetchApiKeys();};
   /* suppliers */
   const fetchSuppliers=async()=>{const r=await fetch(API+"/suppliers");if(r.ok)setSuppliers(await r.json());};
-  const saveSupplier=async()=>{if(!supplierForm.name.trim())return;await fetch(API+"/suppliers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(supplierForm)});setSupplierForm({name:"",email:"",phone:"",webhook_url:""});fetchSuppliers();};
+  const saveSupplier=async()=>{if(!supplierForm.name.trim())return;await fetch(API+"/suppliers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(supplierForm)});setSupplierForm({name:"",email:"",phone:"",webhook_url:"",max_shipping_days:"14",payment_terms:"Net 30",return_policy:"30 days",min_order:"1",bulk_discount_threshold:"10"});fetchSuppliers();};
   const delSupplier=async id=>{if(!window.confirm("Delete this supplier?"))return;await fetch(`${API}/suppliers/${id}`,{method:"DELETE"});fetchSuppliers();};
   const fetchGeoSupplier=async(pid,cc)=>{try{const r=await fetch(`${API}/suppliers/best?product_id=${pid}&customer_country=${cc}`);if(r.ok)setGeoSupplier(await r.json());else setGeoSupplier(null);}catch{setGeoSupplier(null);}};
   const fetchProductSuppliers=async pid=>{try{const r=await fetch(`${API}/product-suppliers/${pid}`);if(r.ok)setProductSuppliers(await r.json());else setProductSuppliers([]);}catch{setProductSuppliers([]);}};
+  const fetchSupplierAnalytics=async()=>{const r=await fetch(API+"/suppliers/analytics");if(r.ok)setSupplierAnalytics(await r.json());};
+  const rateSupplier=async(id,rating)=>{await fetch(`${API}/suppliers/${id}/rate`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rating})});fetchSuppliers();};
+  const fetchSpOrders=async()=>{const tk=localStorage.getItem('bx_sp_jwt');if(!tk)return;const r=await fetch(API+"/supplier-portal/orders",{headers:{Authorization:`Bearer ${tk}`}});if(r.ok)setSupplierPortalOrders(await r.json());};
+  const spLogin=async()=>{setSpLoginErr("");const r=await fetch(API+"/supplier-portal/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(spLoginForm)});const d=await r.json();if(r.ok){localStorage.setItem('bx_sp_jwt',d.token);LSS('bx_sp_user',d.supplier);setSupplierPortalUser(d.supplier);fetchSpOrders();}else setSpLoginErr(d.error||"Login failed");};
+  const routeOrder=async(orderId,cc)=>{const r=await fetch(`${API}/orders/${orderId}/route`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({customer_country:cc||detectedCountry||'SA'})});if(r.ok){const d=await r.json();addToast(d.routed?`Routed to ${d.supplier_name}`:"No supplier available","info");}};
   const fetchFinancialReport=async()=>{const r=await fetch(API+"/reports/financial");if(r.ok)setFinancialReport(await r.json());};
   const cjCheckStatus=async()=>{setCjConnected(null);try{const r=await fetch(API+"/cj/token",{method:"POST",headers:{"Content-Type":"application/json"}});const d=await r.json();setCjConnected(!!d.connected);}catch{setCjConnected(false);}};
   const cjSearch=async()=>{if(!cjKeyword.trim())return;setCjLoading(true);setCjMsg("");try{const r=await fetch(`${API}/cj/products?keyword=${encodeURIComponent(cjKeyword)}`);const d=await r.json();if(d.error){setCjMsg(d.error);}else{setCjResults(Array.isArray(d.list)?d.list:[]);}}catch(e){setCjMsg(e.message);}setCjLoading(false);};
@@ -755,6 +767,24 @@ export default function App() {
       </div>);
     })()}
 
+    {/* SUPPLIER PORTAL VIEW */}
+    {view==="supplier-portal"&&<div className="fu" style={{padding:"40px 24px",maxWidth:"680px",margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"28px"}}><button onClick={()=>setView("store")} style={{background:"none",border:"none",color:c.muted,cursor:"pointer",fontSize:"20px",lineHeight:1}}>←</button><h2 style={{fontWeight:"800",fontSize:"22px"}}>🏭 Supplier Portal</h2></div>
+      {!supplierPortalUser?<div style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"16px",padding:"24px"}}>
+        <p style={{fontWeight:"700",fontSize:"15px",marginBottom:"16px"}}>Supplier Login</p>
+        <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+          <input value={spLoginForm.email} onChange={e=>setSpLoginForm({...spLoginForm,email:e.target.value})} placeholder="Email" style={inp(false)}/>
+          <input type="password" value={spLoginForm.password} onChange={e=>setSpLoginForm({...spLoginForm,password:e.target.value})} placeholder="Password" style={inp(false)}/>
+          {spLoginErr&&<p style={{color:c.error,fontSize:"12px"}}>{spLoginErr}</p>}
+          <button className="btn-t" onClick={spLogin} style={btnP({width:"auto",padding:"10px 24px"})}>Login as Supplier</button>
+        </div>
+      </div>:<>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}><div><p style={{fontWeight:"800",fontSize:"16px"}}>{supplierPortalUser.name}</p><p style={{fontSize:"12px",color:c.muted}}>{supplierPortalUser.email}</p></div><button onClick={()=>{setSupplierPortalUser(null);localStorage.removeItem('bx_sp_jwt');LSS('bx_sp_user',null);setSupplierPortalOrders([]);}} style={{background:"none",border:`1px solid ${c.border}`,color:c.muted,padding:"6px 14px",borderRadius:"7px",cursor:"pointer",fontSize:"12px"}}>Logout</button></div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}><h3 style={{fontWeight:"700",fontSize:"14px"}}>Your Routed Orders ({supplierPortalOrders.length})</h3><button className="btn-t" onClick={fetchSpOrders} style={btnP({width:"auto",padding:"5px 12px",fontSize:"11px"})}>↻ Refresh</button></div>
+        {supplierPortalOrders.length===0?<div style={{textAlign:"center",padding:"40px",color:c.muted,background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`}}>No orders routed to you yet.</div>:<div style={{display:"flex",flexDirection:"column",gap:"8px"}}>{supplierPortalOrders.map(o=><div key={o.id} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"6px"}}><div><p style={{fontWeight:"700",fontSize:"12px"}}>{o.customer}</p><p style={{color:c.muted,fontSize:"11px"}}>{new Date(o.created_at).toLocaleDateString()}</p></div><div style={{textAlign:"right"}}><span style={{background:c.chip,color:c.muted,padding:"2px 8px",borderRadius:"5px",fontSize:"10px",fontWeight:"800"}}>{o.status}</span><p style={{fontWeight:"700",fontSize:"13px",marginTop:"3px"}}>{fmt(o.total)}</p></div></div>)}</div>}
+      </>}
+    </div>}
+
     {/* WALLET VIEW */}
     {view==="wallet"&&(
       <div className="fu" style={{padding:"36px 24px",maxWidth:"580px",margin:"0 auto"}}>
@@ -985,8 +1015,8 @@ export default function App() {
               </div>
             )}
             <div style={{display:"flex",gap:"3px",marginBottom:"20px",background:c.chip,padding:"3px",borderRadius:"9px",maxWidth:"100%",overflowX:"auto"}}>
-              {["products","orders","customers","coupons","b2b","returns","rfq","audit","analytics","promotions","suppliers","dropshipping","settings","trends"].map(tab=>(
-                <button key={tab} onClick={()=>{setAdminTab(tab);if(tab==="orders")fetchOrders();if(tab==="b2b")fetchB2BApps();if(tab==="returns")fetchRMA();if(tab==="rfq")fetchRFQ();if(tab==="audit")fetchAuditLogs();if(tab==="promotions")fetchPromos();if(tab==="suppliers")fetchSuppliers();if(tab==="settings"){fetchApiKeys();fetchApStatus();}if(tab==="dropshipping")cjCheckStatus();}}
+              {["products","orders","customers","coupons","b2b","returns","rfq","audit","analytics","promotions","suppliers","supplier-analytics","dropshipping","settings","trends"].map(tab=>(
+                <button key={tab} onClick={()=>{setAdminTab(tab);if(tab==="orders")fetchOrders();if(tab==="b2b")fetchB2BApps();if(tab==="returns")fetchRMA();if(tab==="rfq")fetchRFQ();if(tab==="audit")fetchAuditLogs();if(tab==="promotions")fetchPromos();if(tab==="suppliers")fetchSuppliers();if(tab==="supplier-analytics")fetchSupplierAnalytics();if(tab==="settings"){fetchApiKeys();fetchApStatus();}if(tab==="dropshipping")cjCheckStatus();}}
                   style={{background:adminTab===tab?c.accent:"transparent",color:adminTab===tab?c.accentTxt:c.muted,border:"none",padding:"6px 14px",borderRadius:"6px",cursor:"pointer",fontWeight:"700",fontSize:"12px",transition:"all .2s",flexShrink:0,whiteSpace:"nowrap"}}>
                   {t[tab]||tab.charAt(0).toUpperCase()+tab.slice(1)}
                 </button>
@@ -1025,7 +1055,7 @@ export default function App() {
                   {pGallery&&<span style={{fontSize:"10px",color:c.success,fontWeight:"700"}}>✓ Gallery ready · {[pGallery.original,pGallery.cleaned].filter(Boolean).length+2} images</span>}
                 </div>
                 {pGallery&&(()=>{const imgs=[{url:pGallery.original,label:"Original"},{url:pGallery.cleaned,label:"Cleaned",bg:"#fff"},{url:pGallery.cleaned,label:pGallery.promo1?.angle||"Benefit",text:pGallery.promo1?.text,bg:"#fff"},{url:pGallery.cleaned,label:pGallery.promo2?.angle||"Lifestyle",text:pGallery.promo2?.text,bg:"#fff"}].filter(x=>x.url);return<div style={{marginTop:"9px",background:c.chip,border:`1px solid ${c.border}`,borderRadius:"9px",padding:"10px 13px"}}><p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginBottom:"8px"}}>🖼️ Choose storefront image (radio):</p><div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>{imgs.map((im,i)=><label key={i} style={{cursor:"pointer",textAlign:"center",opacity:pForm.image===im.url?1:0.6,transition:"opacity .2s"}}><input type="radio" name="galleryImg" checked={pForm.image===im.url} onChange={()=>setPForm(f=>({...f,image:im.url}))} style={{display:"none"}}/><img src={im.url} alt={im.label} style={{width:"64px",height:"64px",objectFit:"contain",borderRadius:"7px",border:`2px solid ${pForm.image===im.url?c.accent:c.border}`,background:im.bg||c.chip,display:"block"}} onError={e=>e.target.parentNode.style.display="none"}/><p style={{fontSize:"9px",color:c.muted,marginTop:"2px",fontWeight:"700"}}>{im.label}</p>{im.text&&<p style={{fontSize:"8px",color:c.text,maxWidth:"64px",lineHeight:1.3}}>{im.text.substring(0,28)}</p>}</label>)}</div></div>;})()}
-                {editing&&productSuppliers.length>0&&<div style={{marginTop:"9px",background:c.chip,border:`1px solid ${c.border}`,borderRadius:"9px",padding:"10px 13px"}}><p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginBottom:"6px"}}>📦 Suppliers carrying this product</p><div style={{display:"flex",flexDirection:"column",gap:"4px"}}>{productSuppliers.map(s=><div key={s.supplier_id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"4px",fontSize:"11px"}}><span style={{fontWeight:"700"}}>{s.supplier_name}</span><span style={{color:c.muted}}>{(s.country_codes||[]).join(", ")||"All regions"} · {s.avg_shipping_days||7}d · {s.stock_available} in stock</span></div>)}</div></div>}
+                {editing&&productSuppliers.length>0&&<div style={{marginTop:"9px",background:c.chip,border:`1px solid ${c.border}`,borderRadius:"9px",padding:"10px 13px"}}><p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginBottom:"6px"}}>📦 Supplier Price Comparison &amp; Profit Margin</p><div style={{display:"flex",flexDirection:"column",gap:"5px"}}>{productSuppliers.map(s=>{const cost=Number(s.supplier_price||0);const ship=Math.round(cost*0.08);const fee=Math.round(cost*0.03);const sell=Number(pForm.price||0);const profit=sell-cost-ship-fee;return<div key={s.supplier_id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"4px",fontSize:"11px",padding:"5px 0",borderTop:`1px solid ${c.border}`}}><span style={{fontWeight:"700"}}>{s.supplier_name}</span><span style={{color:c.muted}}>{(s.country_codes||[]).join(", ")||"All"} · {s.avg_shipping_days||7}d · {s.stock_available} units</span><span style={{color:profit>0?c.success:c.error,fontWeight:"800"}}>Cost {cost} + Ship {ship} + Fee {fee} = Net <b>{profit.toFixed(0)} SAR</b></span></div>})}</div></div>}
                 <div style={{display:"flex",gap:"7px",marginTop:"11px"}}>
                   <button className="btn-t" onClick={saveProduct} style={btnP({width:"auto",padding:"7px 18px",fontSize:"12px"})}>{t.save}</button>
                   <button className="btn-t" onClick={()=>{setShowForm(false);setBgPreview(null);}} style={btnS({width:"auto"})}>{t.cancel}</button>
@@ -1063,7 +1093,7 @@ export default function App() {
                     <div key={i} style={{background:c.card,borderRadius:"11px",border:`1px solid ${c.border}`,padding:"14px"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"7px"}}>
                         <div><p style={{fontWeight:"700",fontSize:"13px"}}>{o.customer}</p><p style={{color:c.muted,fontSize:"11px",marginTop:"2px"}}>{o.phone} · {o.address}</p></div>
-                        <div style={{textAlign:"right"}}><select value={o.status||"pending"} onChange={e=>updateOrderStatus(o.id,e.target.value)} style={{background:c.chip,color:c.text,border:`1px solid ${c.border}`,borderRadius:"7px",padding:"3px 8px",fontSize:"10px",fontWeight:"700",cursor:"pointer"}}>{["pending","confirmed","processing","shipped","delivered"].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}</select><p style={{color:c.muted,fontSize:"11px",marginTop:"4px"}}>{fmt(o.total)}</p></div>
+                        <div style={{textAlign:"right",display:"flex",flexDirection:"column",gap:"4px",alignItems:"flex-end"}}><select value={o.status||"pending"} onChange={e=>updateOrderStatus(o.id,e.target.value)} style={{background:c.chip,color:c.text,border:`1px solid ${c.border}`,borderRadius:"7px",padding:"3px 8px",fontSize:"10px",fontWeight:"700",cursor:"pointer"}}>{["pending","confirmed","processing","shipped","delivered"].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}</select><p style={{color:c.muted,fontSize:"11px"}}>{fmt(o.total)}{o.routed_supplier_id&&<span style={{color:"#3b82f6",marginLeft:"6px",fontSize:"10px"}}>🚚 Routed</span>}</p><button className="btn-t" onClick={()=>routeOrder(o.id)} style={{background:"transparent",border:`1px solid ${c.border}`,color:c.muted,padding:"2px 8px",borderRadius:"5px",cursor:"pointer",fontSize:"9px",fontWeight:"700"}}>Route to Supplier</button></div>
                       </div>
                       {o.items?.length>0&&<div style={{marginTop:"8px",paddingTop:"8px",borderTop:`1px solid ${c.border}`,display:"flex",flexWrap:"wrap",gap:"3px"}}>{o.items.map((it,j)=><span key={j} style={{background:c.chip,color:c.text,padding:"2px 7px",borderRadius:"5px",fontSize:"10px"}}>{it.name}{it.qty?` ×${it.qty}`:""}</span>)}</div>}
                     </div>
@@ -1277,19 +1307,37 @@ export default function App() {
                   <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Phone</label><input value={supplierForm.phone} onChange={e=>setSupplierForm({...supplierForm,phone:e.target.value})} placeholder="+966 5…" style={inp(false)}/></div>
                   <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Webhook URL (low stock)</label><input value={supplierForm.webhook_url} onChange={e=>setSupplierForm({...supplierForm,webhook_url:e.target.value})} placeholder="https://webhook.site/…" style={inp(false)}/></div>
                 </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginTop:"8px"}}>
+                  <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Max Ship Days</label><input type="number" value={supplierForm.max_shipping_days} onChange={e=>setSupplierForm({...supplierForm,max_shipping_days:e.target.value})} style={inp(false)}/></div>
+                  <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Payment Terms</label><input value={supplierForm.payment_terms} onChange={e=>setSupplierForm({...supplierForm,payment_terms:e.target.value})} placeholder="Net 30" style={inp(false)}/></div>
+                  <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Return Policy</label><input value={supplierForm.return_policy} onChange={e=>setSupplierForm({...supplierForm,return_policy:e.target.value})} placeholder="30 days" style={inp(false)}/></div>
+                  <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Min Order Qty</label><input type="number" value={supplierForm.min_order} onChange={e=>setSupplierForm({...supplierForm,min_order:e.target.value})} style={inp(false)}/></div>
+                </div>
                 <button className="btn-t" onClick={saveSupplier} style={btnP({width:"auto",padding:"7px 18px",fontSize:"12px"})}>+ Add Supplier</button>
               </div>
               {suppliers.length===0
                 ?<div style={{textAlign:"center",padding:"40px",color:c.muted,background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`}}><p>No suppliers yet. Add one to enable low-stock webhook alerts.</p></div>
                 :<div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
                   {suppliers.map(s=>(
-                    <div key={s.id} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,padding:"13px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}}>
-                      <div><p style={{fontWeight:"700",fontSize:"13px"}}>{s.name}</p><p style={{color:c.muted,fontSize:"11px",marginTop:"2px"}}>{s.email||"—"} · {s.phone||"—"}{s.webhook_url&&<span style={{color:"#3b82f6",marginLeft:"6px",fontSize:"10px"}}>🔔 Webhook set</span>}</p></div>
+                    <div key={s.id} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,padding:"13px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"8px"}}>
+                      <div style={{flex:1,minWidth:"200px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap",marginBottom:"2px"}}><p style={{fontWeight:"700",fontSize:"13px"}}>{s.name}</p><span style={{color:"#f59e0b",fontSize:"11px"}}>{s.rating>0?`★ ${s.rating}`:""}</span></div>
+                        <p style={{color:c.muted,fontSize:"11px"}}>{s.email||"—"} · {s.phone||"—"}{s.webhook_url&&<span style={{color:"#3b82f6",marginLeft:"6px",fontSize:"10px"}}>🔔</span>}</p>
+                        <p style={{color:c.muted,fontSize:"10px",marginTop:"3px"}}>📦 Max {s.max_shipping_days||14}d · Min {s.min_order||1} units · {s.payment_terms||"Net 30"} · Returns: {s.return_policy||"30 days"}</p>
+                        <div style={{display:"flex",gap:"3px",marginTop:"6px"}}>{[1,2,3,4,5].map(n=><button key={n} className="btn-t" onClick={()=>rateSupplier(s.id,n)} title={`Rate ${n} stars`} style={{background:n<=(Math.round(s.rating)||0)?c.accent:"transparent",color:n<=(Math.round(s.rating)||0)?c.accentTxt:c.muted,border:`1px solid ${c.border}`,borderRadius:"4px",padding:"1px 6px",fontSize:"11px",cursor:"pointer"}}>{n}★</button>)}</div>
+                      </div>
                       <button className="btn-t" onClick={()=>delSupplier(s.id)} style={{background:"none",border:`1px solid ${c.error}`,color:c.error,padding:"5px 12px",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:"700"}}>Delete</button>
                     </div>
                   ))}
                 </div>
               }
+            </div>}
+
+            {adminTab==="supplier-analytics"&&<div className="fu">
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"13px"}}><h3 style={{fontWeight:"700"}}>📊 Supplier Analytics</h3><button className="btn-t" onClick={fetchSupplierAnalytics} style={btnP({width:"auto",padding:"7px 14px",fontSize:"12px"})}>↻ Refresh</button></div>
+              {supplierAnalytics.length===0?<div style={{textAlign:"center",padding:"40px",color:c.muted,background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`}}>No data. Add suppliers, link products, then route orders.</div>
+                :<div style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:"620px"}}><thead><tr style={{background:c.chip}}>{["Supplier","Rating","Products","Stock","Routed Orders","Return %","Resp.h","Max Days"].map((h,i)=><th key={i} style={{padding:"8px 11px",textAlign:"left",fontWeight:"700",fontSize:"10px",color:c.muted,textTransform:"uppercase"}}>{h}</th>)}</tr></thead>
+                <tbody>{supplierAnalytics.map(s=><tr key={s.id} style={{borderTop:`1px solid ${c.border}`}}><td style={{padding:"9px 11px",fontWeight:"600",fontSize:"12px"}}>{s.name}</td><td style={{padding:"9px 11px",color:"#f59e0b",fontSize:"13px"}}>{s.rating>0?`★ ${s.rating}`:"-"}</td><td style={{padding:"9px 11px",fontSize:"12px"}}>{s.products_count||0}</td><td style={{padding:"9px 11px",fontSize:"12px",fontWeight:"700",color:Number(s.total_stock)>0?c.success:c.error}}>{s.total_stock||0}</td><td style={{padding:"9px 11px",fontSize:"12px"}}>{s.routed_orders||0}</td><td style={{padding:"9px 11px",fontSize:"12px",color:Number(s.return_rate)>10?c.error:c.muted}}>{s.return_rate||0}%</td><td style={{padding:"9px 11px",fontSize:"12px"}}>{s.response_time||24}h</td><td style={{padding:"9px 11px",fontSize:"12px"}}>{s.max_shipping_days||14}d</td></tr>)}</tbody></table></div>}
             </div>}
 
             {adminTab==="dropshipping"&&<div>
