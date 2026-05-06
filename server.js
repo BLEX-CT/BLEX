@@ -248,6 +248,24 @@ async function initDB() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS supplier_regions (
+      supplier_id INTEGER PRIMARY KEY REFERENCES suppliers(id) ON DELETE CASCADE,
+      country_codes TEXT[] NOT NULL DEFAULT '{}',
+      avg_shipping_days INTEGER DEFAULT 7
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_suppliers (
+      product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+      supplier_id INTEGER REFERENCES suppliers(id) ON DELETE CASCADE,
+      supplier_price DECIMAL(10,2),
+      stock_available INTEGER DEFAULT 0,
+      PRIMARY KEY (product_id, supplier_id)
+    )
+  `);
+
   // Add missing columns to existing tables (idempotent)
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'electronics'`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT`);
@@ -1770,6 +1788,120 @@ app.post('/autopilot/schedule', async (req, res) => {
     await Promise.all([apSet('enabled', !!enabled), apSet('hour', hour ?? 2)]);
     await auditLog('autopilot_schedule', `Auto-pilot ${enabled ? 'enabled' : 'disabled'} at ${hour ?? 2}:00`);
     res.json({ enabled: !!enabled, hour: Number(hour ?? 2) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── Geo Routing ─────────────────────────────────────────────────────────────
+
+const GEO_REGIONS = {
+  MENA:     ['SA','AE','KW','BH','QA','OM','EG','JO','IQ','YE','LB'],
+  Europe:   ['GB','FR','DE','IT','ES','PT','NL','BE','SE','NO','DK','FI','AT','CH','PL'],
+  Asia:     ['CN','JP','KR','IN','SG','TH','MY','VN','PH','ID','TW','HK'],
+  Americas: ['US','CA','BR','MX','AR','CL','CO','PE'],
+  Africa:   ['ZA','NG','KE','GH','TZ','ET']
+};
+const getRegion = cc => { for (const [r, cs] of Object.entries(GEO_REGIONS)) if (cs.includes(cc)) return r; return 'Other'; };
+
+app.get('/suppliers/best', async (req, res) => {
+  try {
+    const { product_id, customer_country } = req.query;
+    if (!product_id) return res.status(400).json({ error: 'product_id required' });
+    const cc = (customer_country || 'US').toUpperCase();
+
+    const { rows } = await pool.query(`
+      SELECT ps.supplier_id, ps.supplier_price, ps.stock_available,
+             s.name AS supplier_name,
+             sr.country_codes, sr.avg_shipping_days
+      FROM product_suppliers ps
+      JOIN suppliers s ON s.id = ps.supplier_id
+      LEFT JOIN supplier_regions sr ON sr.supplier_id = ps.supplier_id
+      WHERE ps.product_id = $1 AND ps.stock_available > 0
+      ORDER BY sr.avg_shipping_days ASC NULLS LAST
+    `, [product_id]);
+
+    const getSimilar = async () => {
+      const prod = await pool.query('SELECT category FROM products WHERE id=$1', [product_id]);
+      const cat = prod.rows[0]?.category || 'electronics';
+      const { rows: sim } = await pool.query(
+        'SELECT id,name,price,image,category FROM products WHERE category=$1 AND id!=$2 AND stock>0 ORDER BY id DESC LIMIT 3',
+        [cat, product_id]
+      );
+      return sim;
+    };
+
+    if (rows.length === 0) {
+      return res.json({ available: false, similar: await getSimilar() });
+    }
+
+    const custRegion = getRegion(cc);
+    let best = null, shipping = 14, isLocal = false;
+
+    for (const r of rows) {
+      if ((r.country_codes || []).includes(cc)) { best = r; shipping = r.avg_shipping_days || 3; isLocal = true; break; }
+    }
+    if (!best) {
+      for (const r of rows) {
+        const codes = r.country_codes || [];
+        if (codes.length && getRegion(codes[0]) === custRegion) { best = r; shipping = r.avg_shipping_days || 7; break; }
+      }
+    }
+    if (!best) { best = rows[0]; shipping = best.avg_shipping_days || 14; }
+
+    const shipsFrom = best.country_codes?.[0] || 'CN';
+    const similar = isLocal ? [] : await getSimilar();
+
+    res.json({
+      available: true,
+      supplier_id: best.supplier_id,
+      supplier_name: best.supplier_name,
+      ships_from: shipsFrom,
+      estimated_days: shipping,
+      is_local: isLocal,
+      similar
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/product-suppliers/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT ps.supplier_id, ps.supplier_price, ps.stock_available,
+             s.name AS supplier_name,
+             sr.country_codes, sr.avg_shipping_days
+      FROM product_suppliers ps
+      JOIN suppliers s ON s.id = ps.supplier_id
+      LEFT JOIN supplier_regions sr ON sr.supplier_id = ps.supplier_id
+      WHERE ps.product_id = $1
+    `, [req.params.id]);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/supplier-regions', async (req, res) => {
+  try {
+    const { supplier_id, country_codes, avg_shipping_days } = req.body;
+    if (!supplier_id) return res.status(400).json({ error: 'supplier_id required' });
+    const { rows } = await pool.query(
+      `INSERT INTO supplier_regions (supplier_id, country_codes, avg_shipping_days)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (supplier_id) DO UPDATE SET country_codes=$2, avg_shipping_days=$3 RETURNING *`,
+      [supplier_id, country_codes || [], avg_shipping_days || 7]
+    );
+    res.json(rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/product-suppliers', async (req, res) => {
+  try {
+    const { product_id, supplier_id, supplier_price, stock_available } = req.body;
+    if (!product_id || !supplier_id) return res.status(400).json({ error: 'product_id and supplier_id required' });
+    const { rows } = await pool.query(
+      `INSERT INTO product_suppliers (product_id, supplier_id, supplier_price, stock_available)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (product_id, supplier_id) DO UPDATE SET supplier_price=$3, stock_available=$4 RETURNING *`,
+      [product_id, supplier_id, supplier_price || null, stock_available || 0]
+    );
+    res.json(rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
