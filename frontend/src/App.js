@@ -44,9 +44,9 @@ const T = {
 };
 
 const LANGS=[{code:"en",label:"🇬🇧 EN"},{code:"ar",label:"🇸🇦 AR"},{code:"zh",label:"🇨🇳 ZH"},{code:"ko",label:"🇰🇷 KO"},{code:"ja",label:"🇯🇵 JA"},{code:"fr",label:"🇫🇷 FR"},{code:"es",label:"🇪🇸 ES"},{code:"de",label:"🇩🇪 DE"},{code:"it",label:"🇮🇹 IT"},{code:"pt",label:"🇵🇹 PT"}];
-const _D={bg:"#080808",surface:"#111",card:"#141414",cardHover:"#1a1a1a",border:"#222",text:"#f0f0f0",muted:"#666",sub:"#333",chip:"#1c1c1c",input:"#141414",inputBorder:"#2a2a2a",success:"#22c55e",error:"#ef4444",overlay:"rgba(0,0,0,0.86)",glow:"rgba(255,255,255,0.03)"};
+const _D={bg:"#0a0a0f",surface:"#0d0d14",card:"#11111a",cardHover:"#16162a",border:"#1e1e2e",text:"#f0f0f0",muted:"#5a5a7a",sub:"#2a2a3a",chip:"#141420",input:"#111118",inputBorder:"#252535",success:"#22c55e",error:"#ef4444",overlay:"rgba(0,0,0,0.88)",glow:"rgba(0,212,255,0.03)"};
 const THEMES={
-  dark: {..._D,accent:"#e8e8e8",accentTxt:"#080808",nav:"rgba(8,8,8,0.93)",navBorder:"#1a1a1a"},
+  dark: {..._D,accent:"#00d4ff",accentTxt:"#030308",nav:"rgba(10,10,15,0.82)",navBorder:"rgba(0,212,255,0.15)"},
   light:{bg:"#f5f5f5",surface:"#fff",card:"#fff",cardHover:"#f9f9f9",border:"#e5e5e5",text:"#0a0a0a",muted:"#888",sub:"#ccc",accent:"#0a0a0a",accentTxt:"#fff",chip:"#efefef",nav:"rgba(255,255,255,0.93)",navBorder:"#e8e8e8",input:"#fff",inputBorder:"#ddd",success:"#16a34a",error:"#dc2626",overlay:"rgba(0,0,0,0.5)",glow:"rgba(0,0,0,0.02)"},
   ocean:{..._D,bg:"#040d1a",surface:"#071526",card:"#0a1e30",cardHover:"#0d2540",border:"#0e2d45",nav:"rgba(4,13,26,0.93)",navBorder:"#0e2d45",accent:"#0ea5e9",accentTxt:"#fff"},
   sunset:{..._D,bg:"#110600",surface:"#1a0b00",card:"#211000",cardHover:"#2a1400",border:"#3d1e00",nav:"rgba(17,6,0,0.93)",navBorder:"#3d1e00",accent:"#f97316",accentTxt:"#fff"},
@@ -63,9 +63,10 @@ function injectCSS(){
   const s=document.createElement("style");
   s.textContent=`
     *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
     body{transition:background .35s,color .35s;-webkit-font-smoothing:antialiased}
     input,select,textarea{outline:none;font-family:inherit}
-    ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+    ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.3);border-radius:3px}
     @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes scaleIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
@@ -78,17 +79,29 @@ function injectCSS(){
     @keyframes shimmer{0%{background-position:200% 50%}100%{background-position:-200% 50%}}
     @keyframes checkpop{0%{transform:scale(0) rotate(-20deg)}70%{transform:scale(1.2) rotate(5deg)}100%{transform:scale(1) rotate(0)}}
     @keyframes eggPop{0%{transform:scale(1)}30%{transform:scale(1.9) rotate(-12deg)}65%{transform:scale(.85) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+    @keyframes neonPulse{0%,100%{text-shadow:0 0 8px #00d4ff,0 0 20px rgba(0,212,255,.5)}50%{text-shadow:0 0 16px #00d4ff,0 0 40px #00d4ff,0 0 60px rgba(123,47,247,.4)}}
+    @keyframes holoShine{0%{background-position:-200% center}100%{background-position:200% center}}
+    @keyframes morphFade{0%,100%{opacity:1;transform:translateY(0)}40%{opacity:0;transform:translateY(-14px)}60%{opacity:0;transform:translateY(14px)}}
+    @keyframes particleDrift{0%{transform:translateY(0) translateX(0);opacity:0}10%{opacity:.8}85%{opacity:0}100%{transform:translateY(-100vh) translateX(50px);opacity:0}}
     .fu{animation:fadeUp .48s ease both}.fi{animation:fadeIn .28s ease both}
     .si{animation:scaleIn .3s ease both}.sr{animation:slideR .36s cubic-bezier(.4,0,.2,1) both}
     .sl{animation:slideL .36s cubic-bezier(.4,0,.2,1) both}
-    .btn-t{transition:opacity .15s,transform .15s,background .2s,color .2s}
-    .btn-t:hover{opacity:.84;transform:scale(1.03)}.btn-t:active{transform:scale(.97)}
-    .card-wrap{transition:transform .28s ease,box-shadow .28s ease}
-    .card-wrap:hover{transform:translateY(-6px)}
+    .btn-t{transition:opacity .15s,transform .15s,background .2s,color .2s;position:relative;overflow:hidden}
+    .btn-t:hover{opacity:.88;transform:scale(1.03)}.btn-t:active{transform:scale(.97)}
+    .btn-t::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);transform:translateX(-100%);transition:transform .5s;pointer-events:none}
+    .btn-t:hover::after{transform:translateX(100%)}
+    .card-wrap{transition:transform .32s ease,box-shadow .32s ease}
+    .card-wrap:hover{transform:translateY(-8px) perspective(800px) rotateX(2deg) rotateY(-1deg)}
+    .holo-card{position:relative;overflow:hidden}
+    .holo-card::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(0,212,255,.07) 50%,rgba(123,47,247,.07) 60%,rgba(255,215,0,.04) 70%,transparent 80%);background-size:200% 100%;opacity:0;transition:opacity .3s;pointer-events:none;z-index:5}
+    .holo-card:hover::after{opacity:1;animation:holoShine 1.8s linear infinite}
+    .neon-price{animation:neonPulse 2.5s ease-in-out infinite;color:#00d4ff!important}
+    .morph-text{display:inline-block;animation:morphFade .6s ease both}
+    .particle{position:absolute;border-radius:50%;pointer-events:none;animation:particleDrift linear infinite;z-index:1}
     .img-ov{opacity:0;transition:opacity .25s}.card-wrap:hover .img-ov{opacity:1}
-    .hero-title{font-size:clamp(56px,12vw,128px);font-weight:900;letter-spacing:14px;background:linear-gradient(135deg,#fff 0%,#aaa 50%,#fff 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite}
-    .hero-title-l{font-size:clamp(56px,12vw,128px);font-weight:900;letter-spacing:14px;background:linear-gradient(135deg,#111 0%,#555 50%,#111 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite}
-    .float-blob{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none}
+    .hero-title{font-size:clamp(56px,12vw,128px);font-weight:900;letter-spacing:14px;background:linear-gradient(135deg,#fff 0%,#00d4ff 30%,#7b2ff7 60%,#ffd700 85%,#fff 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 5s linear infinite}
+    .hero-title-l{font-size:clamp(56px,12vw,128px);font-weight:900;letter-spacing:14px;background:linear-gradient(135deg,#111 0%,#0066cc 50%,#4400aa 80%,#111 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 5s linear infinite}
+    .float-blob{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none}
     .mq-track{display:flex;animation:marquee 22s linear infinite}.mq-track:hover{animation-play-state:paused}
     @media(max-width:700px){.hide-mob{display:none!important}.show-mob{display:flex!important}.g3{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}}
     @media(max-width:440px){.g3{grid-template-columns:1fr 1fr!important}}
@@ -238,6 +251,7 @@ export default function App() {
   const [vsLoading,setVsLoading]=useState(false);const visRef=useRef();
   const [voiceActive,setVoiceActive]=useState(false);
   const [agentStatus,setAgentStatus]=useState({});
+  const [morphIdx,setMorphIdx]=useState(0);
 
   const c=THEMES[theme]||THEMES.dark, t=T[lang], isRtl=t.dir==="rtl";
   const CATS=["all","electronics","accessories","clothing"];
@@ -271,6 +285,7 @@ export default function App() {
   /* wishlist price-drop alerts */
   useEffect(()=>{if(!wishlist.length||!sp.length)return;const prev=LS('bx_wl_prices')||{};const now={};sp.forEach(p=>{now[p.id]=Number(p.price);});const alerts=[];wishlist.forEach(id=>{if(prev[id]&&now[id]&&now[id]<prev[id]*0.9)alerts.push(`Price drop! ${sp.find(p=>p.id===id)?.name} now ${fmt(now[id])}`);});if(alerts.length)alerts.forEach(a=>addToast(a,"success"));LSS('bx_wl_prices',now);},[sp]); // eslint-disable-line
 
+  useEffect(()=>{const iv=setInterval(()=>setMorphIdx(i=>(i+1)%4),2800);return()=>clearInterval(iv);},[]);
   /* b2b tiered pricing */
   const getTieredPrice=(price,qty)=>qty>=10?Number(price)*.8:qty>=5?Number(price)*.9:Number(price);
 
@@ -543,7 +558,7 @@ export default function App() {
     </>}
 
     {/* NAVBAR */}
-    <nav style={{background:c.nav,borderBottom:`1px solid ${c.navBorder}`,padding:"0 18px",height:"58px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"8px",position:"sticky",top:0,zIndex:100,backdropFilter:"blur(18px)"}}>
+    <nav style={{background:c.nav,borderBottom:`1px solid ${c.navBorder}`,padding:"0 18px",height:"58px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"8px",position:"sticky",top:0,zIndex:100,backdropFilter:"blur(24px)",boxShadow:theme==="dark"?"0 1px 0 rgba(0,212,255,0.1),0 4px 24px rgba(0,0,0,0.5)":undefined}}>
       <button onClick={handleLogoClick} style={{background:"none",border:"none",cursor:"pointer",flexShrink:0,position:"relative"}}>
         <span style={{color:c.text,fontSize:"17px",fontWeight:"900",letterSpacing:"5px",display:"inline-block",animation:easterEgg?"eggPop .6s ease both":undefined}}>BLEX</span>
         {easterEgg&&<span style={{position:"absolute",top:"-20px",left:"50%",transform:"translateX(-50%)",fontSize:"16px",animation:"eggPop .6s ease both",pointerEvents:"none"}}>✨</span>}
@@ -649,19 +664,21 @@ export default function App() {
     {/* STORE VIEW */}
     {view==="store"&&<div>
       {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
-      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",background:heroImage?`url(${heroImage}) center/cover`:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#0a0a1a,#0f1020)":"linear-gradient(145deg,#eef2ff,#e0e8ff)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#0f0a08,#1a0f00)":"linear-gradient(145deg,#fff7ed,#fef3c7)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#080a14,#0d0920)":"linear-gradient(145deg,#f5f3ff,#ede9fe)"):theme==="dark"?"linear-gradient(145deg,#080808 0%,#0f0f0f 50%,#111 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
-        <div className="float-blob" style={{width:"480px",height:"480px",top:"-200px",left:"-140px",background:theme==="dark"?"rgba(255,255,255,0.022)":"rgba(0,0,0,0.028)",animation:"floatA 12s ease-in-out infinite"}}/>
-        <div className="float-blob" style={{width:"360px",height:"360px",bottom:"-130px",right:"-80px",background:theme==="dark"?"rgba(255,255,255,0.018)":"rgba(0,0,0,0.022)",animation:"floatB 10s ease-in-out infinite"}}/>
+      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",background:heroImage?`url(${heroImage}) center/cover`:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#060618,#0a0a2a)":"linear-gradient(145deg,#eef2ff,#e0e8ff)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#0f0618,#180a28)":"linear-gradient(145deg,#fff7ed,#fef3c7)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#06100e,#0a1e18)":"linear-gradient(145deg,#f5f3ff,#ede9fe)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+        <div className="float-blob" style={{width:"540px",height:"540px",top:"-220px",left:"-160px",background:theme==="dark"?"rgba(0,212,255,0.14)":"rgba(0,100,200,0.06)",animation:"floatA 14s ease-in-out infinite"}}/>
+        <div className="float-blob" style={{width:"420px",height:"420px",bottom:"-160px",right:"-100px",background:theme==="dark"?"rgba(123,47,247,0.16)":"rgba(100,0,200,0.06)",animation:"floatB 11s ease-in-out infinite"}}/>
+        <div className="float-blob" style={{width:"280px",height:"280px",top:"25%",right:"12%",background:theme==="dark"?"rgba(255,215,0,0.07)":"rgba(200,150,0,0.04)",animation:"floatA 19s ease-in-out infinite reverse"}}/>
+        {theme==="dark"&&[...Array(10)].map((_,i)=><span key={i} className="particle" style={{width:`${2+(i%3)}px`,height:`${2+(i%3)}px`,left:`${(i*10+5)%95}%`,bottom:0,background:i%3===0?"#00d4ff":i%3===1?"#7b2ff7":"#ffd700",animationDuration:`${8+i*1.2}s`,animationDelay:`${i*0.7}s`}}/>)}
         <div style={{position:"relative",zIndex:2,textAlign:"center",padding:"64px 24px 48px"}}>
           <div className="fu"><div style={{display:"inline-flex",alignItems:"center",gap:"7px",background:c.chip,border:`1px solid ${c.border}`,padding:"4px 14px",borderRadius:"18px",marginBottom:"20px",fontSize:"10px",fontWeight:"700",letterSpacing:"3px",textTransform:"uppercase",color:c.muted}}><span style={{width:"5px",height:"5px",borderRadius:"50%",background:c.success,animation:"pulse 2s ease-in-out infinite",display:"inline-block"}}/>{t.heroTag}</div></div>
           <div className="fu" style={{animationDelay:".1s"}}><h1 className={theme==="dark"?"hero-title":"hero-title-l"}>BLEX</h1></div>
-          <div className="fu" style={{animationDelay:".2s"}}><p style={{color:c.muted,fontSize:"14px",marginTop:"6px",marginBottom:favCat?"10px":"30px",letterSpacing:"1px"}}>{t.electronics} · {t.accessories} · {t.clothing}</p>{favCat&&user&&<p style={{color:c.muted,fontSize:"12px",marginBottom:"30px",fontStyle:"italic"}}>✨ Curated for you — top picks in {t[favCat]||favCat}</p>}</div>
+          <div className="fu" style={{animationDelay:".2s"}}><p style={{color:c.muted,fontSize:"14px",marginTop:"6px",marginBottom:favCat?"10px":"30px",letterSpacing:"2px",textTransform:"uppercase"}}><span key={morphIdx} className="morph-text">{["Electronics","Jewelry","Fashion","Accessories"][morphIdx]}</span></p>{favCat&&user&&<p style={{color:c.muted,fontSize:"12px",marginBottom:"30px",fontStyle:"italic"}}>✨ Curated for you — top picks in {t[favCat]||favCat}</p>}</div>
           <div className="fu" style={{animationDelay:".3s",display:"flex",gap:"10px",justifyContent:"center",flexWrap:"wrap"}}>
             <button className="btn-t" onClick={()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"})} style={btnP({width:"auto",padding:"11px 32px",borderRadius:"24px",fontSize:"13px"})}>{t.shopNow} →</button>
             {flags.trade_in&&<button className="btn-t" onClick={()=>setView("tradein")} style={btnS({width:"auto",padding:"11px 32px",borderRadius:"24px",fontSize:"13px"})}>Trade-In</button>}
           </div>
           <div className="fu" style={{animationDelay:".42s",display:"flex",justifyContent:"center",gap:"44px",marginTop:"44px",flexWrap:"wrap"}}>
-            {[t.stat1,t.stat2,t.stat3].map((s,i)=><div key={i} style={{textAlign:"center"}}><p style={{fontWeight:"800",fontSize:"17px"}}>{s.split(" ")[0]}</p><p style={{color:c.muted,fontSize:"11px",marginTop:"2px"}}>{s.split(" ").slice(1).join(" ")}</p></div>)}
+            {[t.stat1,t.stat2,t.stat3].map((s,i)=><div key={i} style={{textAlign:"center",background:theme==="dark"?"rgba(0,212,255,0.06)":"rgba(0,0,0,0.04)",border:`1px solid ${theme==="dark"?"rgba(0,212,255,0.2)":c.border}`,borderRadius:"14px",padding:"14px 22px",backdropFilter:"blur(10px)"}}><p style={{fontWeight:"800",fontSize:"17px",color:theme==="dark"?"#00d4ff":c.text}}>{s.split(" ")[0]}</p><p style={{color:c.muted,fontSize:"11px",marginTop:"3px"}}>{s.split(" ").slice(1).join(" ")}</p></div>)}
           </div>
         </div>
         <div style={{borderTop:`1px solid ${c.border}`,overflow:"hidden",padding:"10px 0",background:c.glow}}>
@@ -703,7 +720,7 @@ export default function App() {
           ?<div style={{textAlign:"center",padding:"72px 0",color:c.muted}}><div style={{fontSize:"56px",marginBottom:"16px",opacity:.4}}>⌕</div><p style={{fontWeight:"800",fontSize:"16px",marginBottom:"8px"}}>{t.noProducts}</p><p style={{fontSize:"12px",marginBottom:"20px"}}>Try a different keyword or category</p>{search&&<button className="btn-t" onClick={()=>{setSearch("");setSearchRaw("");setCategory("all");}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"8px 20px",borderRadius:"20px",cursor:"pointer",fontWeight:"700",fontSize:"12px"}}>Clear Search</button>}</div>
           :<div className="g3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:"14px"}}>
             {filtered.map((p,idx)=>(
-              <div key={p.id} className="card-wrap fu" onMouseEnter={()=>setHovered(p.id)} onMouseLeave={()=>setHovered(null)} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
+              <div key={p.id} className="card-wrap holo-card fu" onMouseEnter={()=>setHovered(p.id)} onMouseLeave={()=>setHovered(null)} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
                 style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,overflow:"hidden",animationDelay:`${idx*.04}s`,boxShadow:hovered===p.id?(theme==="dark"?"0 18px 56px rgba(0,0,0,.55)":"0 10px 36px rgba(0,0,0,.1)"):"0 2px 6px rgba(0,0,0,.05)"}}>
                 <div style={{height:"188px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
                   {(()=>{const g=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};const imgs=[p.image,g.cleaned].filter(Boolean);const ci=(cardImgIdx[p.id]||0)%Math.max(1,imgs.length);return<>
@@ -728,7 +745,7 @@ export default function App() {
                   <h3 style={{fontWeight:"700",fontSize:"13px",marginBottom:"4px",lineHeight:1.35,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.name}</h3>
                   <p style={{color:c.muted,fontSize:"11px",marginBottom:"11px",lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.description}</p>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"900",fontSize:"17px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"800",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span style={{fontWeight:"900",fontSize:"19px"}}>{fmt(p.price)}</span></div>}</div>
+                    <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"900",fontSize:"17px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"800",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span className={theme==="dark"?"neon-price":""} style={{fontWeight:"900",fontSize:"19px"}}>{fmt(p.price)}</span></div>}</div>
                     <button className="btn-t" onClick={e=>{e.stopPropagation();(p.stock>0||p.is_preorder)&&addToCart(p);}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"6px 11px",borderRadius:"7px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"11px",fontWeight:"700",opacity:(p.stock>0||p.is_preorder)?1:.4}}>+ {t.cart}</button>
                   </div>
                   {flags.b2b&&<p style={{fontSize:"8px",color:c.muted,marginTop:"3px",letterSpacing:".3px"}}>★ B2B tiers: 5–9 ▸ 10% off · 10+ ▸ 20% off</p>}
