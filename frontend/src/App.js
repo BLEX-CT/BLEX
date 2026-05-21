@@ -237,6 +237,7 @@ export default function App() {
   const [userBehavior,setUserBehavior]=useState(()=>LS('bx_beh')||{});
   const [vsLoading,setVsLoading]=useState(false);const visRef=useRef();
   const [voiceActive,setVoiceActive]=useState(false);
+  const [agentStatus,setAgentStatus]=useState({});
 
   const c=THEMES[theme]||THEMES.dark, t=T[lang], isRtl=t.dir==="rtl";
   const CATS=["all","electronics","accessories","clothing"];
@@ -456,6 +457,7 @@ export default function App() {
   const startEdit=p=>{setEditing(p);setBgPreview(null);setPGallery(p.image_gallery||null);setPForm({name:p.name,price:String(p.price),category:p.category||"electronics",description:p.description||"",stock:String(p.stock||0),image:p.image||"",sale_price:String(p.sale_price||""),sale_ends_at:p.sale_ends_at?p.sale_ends_at.slice(0,16):"",is_preorder:p.is_preorder||false,preorder_date:p.preorder_date||"",cost_price:String(p.cost_price||"")});setShowForm(true);fetchProductSuppliers(p.id);};
   const sendChat=async msg=>{if(!msg?.trim())return;const hist=chatMsgs;setChatMsgs(h=>[...h,{role:"user",content:msg}]);setChatInput("");setChatTyping(true);try{const r=await fetch(`${API}/ai/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,history:hist})});const d=await r.json();setChatMsgs(h=>[...h,{role:"assistant",content:d.response||"Sorry, something went wrong.",escalate:d.escalate}]);}catch{setChatMsgs(h=>[...h,{role:"assistant",content:"Connection error. Please try again."}]);}finally{setChatTyping(false);}};
   const fetchApStatus=async()=>{try{const r=await fetch(`${API}/autopilot/status`);const d=await r.json();setApStatus(d);setApEnabled(!!d.enabled);setApHour(d.hour??2);}catch{}};
+  const fetchAgentStatus=async()=>{try{const r=await fetch(`${API}/ai/agents/status`,{headers:authH()});const d=await r.json();setAgentStatus(d);}catch{}};
   const runAutoPilot=async()=>{setApRunning(true);try{const r=await fetch(`${API}/autopilot/run`,{method:"POST",headers:{"Content-Type":"application/json"}});const d=await r.json();setApStatus(s=>({...s,last_run:d}));addToast(`Auto-Pilot done: ${d.imported} imported, ${d.prices_updated} prices, ${d.descriptions_generated} descs`,"success");}catch{addToast("Auto-Pilot run failed","error");}finally{setApRunning(false);}};
   const saveApSchedule=async(en,hr)=>{try{await fetch(`${API}/autopilot/schedule`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:en,hour:hr})});}catch{}};
   const saveMaintenance=async enabled=>{try{const r=await fetch(API+"/maintenance",{method:"POST",headers:authH(),body:JSON.stringify({enabled,message:maintForm.msg,launch_date:maintForm.date||null})});const d=await r.json();if(r.ok){setMaintenance(d);addToast("Saved","success");}else addToast(d.error||"Error","error");}catch{addToast("Error","error");}};
@@ -1054,8 +1056,8 @@ export default function App() {
               </div>
             )}
             <div style={{display:"flex",gap:"3px",marginBottom:"20px",background:c.chip,padding:"3px",borderRadius:"9px",maxWidth:"100%",overflowX:"auto"}}>
-              {["products","orders","customers","coupons","b2b","returns","rfq","audit","analytics","promotions","suppliers","supplier-analytics","dropshipping","settings","trends"].map(tab=>(
-                <button key={tab} onClick={()=>{setAdminTab(tab);if(tab==="orders")fetchOrders();if(tab==="b2b")fetchB2BApps();if(tab==="returns")fetchRMA();if(tab==="rfq")fetchRFQ();if(tab==="audit")fetchAuditLogs();if(tab==="promotions")fetchPromos();if(tab==="suppliers")fetchSuppliers();if(tab==="supplier-analytics")fetchSupplierAnalytics();if(tab==="settings"){fetchApiKeys();fetchApStatus();}if(tab==="dropshipping")cjCheckStatus();}}
+              {["products","orders","customers","coupons","b2b","returns","rfq","audit","analytics","promotions","suppliers","supplier-analytics","dropshipping","settings","trends","ai-agents"].map(tab=>(
+                <button key={tab} onClick={()=>{setAdminTab(tab);if(tab==="orders")fetchOrders();if(tab==="b2b")fetchB2BApps();if(tab==="returns")fetchRMA();if(tab==="rfq")fetchRFQ();if(tab==="audit")fetchAuditLogs();if(tab==="promotions")fetchPromos();if(tab==="suppliers")fetchSuppliers();if(tab==="supplier-analytics")fetchSupplierAnalytics();if(tab==="settings"){fetchApiKeys();fetchApStatus();}if(tab==="dropshipping")cjCheckStatus();if(tab==="ai-agents")fetchAgentStatus();}}
                   style={{background:adminTab===tab?c.accent:"transparent",color:adminTab===tab?c.accentTxt:c.muted,border:"none",padding:"6px 14px",borderRadius:"6px",cursor:"pointer",fontWeight:"700",fontSize:"12px",transition:"all .2s",flexShrink:0,whiteSpace:"nowrap"}}>
                   {t[tab]||tab.charAt(0).toUpperCase()+tab.slice(1)}
                 </button>
@@ -1518,6 +1520,16 @@ export default function App() {
                   </div>
                 );})}
               </div>
+            </div>}
+            {adminTab==="ai-agents"&&<div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}}><h3 style={{fontWeight:"700"}}>🤖 AI Agents</h3><button className="btn-t" onClick={fetchAgentStatus} style={btnS({width:"auto",padding:"7px 16px",fontSize:"12px"})}>↻ Refresh</button></div>
+              {[{k:"sales_agent_last",icon:"💰",name:"Sales Agent",desc:"Personalized discounts & price negotiation",url:"/ai/sales-agent",body:{behavior:{}}},{k:"inventory_agent_last",icon:"📦",name:"Inventory Agent",desc:"Stock-out prediction & reorder alerts",url:"/ai/inventory-agent",body:{}},{k:"pricing_agent_last",icon:"📊",name:"Dynamic Pricing",desc:"Demand-based hourly price adjustments",url:"/ai/pricing-agent",body:{}}].map(ag=>{
+                const d=agentStatus[ag.k];
+                return<div key={ag.k} style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"13px 15px",marginBottom:"9px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:d?"8px":"0"}}><span style={{fontSize:"22px"}}>{ag.icon}</span><div style={{flex:1}}><p style={{fontWeight:"700",fontSize:"13px"}}>{ag.name}</p><p style={{fontSize:"11px",color:c.muted}}>{ag.desc}</p></div><span style={{fontSize:"10px",fontWeight:"700",padding:"3px 8px",borderRadius:"20px",background:d?"#22c55e22":"#88888822",color:d?"#22c55e":c.muted,marginRight:"8px"}}>{d?"ACTIVE":"IDLE"}</span><button className="btn-t" onClick={async()=>{addToast("Running agent…","info");try{await fetch(`${API}${ag.url}`,{method:"POST",headers:authH(),body:JSON.stringify(ag.body)});fetchAgentStatus();addToast("Done ✓","success");}catch{addToast("Error","error");}}} style={{background:c.accent,color:c.accentTxt,border:"none",borderRadius:"7px",padding:"5px 12px",cursor:"pointer",fontSize:"11px",fontWeight:"700",flexShrink:0}}>▶ Run</button></div>
+                  {d&&<div style={{background:c.chip,borderRadius:"8px",padding:"8px 10px",fontSize:"11px",color:c.muted}}><span>Last run: {new Date(d.ran_at).toLocaleString()}</span>{d.action&&<span> · Action: <b style={{color:c.text}}>{d.action}</b></span>}{d.discount_pct>0&&<span> · Discount: <b style={{color:"#22c55e"}}>{d.discount_pct}%</b></span>}{d.applied!=null&&<span> · Price changes: <b style={{color:c.text}}>{d.applied}</b></span>}{d.predictions&&<span> · Reorders: <b style={{color:c.text}}>{(d.predictions||[]).filter(p=>p.action==="reorder_now").length}</b></span>}</div>}
+                </div>;
+              })}
             </div>}
           </>
         )}

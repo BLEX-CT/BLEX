@@ -1825,7 +1825,7 @@ async function getCJImage(name) {
 }
 
 app.post('/autopilot/run', async (req, res) => {
-  const results = { imported: 0, prices_updated: 0, descriptions_generated: 0, webhooks_sent: 0, errors: [] };
+  const results = { imported: 0, prices_updated: 0, descriptions_generated: 0, webhooks_sent: 0, inventory_orders: 0, price_changes: 0, errors: [] };
   try {
     const hasKey = !!process.env.ANTHROPIC_API_KEY;
 
@@ -1888,6 +1888,25 @@ app.post('/autopilot/run', async (req, res) => {
         if (results.descriptions_generated) await auditLog('autopilot', `Generated ${results.descriptions_generated} descriptions`);
       }
     } catch (e) { results.errors.push('descriptions:' + e.message.slice(0, 50)); }
+
+    // e. Inventory Agent - predict stock-outs
+    if (hasKey) try {
+      const { rows: ap } = await pool.query('SELECT id,name,stock FROM products WHERE stock>=0 ORDER BY stock ASC LIMIT 20');
+      const { rows: as } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '30 days' GROUP BY item->>'id'`);
+      const asm=Object.fromEntries(as.map(s=>[s.pid,Number(s.sold)]));
+      const at=await callClaude(`Flag products needing reorder. Data:${JSON.stringify(ap.map(p=>({id:p.id,name:p.name,stock:p.stock,sold_30d:asm[String(p.id)]||0})))}\nReturn ONLY JSON:{"reorder":[{"product_id":1,"days_left":3}]}`,512);
+      const am=at.match(/\{[\s\S]*\}/);if(am){const ar=JSON.parse(am[0]);results.inventory_orders=(ar.reorder||[]).length;if(results.inventory_orders)await auditLog('inventory_agent',`Autopilot: ${results.inventory_orders} need reorder`);}
+    } catch(e){results.errors.push('inventory:'+e.message.slice(0,50));}
+
+    // f. Pricing Agent - dynamic price adjustments
+    if (hasKey) try {
+      const { rows: pp } = await pool.query('SELECT id,name,price,cost_price,stock FROM products ORDER BY id LIMIT 20');
+      const { rows: pd } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '7 days' GROUP BY item->>'id'`);
+      const pdm=Object.fromEntries(pd.map(d=>[d.pid,Number(d.sold)]));
+      const pdata=pp.map(p=>({id:p.id,name:p.name,price:Number(p.price),cost:Number(p.cost_price||p.price*0.6),stock:p.stock,sold_7d:pdm[String(p.id)]||0}));
+      const pt=await callClaude(`Dynamic pricing: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data:${JSON.stringify(pdata)}\nReturn ONLY JSON:{"changes":[{"product_id":1,"old_price":100,"new_price":115}]}`,768);
+      const pm=pt.match(/\{[\s\S]*\}/);if(pm){for(const ch of(JSON.parse(pm[0]).changes||[])){const orig=pdata.find(p=>p.id===ch.product_id);if(orig&&ch.new_price>=orig.cost&&Math.abs(ch.new_price-ch.old_price)/ch.old_price>0.02){await pool.query('UPDATE products SET price=$1 WHERE id=$2',[ch.new_price,ch.product_id]);await auditLog('pricing_agent',`${orig.name}:${ch.old_price}→${ch.new_price}`);results.price_changes++;}}}
+    } catch(e){results.errors.push('pricing:'+e.message.slice(0,50));}
 
     const summary = { ...results, ran_at: new Date().toISOString() };
     await apSet('last_run', JSON.stringify(summary));
@@ -2094,6 +2113,70 @@ app.post('/ai/size-fit', async (req, res) => {
     const text = d.content?.[0]?.text || '';
     const m = text.match(/\{[\s\S]*\}/);
     res.json(m ? JSON.parse(m[0]) : { size: 'M', confidence: 'medium', note: '' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── AI Agents ───────────────────────────────────────────────────────────────
+
+app.get('/ai/agents/status', auth, async (req, res) => {
+  try {
+    const [s, inv, pr] = await Promise.all([apGet('sales_agent_last'), apGet('inventory_agent_last'), apGet('pricing_agent_last')]);
+    res.json({ sales_agent_last: s ? JSON.parse(s) : null, inventory_agent_last: inv ? JSON.parse(inv) : null, pricing_agent_last: pr ? JSON.parse(pr) : null });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/ai/sales-agent', auth, async (req, res) => {
+  try {
+    const { email, behavior = {} } = req.body;
+    const { cart_items = [], wishlist = [], views = [], query = '' } = behavior;
+    let pastOrders = [];
+    if (email) { const { rows } = await pool.query('SELECT id,total,created_at FROM orders WHERE email=$1 ORDER BY created_at DESC LIMIT 5', [email]); pastOrders = rows; }
+    const cartValue = cart_items.reduce((s, i) => s + (Number(i.price) * (i.qty || 1)), 0);
+    const text = await callClaude(`Sales AI for BLEX Saudi e-commerce. Customer: email=${email||'guest'}, cart=${cartValue} SAR (${cart_items.length} items), wishlist=${wishlist.length}, past orders=${pastOrders.length}, views=${views.length}, query="${query}". Decide ONE: discount_offer (cart abandon/loyalty), price_negotiate (wants better price), reorder_prompt (repeat buyer), none. Return ONLY JSON: {"action":"discount_offer","message":"<personalized EN message>","discount_pct":10,"confidence":"high"}`, 512);
+    const m = text.match(/\{[\s\S]*\}/);
+    const result = m ? JSON.parse(m[0]) : { action: 'none', message: '', discount_pct: 0, confidence: 'low' };
+    await apSet('sales_agent_last', JSON.stringify({ ...result, ran_at: new Date().toISOString() }));
+    await auditLog('sales_agent', `Action: ${result.action} (${result.confidence})`);
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/ai/inventory-agent', auth, async (req, res) => {
+  try {
+    const { rows: prods } = await pool.query('SELECT id,name,stock,category FROM products WHERE stock>=0 ORDER BY stock ASC LIMIT 30');
+    const { rows: sales } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '30 days' GROUP BY item->>'id'`);
+    const sm = Object.fromEntries(sales.map(s => [s.pid, Number(s.sold)]));
+    const data = prods.map(p => ({ id: p.id, name: p.name, stock: p.stock, sold_30d: sm[String(p.id)] || 0 }));
+    const text = await callClaude(`Inventory AI. Flag products needing reorder (stock<20 or daily_velocity>stock/14). Data: ${JSON.stringify(data)}\nReturn ONLY JSON: {"predictions":[{"product_id":1,"product_name":"X","stock":5,"daily_velocity":0.5,"days_until_stockout":10,"action":"reorder_now","reorder_qty":50}]}`, 1024);
+    const m = text.match(/\{[\s\S]*\}/);
+    const result = m ? JSON.parse(m[0]) : { predictions: [] };
+    const criticals = (result.predictions || []).filter(p => p.action === 'reorder_now').length;
+    await apSet('inventory_agent_last', JSON.stringify({ ...result, ran_at: new Date().toISOString() }));
+    if (criticals) await auditLog('inventory_agent', `${criticals} products flagged for reorder`);
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/ai/pricing-agent', auth, async (req, res) => {
+  try {
+    const { rows: prods } = await pool.query('SELECT id,name,price,cost_price,stock,category FROM products ORDER BY id LIMIT 30');
+    const { rows: demand } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '7 days' GROUP BY item->>'id'`);
+    const dm = Object.fromEntries(demand.map(d => [d.pid, Number(d.sold)]));
+    const data = prods.map(p => ({ id: p.id, name: p.name, price: Number(p.price), cost: Number(p.cost_price || p.price * 0.6), stock: p.stock, sold_7d: dm[String(p.id)] || 0 }));
+    const text = await callClaude(`Dynamic pricing AI. Rules: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data: ${JSON.stringify(data)}\nReturn ONLY JSON: {"changes":[{"product_id":1,"old_price":100,"new_price":115,"reason":"high demand"}]}`, 1024);
+    const m = text.match(/\{[\s\S]*\}/);
+    const changes = m ? (JSON.parse(m[0]).changes || []) : [];
+    let applied = 0;
+    for (const ch of changes) {
+      const orig = data.find(p => p.id === ch.product_id);
+      if (orig && ch.new_price >= orig.cost && Math.abs(ch.new_price - ch.old_price) / ch.old_price > 0.02) {
+        await pool.query('UPDATE products SET price=$1 WHERE id=$2', [ch.new_price, ch.product_id]);
+        await auditLog('pricing_agent', `${orig.name}: ${ch.old_price}→${ch.new_price} SAR (${ch.reason})`);
+        applied++;
+      }
+    }
+    await apSet('pricing_agent_last', JSON.stringify({ changes, applied, ran_at: new Date().toISOString() }));
+    res.json({ changes, applied });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
