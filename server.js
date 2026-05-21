@@ -2116,6 +2116,17 @@ app.post('/ai/size-fit', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── Complete the Look (Smart Bundle AI) ────────────────────────────────────
+
+app.post('/ai/complete-look', async (req, res) => {
+  try {
+    const { name, category } = req.body;
+    const text = await callClaude(`Personal stylist AI for BLEX e-commerce. Customer is viewing: "${name}" (${category}). Suggest 3 complementary products from different categories (${['electronics','accessories','clothing'].filter(c=>c!==category).join(', ')}) that pair well with this. Return ONLY JSON: {"products":[{"name":"<product name>","category":"accessories","reason":"<short reason>","price":150}]}`, 512);
+    const m = text.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : { products: [] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── AI Agents ───────────────────────────────────────────────────────────────
 
 app.get('/ai/agents/status', authenticate, async (req, res) => {

@@ -11,8 +11,8 @@ const getCustomers  = ()=>LS('bx_c')||[];
 const getLocalOrders= ()=>LS('bx_o')||[];
 const setLocalOrders= v=>LSS('bx_o',v);
 const nextNum = ()=>{const n=(LS('bx_n')||1000)+1;LSS('bx_n',n);return `BLEX-${n}`;};
-const getTier = p=>p>=2000?'gold':p>=500?'silver':'bronze';
-const TIER = {bronze:{label:'Bronze',color:'#cd7f32',next:500},silver:{label:'Silver',color:'#aaa',next:2000},gold:{label:'Gold',color:'#f59e0b',next:null}};
+const getTier = p=>p>=10000?'diamond':p>=5000?'platinum':p>=2000?'gold':p>=500?'silver':'bronze';
+const TIER = {bronze:{label:'Bronze',color:'#cd7f32',next:500},silver:{label:'Silver',color:'#c0c0c0',next:2000},gold:{label:'Gold',color:'#f59e0b',next:5000},platinum:{label:'Platinum',color:'#a0e0ff',next:10000},diamond:{label:'Diamond',color:'#00d4ff',next:null}};
 
 function BarChart({data,c}){
   const max=Math.max(...data.map(d=>d.v),1);
@@ -230,7 +230,7 @@ export default function App() {
   const [trackLoading,setTrackLoading]=useState(false);
   const langRef=useRef();
   const userManualLang=useRef(false);
-  const chatRef=useRef();
+  const chatRef=useRef();const arRef=useRef();
   const logoTaps=useRef(0),logoTimer=useRef(null);
   const [heroImage,setHeroImage]=useState(LS('bx_hi')||"");
   const [chatTheme,setChatTheme]=useState(LS('bx_ct')||'default');
@@ -252,6 +252,8 @@ export default function App() {
   const [voiceActive,setVoiceActive]=useState(false);
   const [agentStatus,setAgentStatus]=useState({});
   const [morphIdx,setMorphIdx]=useState(0);
+  const [arOpen,setArOpen]=useState(false);
+  const [bundleSugg,setBundleSugg]=useState(null);const [bundleLoading,setBundleLoading]=useState(false);
 
   const c=THEMES[theme]||THEMES.dark, t=T[lang], isRtl=t.dir==="rtl";
   const CATS=["all","electronics","accessories","clothing"];
@@ -286,6 +288,9 @@ export default function App() {
   useEffect(()=>{if(!wishlist.length||!sp.length)return;const prev=LS('bx_wl_prices')||{};const now={};sp.forEach(p=>{now[p.id]=Number(p.price);});const alerts=[];wishlist.forEach(id=>{if(prev[id]&&now[id]&&now[id]<prev[id]*0.9)alerts.push(`Price drop! ${sp.find(p=>p.id===id)?.name} now ${fmt(now[id])}`);});if(alerts.length)alerts.forEach(a=>addToast(a,"success"));LSS('bx_wl_prices',now);},[sp]); // eslint-disable-line
 
   useEffect(()=>{const iv=setInterval(()=>setMorphIdx(i=>(i+1)%4),2800);return()=>clearInterval(iv);},[]);
+  useEffect(()=>{if(!arOpen)return;let s;navigator.mediaDevices?.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{s=stream;if(arRef.current)arRef.current.srcObject=stream;}).catch(()=>{});return()=>s?.getTracks().forEach(t=>t.stop());},[arOpen]);
+  useEffect(()=>{if(selectedProduct)fetchBundle(selectedProduct);},[selectedProduct]); // eslint-disable-line
+  useEffect(()=>{if(!user||!userPts)return;const tier=getTier(userPts);const prev=LS('bx_ltier');if(prev&&prev!==tier){addToast(`🎉 You've reached ${TIER[tier].label} status! New perks unlocked.`,"success");}LSS('bx_ltier',tier);},[userPts]); // eslint-disable-line
   /* b2b tiered pricing */
   const getTieredPrice=(price,qty)=>qty>=10?Number(price)*.8:qty>=5?Number(price)*.9:Number(price);
 
@@ -470,9 +475,10 @@ export default function App() {
   };
   const delProduct=async id=>{if(!window.confirm(t.confirmDelete))return;try{await fetch(`${API}/products/${id}`,{method:"DELETE"});setProducts(p=>(Array.isArray(p)?p:[]).filter(x=>x.id!==id));}catch{}};
   const startEdit=p=>{setEditing(p);setBgPreview(null);setPGallery(p.image_gallery||null);setPForm({name:p.name,price:String(p.price),category:p.category||"electronics",description:p.description||"",stock:String(p.stock||0),image:p.image||"",sale_price:String(p.sale_price||""),sale_ends_at:p.sale_ends_at?p.sale_ends_at.slice(0,16):"",is_preorder:p.is_preorder||false,preorder_date:p.preorder_date||"",cost_price:String(p.cost_price||"")});setShowForm(true);fetchProductSuppliers(p.id);};
-  const sendChat=async msg=>{if(!msg?.trim())return;const hist=chatMsgs;setChatMsgs(h=>[...h,{role:"user",content:msg}]);setChatInput("");setChatTyping(true);try{const r=await fetch(`${API}/ai/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,history:hist})});const d=await r.json();setChatMsgs(h=>[...h,{role:"assistant",content:d.response||"Sorry, something went wrong.",escalate:d.escalate}]);}catch{setChatMsgs(h=>[...h,{role:"assistant",content:"Connection error. Please try again."}]);}finally{setChatTyping(false);}};
+  const sendChat=async msg=>{if(!msg?.trim())return;const hist=chatMsgs;setChatMsgs(h=>[...h,{role:"user",content:msg}]);setChatInput("");setChatTyping(true);try{const r=await fetch(`${API}/ai/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,history:hist})});const d=await r.json();setChatMsgs(h=>[...h,{role:"assistant",content:d.response||"Sorry, something went wrong.",escalate:d.escalate,product:sp.find(p=>d.response&&p.name&&d.response.toLowerCase().includes(p.name.toLowerCase().slice(0,10)))||null}]);}catch{setChatMsgs(h=>[...h,{role:"assistant",content:"Connection error. Please try again."}]);}finally{setChatTyping(false);}};
   const fetchApStatus=async()=>{try{const r=await fetch(`${API}/autopilot/status`);const d=await r.json();setApStatus(d);setApEnabled(!!d.enabled);setApHour(d.hour??2);}catch{}};
   const fetchAgentStatus=async()=>{try{const r=await fetch(`${API}/ai/agents/status`,{headers:authH()});const d=await r.json();setAgentStatus(d);}catch{}};
+  const fetchBundle=async p=>{if(!p)return;setBundleLoading(true);setBundleSugg(null);try{const r=await fetch(`${API}/ai/complete-look`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:p.name,category:p.category})});const d=await r.json();setBundleSugg(d);}catch{}finally{setBundleLoading(false);}};
   const runAutoPilot=async()=>{setApRunning(true);try{const r=await fetch(`${API}/autopilot/run`,{method:"POST",headers:{"Content-Type":"application/json"}});const d=await r.json();setApStatus(s=>({...s,last_run:d}));addToast(`Auto-Pilot done: ${d.imported} imported, ${d.prices_updated} prices, ${d.descriptions_generated} descs`,"success");}catch{addToast("Auto-Pilot run failed","error");}finally{setApRunning(false);}};
   const saveApSchedule=async(en,hr)=>{try{await fetch(`${API}/autopilot/schedule`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:en,hour:hr})});}catch{}};
   const saveMaintenance=async enabled=>{try{const r=await fetch(API+"/maintenance",{method:"POST",headers:authH(),body:JSON.stringify({enabled,message:maintForm.msg,launch_date:maintForm.date||null})});const d=await r.json();if(r.ok){setMaintenance(d);addToast("Saved","success");}else addToast(d.error||"Error","error");}catch{addToast("Error","error");}};
@@ -796,6 +802,7 @@ export default function App() {
             <div style={{display:"flex",gap:"9px",flexWrap:"wrap"}}>
               <button className="btn-t" onClick={()=>{if(p.stock>0||p.is_preorder){setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+pdQty}:i):[...pv,{...p,qty:pdQty}];});setCartOpen(true);addToast(p.name.substring(0,22)+" added","success");}}} disabled={p.stock===0&&!p.is_preorder} style={{...btnP({flex:1,minWidth:"140px",padding:"12px 20px",fontSize:"14px",opacity:(p.stock===0&&!p.is_preorder)?.4:1})}}>{p.is_preorder?"Pre-Order":t.addToCart}</button>
               <button className="btn-t" onClick={()=>setView("store")} style={{...btnS({width:"auto",padding:"12px 18px",fontSize:"13px"})}}>{isRtl?"→":"←"} {t.store}</button>
+              {(p.category==="clothing"||p.category==="accessories")&&<button className="btn-t" onClick={()=>setArOpen(true)} style={{background:"linear-gradient(135deg,#7b2ff7,#00d4ff)",color:"#fff",border:"none",borderRadius:"9px",padding:"12px 18px",cursor:"pointer",fontWeight:"700",fontSize:"13px"}}>👁 Try On</button>}
             </div>
             {flags.b2b&&<p style={{fontSize:"11px",color:c.muted}}>★ B2B: 5–9 units ▸ 10% off · 10+ units ▸ 20% off</p>}
             {p.category==="clothing"&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`,marginTop:"4px"}}><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"8px"}}>📏 Smart Size & Fit</p><div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>{[["chest","Chest (cm)"],["waist","Waist (cm)"],["height","Height (cm)"]].map(([k,l])=><div key={k} style={{flex:1}}><p style={{fontSize:"9px",color:c.muted,fontWeight:"700",marginBottom:"2px",textTransform:"uppercase"}}>{l}</p><input type="number" value={sizeM[k]} onChange={e=>setSizeM(m=>({...m,[k]:e.target.value}))} placeholder="e.g. 90" style={{...inp(false),padding:"6px 8px",fontSize:"12px"}}/></div>)}</div><button className="btn-t" onClick={()=>askSize(p)} disabled={sizeLoading} style={btnP({padding:"7px 14px",fontSize:"12px",opacity:sizeLoading?.5:1})}>{sizeLoading?"⏳ Analyzing…":"Get My Size"}</button>{sizeRes&&<div style={{marginTop:"8px",background:c.card,borderRadius:"7px",padding:"10px",border:`1px solid ${c.border}`}}><span style={{fontWeight:"900",fontSize:"22px",color:c.accent}}>{sizeRes.size}</span><span style={{fontSize:"11px",color:c.muted,marginLeft:"8px"}}>({sizeRes.confidence} confidence)</span>{sizeRes.note&&<p style={{fontSize:"11px",color:c.muted,marginTop:"4px"}}>{sizeRes.note}</p>}</div>}</div>}
@@ -803,6 +810,11 @@ export default function App() {
           </div>
         </div>
         {p.image_gallery&&(()=>{const g=typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery;const imgs=[{url:g.original,label:"Original",bg:c.chip},{url:g.cleaned,label:"Cleaned",bg:"#fff",text:""},{url:g.cleaned,label:g.promo1?.angle||"Benefit",bg:"#fff",text:g.promo1?.text},{url:g.cleaned,label:g.promo2?.angle||"Lifestyle",bg:"#fff",text:g.promo2?.text}].filter(x=>x.url);return imgs.length?<div style={{marginBottom:"28px"}}><h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"13px"}}>🎨 Image Gallery</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"11px"}}>{imgs.map((im,i)=><div key={i} style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"hidden"}}><div onClick={()=>setPdZoom(im.url)} style={{height:"140px",background:im.bg,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-in"}}><img src={im.url} alt={im.label} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} onError={e=>e.target.parentNode.style.display="none"}/></div><div style={{padding:"10px"}}><p style={{fontWeight:"800",fontSize:"10px",color:c.muted,textTransform:"uppercase",letterSpacing:".5px",marginBottom:im.text?"5px":"0"}}>{im.label}</p>{im.text&&<p style={{fontSize:"11px",color:c.text,lineHeight:1.5}}>{im.text}</p>}</div></div>)}</div></div>:null;})()}
+        {(bundleSugg?.products?.length>0||bundleLoading)&&<div style={{marginBottom:"28px"}}>
+          <h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"3px"}}>✨ Complete the Look</h2>
+          <p style={{fontSize:"11px",color:c.muted,marginBottom:"12px"}}>AI-curated bundle · 10% off when added together {bundleLoading?"⏳":""}</p>
+          {bundleSugg?.products&&<><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"9px",marginBottom:"11px"}}>{bundleSugg.products.map((b,i)=>{const bp=sp.find(x=>x.id===b.id)||sp.find(x=>x.name&&b.name&&x.name.toLowerCase().includes(b.name.toLowerCase().slice(0,8)));return bp?<div key={i} style={{background:c.card,borderRadius:"11px",border:`1px solid ${c.border}`,overflow:"hidden"}}><div style={{height:"80px",background:c.chip,display:"flex",alignItems:"center",justifyContent:"center"}}>{bp.image?<img src={bp.image} alt={bp.name} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"28px"}}>{CAT_ICONS[bp.category]||"◈"}</span>}</div><div style={{padding:"7px"}}><p style={{fontWeight:"700",fontSize:"10px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bp.name}</p><p style={{fontSize:"10px",color:c.accent,fontWeight:"800"}}>{fmt(bp.price)}</p>{b.reason&&<p style={{fontSize:"9px",color:c.muted,marginTop:"2px"}}>{b.reason}</p>}</div></div>:null;})} </div><button className="btn-t" onClick={()=>{bundleSugg.products.forEach(b=>{const bp=sp.find(x=>x.id===b.id)||sp.find(x=>x.name&&b.name&&x.name.toLowerCase().includes(b.name.toLowerCase().slice(0,8)));if(bp&&bp.stock>0)setCart(pv=>{const ex=pv.find(i=>i.id===bp.id);return ex?pv:[...pv,{...bp,qty:1}];});});setCartOpen(true);addToast("Bundle added! 10% off applied at checkout 🎉","success");}} style={{...btnP({width:"auto",padding:"10px 24px",fontSize:"13px",background:"linear-gradient(135deg,#7b2ff7,#00d4ff)"})}}> + Add Full Bundle — 10% off</button></>}
+        </div>}
         {rel.length>0&&<><h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"13px"}}>You may also like</h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:"11px"}}>
             {rel.map(r=>(
@@ -908,6 +920,7 @@ export default function App() {
               {flags.wallet&&<button className="btn-t" onClick={()=>setView("wallet")} style={btnS({width:"auto",padding:"5px 14px",fontSize:"11px",marginTop:"6px"})}>💳 Wallet</button>}
             </div>
           </div>
+          {(()=>{const tier=getTier(userPts);const ti=TIER[tier];const prev={bronze:0,silver:500,gold:2000,platinum:5000,diamond:10000}[tier]||0;const pct=ti.next?Math.min(100,((userPts-prev)/(ti.next-prev))*100):100;const nextLabel={bronze:"Silver",silver:"Gold",gold:"Platinum",platinum:"Diamond"}[tier];return<div style={{borderTop:`1px solid ${c.border}`,paddingTop:"13px",marginTop:"4px"}}><div style={{display:"flex",justifyContent:"space-between",fontSize:"10px",fontWeight:"700",marginBottom:"6px"}}><span style={{color:ti.color}}>◆ {ti.label}</span><span style={{color:c.muted}}>{ti.next?`${userPts} / ${ti.next} pts`:"✦ MAX TIER"}</span></div><div style={{height:"7px",background:c.chip,borderRadius:"4px",overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${ti.color},#00d4ff)`,borderRadius:"4px",transition:"width .9s ease"}}/></div>{nextLabel&&<p style={{fontSize:"9px",color:c.muted,marginTop:"4px"}}>{ti.next-userPts} pts to {nextLabel} · Unlocks exclusive perks</p>}</div>;})()}
         </div>
         <h3 style={{fontWeight:"700",fontSize:"15px",marginBottom:"12px"}}>{t.orderHistory}</h3>
         {getLocalOrders().filter(o=>o.customerEmail===user.email).length===0
@@ -1552,6 +1565,11 @@ export default function App() {
         )}
       </div>
     )}
+    {arOpen&&<div className="fi" style={{position:"fixed",inset:0,background:"rgba(0,0,0,.96)",zIndex:9998,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"24px"}}>
+      <button onClick={()=>setArOpen(false)} style={{position:"absolute",top:"18px",right:"22px",background:"none",border:"none",color:"#fff",fontSize:"28px",cursor:"pointer",lineHeight:1}}>✕</button>
+      <video ref={arRef} autoPlay playsInline muted style={{width:"min(380px,90vw)",borderRadius:"22px",border:"2px solid rgba(0,212,255,.4)",boxShadow:"0 0 60px rgba(0,212,255,.15)",background:"#000"}}/>
+      <div style={{textAlign:"center",background:"rgba(0,212,255,.08)",border:"1px solid rgba(0,212,255,.35)",borderRadius:"16px",padding:"16px 32px",backdropFilter:"blur(14px)"}}><p style={{color:"#00d4ff",fontWeight:"800",fontSize:"15px",letterSpacing:"3px",animation:"neonPulse 2s ease-in-out infinite"}}>✦ AR TRY-ON</p><p style={{color:"rgba(255,255,255,.6)",fontSize:"12px",marginTop:"5px"}}>Augmented reality experience — coming soon</p></div>
+    </div>}
     {pdZoom&&<div onClick={()=>setPdZoom(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}}><img src={pdZoom} alt="zoom" style={{maxWidth:"92vw",maxHeight:"90vh",objectFit:"contain",borderRadius:"10px",boxShadow:"0 8px 60px rgba(0,0,0,.8)"}}/><button onClick={()=>setPdZoom(null)} style={{position:"absolute",top:"18px",right:"22px",background:"none",border:"none",color:"#fff",fontSize:"30px",cursor:"pointer",lineHeight:1}}>✕</button></div>}
     {imgMgrProd&&(()=>{
       const p=imgMgrProd;
@@ -1589,7 +1607,7 @@ export default function App() {
         <button onClick={()=>setChatOpen(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:"18px",padding:"2px",lineHeight:1}}>✕</button>
       </div>
       <div ref={chatRef} style={{flex:1,overflowY:"auto",padding:"12px",display:"flex",flexDirection:"column",gap:"8px"}}>
-        {chatMsgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}><div style={{maxWidth:"84%",padding:"9px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"linear-gradient(135deg,#7c3aed,#3b82f6)":c.card,color:m.role==="user"?"#fff":c.text,fontSize:"12px",lineHeight:1.55,border:m.role==="user"?"none":`1px solid ${c.border}`}}>{m.content}{m.escalate&&<span style={{display:"block",marginTop:"5px",fontSize:"10px",color:"#f59e0b",fontWeight:"700"}}>⚠ Escalated to human support</span>}</div></div>)}
+        {chatMsgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}><div style={{maxWidth:"84%",padding:"9px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"linear-gradient(135deg,#7c3aed,#3b82f6)":c.card,color:m.role==="user"?"#fff":c.text,fontSize:"12px",lineHeight:1.55,border:m.role==="user"?"none":`1px solid ${c.border}`}}>{m.content}{m.escalate&&<span style={{display:"block",marginTop:"5px",fontSize:"10px",color:"#f59e0b",fontWeight:"700"}}>⚠ Escalated to human support</span>}{m.product&&<div style={{marginTop:"7px",background:c.chip,borderRadius:"8px",padding:"7px 9px",cursor:"pointer",display:"flex",gap:"7px",alignItems:"center",border:`1px solid ${c.border}`}} onClick={()=>{setSelectedProduct(m.product);setPdQty(1);setView("product");setChatOpen(false);}}>{m.product.image&&<img src={m.product.image} alt="" style={{width:"32px",height:"32px",objectFit:"cover",borderRadius:"5px"}} onError={e=>e.target.style.display="none"}/>}<div><p style={{fontSize:"10px",fontWeight:"700",color:c.text}}>{m.product.name}</p><p style={{fontSize:"10px",color:c.accent,fontWeight:"700"}}>{fmt(m.product.price)}</p></div></div>}</div></div>)}
         {chatTyping&&<div style={{display:"flex",justifyContent:"flex-start"}}><div style={{padding:"10px 14px",borderRadius:"12px 12px 12px 2px",background:c.card,border:`1px solid ${c.border}`,display:"flex",gap:"4px",alignItems:"center"}}>{[0,1,2].map(i=><span key={i} style={{width:"6px",height:"6px",borderRadius:"50%",background:c.muted,animation:"pulse 1.2s ease infinite",animationDelay:`${i*0.2}s`}}/>)}</div></div>}
       </div>
       {chatMsgs.length<=1&&<div style={{padding:"0 12px 8px",display:"flex",gap:"5px",flexWrap:"wrap",flexShrink:0}}>
