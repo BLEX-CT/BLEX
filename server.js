@@ -301,6 +301,7 @@ async function initDB() {
     );
   }
   await pool.query(`INSERT INTO feature_flags (name, enabled, description) VALUES ('maintenance_mode', false, 'Store maintenance / coming soon mode') ON CONFLICT (name) DO NOTHING`);
+  await pool.query(`UPDATE products SET price=99 WHERE price::text='NaN' OR price IS NULL`);
 }
 
 initDB().catch(console.error);
@@ -1905,7 +1906,7 @@ app.post('/autopilot/run', async (req, res) => {
       const pdm=Object.fromEntries(pd.map(d=>[d.pid,Number(d.sold)]));
       const pdata=pp.map(p=>({id:p.id,name:p.name,price:Number(p.price),cost:Number(p.cost_price||p.price*0.6),stock:p.stock,sold_7d:pdm[String(p.id)]||0}));
       const pt=await callClaude(`Dynamic pricing: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data:${JSON.stringify(pdata)}\nReturn ONLY JSON:{"changes":[{"product_id":1,"old_price":100,"new_price":115}]}`,768);
-      const pm=pt.match(/\{[\s\S]*\}/);if(pm){for(const ch of(JSON.parse(pm[0]).changes||[])){const orig=pdata.find(p=>p.id===ch.product_id);if(orig&&ch.new_price>=orig.cost&&Math.abs(ch.new_price-ch.old_price)/ch.old_price>0.02){await pool.query('UPDATE products SET price=$1 WHERE id=$2',[ch.new_price,ch.product_id]);await auditLog('pricing_agent',`${orig.name}:${ch.old_price}→${ch.new_price}`);results.price_changes++;}}}
+      const pm=pt.match(/\{[\s\S]*\}/);if(pm){for(const ch of(JSON.parse(pm[0]).changes||[])){const orig=pdata.find(p=>p.id===ch.product_id);if(orig&&typeof ch.new_price==='number'&&isFinite(ch.new_price)&&ch.new_price>=orig.cost&&Math.abs(ch.new_price-ch.old_price)/ch.old_price>0.02){await pool.query('UPDATE products SET price=$1 WHERE id=$2',[ch.new_price,ch.product_id]);await auditLog('pricing_agent',`${orig.name}:${ch.old_price}→${ch.new_price}`);results.price_changes++;}}}
     } catch(e){results.errors.push('pricing:'+e.message.slice(0,50));}
 
     const summary = { ...results, ran_at: new Date().toISOString() };
@@ -2180,7 +2181,7 @@ app.post('/ai/pricing-agent', authenticate, async (req, res) => {
     let applied = 0;
     for (const ch of changes) {
       const orig = data.find(p => p.id === ch.product_id);
-      if (orig && ch.new_price >= orig.cost && Math.abs(ch.new_price - ch.old_price) / ch.old_price > 0.02) {
+      if (orig && typeof ch.new_price === 'number' && isFinite(ch.new_price) && ch.new_price >= orig.cost && Math.abs(ch.new_price - ch.old_price) / ch.old_price > 0.02) {
         await pool.query('UPDATE products SET price=$1 WHERE id=$2', [ch.new_price, ch.product_id]);
         await auditLog('pricing_agent', `${orig.name}: ${ch.old_price}→${ch.new_price} SAR (${ch.reason})`);
         applied++;
