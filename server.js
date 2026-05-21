@@ -2118,14 +2118,14 @@ app.post('/ai/size-fit', async (req, res) => {
 
 // ─── AI Agents ───────────────────────────────────────────────────────────────
 
-app.get('/ai/agents/status', auth, async (req, res) => {
+app.get('/ai/agents/status', authenticate, async (req, res) => {
   try {
     const [s, inv, pr] = await Promise.all([apGet('sales_agent_last'), apGet('inventory_agent_last'), apGet('pricing_agent_last')]);
     res.json({ sales_agent_last: s ? JSON.parse(s) : null, inventory_agent_last: inv ? JSON.parse(inv) : null, pricing_agent_last: pr ? JSON.parse(pr) : null });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/ai/sales-agent', auth, async (req, res) => {
+app.post('/ai/sales-agent', authenticate, async (req, res) => {
   try {
     const { email, behavior = {} } = req.body;
     const { cart_items = [], wishlist = [], views = [], query = '' } = behavior;
@@ -2141,7 +2141,7 @@ app.post('/ai/sales-agent', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/ai/inventory-agent', auth, async (req, res) => {
+app.post('/ai/inventory-agent', authenticate, async (req, res) => {
   try {
     const { rows: prods } = await pool.query('SELECT id,name,stock,category FROM products WHERE stock>=0 ORDER BY stock ASC LIMIT 30');
     const { rows: sales } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '30 days' GROUP BY item->>'id'`);
@@ -2157,7 +2157,7 @@ app.post('/ai/inventory-agent', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/ai/pricing-agent', auth, async (req, res) => {
+app.post('/ai/pricing-agent', authenticate, async (req, res) => {
   try {
     const { rows: prods } = await pool.query('SELECT id,name,price,cost_price,stock,category FROM products ORDER BY id LIMIT 30');
     const { rows: demand } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '7 days' GROUP BY item->>'id'`);
