@@ -290,6 +290,7 @@ export default function App() {
   useEffect(()=>{const iv=setInterval(()=>setMorphIdx(i=>(i+1)%4),2800);return()=>clearInterval(iv);},[]);
   useEffect(()=>{if(!arOpen)return;let s;navigator.mediaDevices?.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{s=stream;if(arRef.current)arRef.current.srcObject=stream;}).catch(()=>{});return()=>s?.getTracks().forEach(t=>t.stop());},[arOpen]);
   useEffect(()=>{if(selectedProduct)fetchBundle(selectedProduct);},[selectedProduct]); // eslint-disable-line
+  const userPts=user?(user.wallet_balance||user.points||0):0;
   useEffect(()=>{if(!user||!userPts)return;const tier=getTier(userPts);const prev=LS('bx_ltier');if(prev&&prev!==tier){addToast(`🎉 You've reached ${TIER[tier].label} status! New perks unlocked.`,"success");}LSS('bx_ltier',tier);},[userPts]); // eslint-disable-line
   /* b2b tiered pricing */
   const getTieredPrice=(price,qty)=>qty>=10?Number(price)*.8:qty>=5?Number(price)*.9:Number(price);
@@ -515,7 +516,6 @@ export default function App() {
   const inp=err=>({width:"100%",padding:"10px 13px",borderRadius:"9px",border:`1.5px solid ${err?c.error:c.inputBorder}`,background:c.input,color:c.text,fontSize:"14px",transition:"border .2s"});
   const btnP=(x={})=>({background:c.accent,color:c.accentTxt,border:"none",padding:"11px 22px",borderRadius:"9px",cursor:"pointer",fontWeight:"700",fontSize:"14px",width:"100%",...x});
   const btnS=(x={})=>({background:"transparent",color:c.text,border:`1.5px solid ${c.border}`,padding:"9px 18px",borderRadius:"9px",cursor:"pointer",fontWeight:"600",fontSize:"13px",...x});
-  const userPts=user?(user.wallet_balance||user.points||0):0;
   const alertedIds=alerts.map(a=>Number(a.product_id));
 
   /* ════════════════════════════════════════════════════════════ RENDER */
