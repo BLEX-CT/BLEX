@@ -2027,6 +2027,76 @@ app.post('/product-suppliers', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── AI Visual Search ────────────────────────────────────────────────────────
+
+app.post('/ai/visual-search', async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'image required' });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    const { rows: prods } = await pool.query('SELECT name, category FROM products WHERE stock > 0 ORDER BY id DESC LIMIT 50');
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 128, messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+        { type: 'text', text: `Products in store: ${JSON.stringify(prods)}. Identify what this image shows and return ONLY a JSON: {"query":"<2-4 word search term matching a product type above>"}` }
+      ]}]})
+    });
+    const d = await r.json();
+    if (!r.ok) return res.json({ query: '' });
+    const text = d.content?.[0]?.text || '';
+    const m = text.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : { query: '' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── AI Style Advisor ────────────────────────────────────────────────────────
+
+app.post('/ai/style-advisor', async (req, res) => {
+  try {
+    const { query, products = [] } = req.body;
+    if (!query) return res.status(400).json({ error: 'query required' });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    const { rows: prods } = await pool.query('SELECT id, name, price, category, description FROM products WHERE stock > 0 ORDER BY id DESC LIMIT 40');
+    const prompt = `You are a luxury fashion and lifestyle stylist. Customer request: "${query}"\nAvailable products: ${JSON.stringify(prods)}\nRecommend exactly 3 products. Return ONLY JSON: {"recommendations":[{"id":number,"name":"string","reason":"1 sentence why it fits the request","price":number}]}`;
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 512, messages: [{ role: 'user', content: prompt }] })
+    });
+    const d = await r.json();
+    if (!r.ok) return res.status(500).json({ error: d.error?.message || 'Claude API error' });
+    const text = d.content?.[0]?.text || '';
+    const m = text.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : { recommendations: [] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── AI Size & Fit ───────────────────────────────────────────────────────────
+
+app.post('/ai/size-fit', async (req, res) => {
+  try {
+    const { product, measurements } = req.body;
+    if (!product || !measurements) return res.status(400).json({ error: 'product and measurements required' });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    const prompt = `For the clothing product "${product}", given measurements: chest=${measurements.chest}cm, waist=${measurements.waist}cm, height=${measurements.height}cm, recommend the correct size. Return ONLY JSON: {"size":"XS|S|M|L|XL|XXL","confidence":"high|medium|low","note":"1 short sentence"}`;
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 128, messages: [{ role: 'user', content: prompt }] })
+    });
+    const d = await r.json();
+    if (!r.ok) return res.status(500).json({ error: d.error?.message || 'Claude API error' });
+    const text = d.content?.[0]?.text || '';
+    const m = text.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : { size: 'M', confidence: 'medium', note: '' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── Static files (React build) ───────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'frontend/build')));

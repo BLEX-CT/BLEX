@@ -46,7 +46,16 @@
       "PowerShell($line = \\(Get-Content \"C:\\\\Users\\\\blexc\\\\blex-store\\\\frontend\\\\src\\\\App.js\" -Encoding UTF8\\)[1179]; $pos = $line.IndexOf\\(\"priceMonitor.map\\(\\(p\"\\); Write-Output \"Map starts at: $pos\"; $line.Substring\\($pos - 1, 25\\))",
       "PowerShell(cd \"C:\\\\Users\\\\blexc\\\\blex-store\\\\frontend\"; $env:DISABLE_ESLINT_PLUGIN=\"true\"; npx react-scripts build 2>&1 | Select-Object -Last 10)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\blexc\\\\blex-store\" -Force)",
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(Test-Path *)",
+      "Bash(dir \"C:\\\\Users\\\\blexc\\\\blex-store\\\\frontend\" /ah)",
+      "Bash(git rm *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\blexc\\\\blex-store\" | ForEach-Object { $_.Name })",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\blexc\\\\blex-store\\\\frontend\\\\src\\\\App.js\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\blexc\\\\blex-store\\\\frontend\\\\src\\\\App.js\"\\).Count; \\(Get-Content \"C:\\\\Users\\\\blexc\\\\blex-store\\\\server.js\"\\).Count)"
     ]
   }
 }

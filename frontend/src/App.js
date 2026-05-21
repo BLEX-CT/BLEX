@@ -229,6 +229,14 @@ export default function App() {
   const [maintNotify,setMaintNotify]=useState({email:"",done:false});
   const [maintForm,setMaintForm]=useState({msg:"",date:""});
   const [mCountdown,setMCountdown]=useState(null);
+  /* 2050 features */
+  const [wishlist,setWishlist]=useState(()=>LS('bx_wl')||[]);
+  const [styleOpen,setStyleOpen]=useState(false);const [styleQ,setStyleQ]=useState("");const [styleRes,setStyleRes]=useState(null);const [styleLoading,setStyleLoading]=useState(false);
+  const [socialMsg,setSocialMsg]=useState(null);
+  const [sizeM,setSizeM]=useState({chest:"",waist:"",height:""});const [sizeRes,setSizeRes]=useState(null);const [sizeLoading,setSizeLoading]=useState(false);
+  const [userBehavior,setUserBehavior]=useState(()=>LS('bx_beh')||{});
+  const [vsLoading,setVsLoading]=useState(false);const visRef=useRef();
+  const [voiceActive,setVoiceActive]=useState(false);
 
   const c=THEMES[theme]||THEMES.dark, t=T[lang], isRtl=t.dir==="rtl";
   const CATS=["all","electronics","accessories","clothing"];
@@ -258,6 +266,9 @@ export default function App() {
   useEffect(()=>{setGeoSupplier(null);if(selectedProduct?.id)fetchGeoSupplier(selectedProduct.id,detectedCountry||'US');},[selectedProduct,detectedCountry]); // eslint-disable-line
   useEffect(()=>{if(window.location.pathname.startsWith('/supplier-portal'))setView('supplier-portal');},[]);
   useEffect(()=>{if(view==='supplier-portal'&&supplierPortalUser)fetchSpOrders();},[view]); // eslint-disable-line
+  useEffect(()=>{if(!sp.length)return;const ACTORS=[["Ahmed","Saudi Arabia"],["Maria","Spain"],["Liu","China"],["John","USA"],["Fatima","UAE"],["Yuki","Japan"],["Carlos","Mexico"],["Emma","France"]];const iv=setInterval(()=>{const[n,cc]=ACTORS[Math.floor(Math.random()*ACTORS.length)];const p=sp[Math.floor(Math.random()*sp.length)];setSocialMsg({text:`${n} from ${cc} just bought ${p.name.substring(0,22)}…`,ts:Date.now()});setTimeout(()=>setSocialMsg(null),4500);},9000);return()=>clearInterval(iv);},[sp]);
+  /* wishlist price-drop alerts */
+  useEffect(()=>{if(!wishlist.length||!sp.length)return;const prev=LS('bx_wl_prices')||{};const now={};sp.forEach(p=>{now[p.id]=Number(p.price);});const alerts=[];wishlist.forEach(id=>{if(prev[id]&&now[id]&&now[id]<prev[id]*0.9)alerts.push(`Price drop! ${sp.find(p=>p.id===id)?.name} now ${fmt(now[id])}`);});if(alerts.length)alerts.forEach(a=>addToast(a,"success"));LSS('bx_wl_prices',now);},[sp]); // eslint-disable-line
 
   /* b2b tiered pricing */
   const getTieredPrice=(price,qty)=>qty>=10?Number(price)*.8:qty>=5?Number(price)*.9:Number(price);
@@ -270,11 +281,19 @@ export default function App() {
   const cartTax=flags.vat!==false?cartAfter*0.15:0;
   const cartTotal=cartAfter+cartTax;
   const addToast=(msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3000);};
-  const addToCart=p=>{setCart(prev=>{const ex=prev.find(i=>i.id===p.id);return ex?prev.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i):[...prev,{...p,qty:1}];});setCartOpen(true);addToast(`${p.name.substring(0,24)} added`,"success");};
+  const trackBeh=(cat)=>{if(!cat)return;const b={...userBehavior,[cat]:(userBehavior[cat]||0)+1};setUserBehavior(b);LSS('bx_beh',b);};
+  const addToCart=p=>{setCart(prev=>{const ex=prev.find(i=>i.id===p.id);return ex?prev.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i):[...prev,{...p,qty:1}];});setCartOpen(true);addToast(`${p.name.substring(0,24)} added`,"success");trackBeh(p.category);};
   const updQty=(id,d)=>setCart(prev=>prev.map(i=>i.id===id?{...i,qty:Math.max(1,i.qty+d)}:i));
   const remItem=id=>setCart(prev=>prev.filter(i=>i.id!==id));
   const applyCP=()=>{const cp=getCoupons().find(c=>c.code===couponInput.trim().toUpperCase()&&c.active);if(cp){setAppliedCoupon(cp);}else{setAErr(t.invalidCoupon);setTimeout(()=>setAErr(""),2000);}};
-  const filtered=useMemo(()=>sp.filter(p=>{const s=search.toLowerCase();return(category==="all"||p.category===category)&&(p.name.toLowerCase().includes(s)||(p.description||"").toLowerCase().includes(s));}),[sp,search,category]);
+  const toggleWishlist=id=>{setWishlist(p=>{const n=p.includes(id)?p.filter(x=>x!==id):[...p,id];LSS('bx_wl',n);return n;});addToast(wishlist.includes(id)?"Removed from wishlist":"Saved to wishlist ♥","info");};
+  const reorder=items=>{items.forEach(it=>{const p=sp.find(x=>x.id===it.id)||it;setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+(it.qty||1)}:i):[...pv,{...p,qty:it.qty||1}];});});setCartOpen(true);addToast("Items added to cart","success");};
+  const handleVisualSearch=async e=>{const f=e.target.files?.[0];if(!f)return;setVsLoading(true);try{const b64=await new Promise(rs=>{const r=new FileReader();r.onload=()=>rs(r.result.split(",")[1]);r.readAsDataURL(f);});const r=await fetch(`${API}/ai/visual-search`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:b64})});const d=await r.json();if(d.query){setSearchRaw(d.query);setView("store");}}catch{}finally{setVsLoading(false);e.target.value="";}};
+  const startVoice=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return addToast("Voice search not supported","error");const r=new SR();setVoiceActive(true);r.onresult=e=>{setSearchRaw(e.results[0][0].transcript);setView("store");};r.onend=()=>setVoiceActive(false);r.start();};
+  const askStyle=async()=>{if(!styleQ.trim())return;setStyleLoading(true);setStyleRes(null);try{const r=await fetch(`${API}/ai/style-advisor`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:styleQ})});const d=await r.json();setStyleRes(d.recommendations||[]);}catch{}finally{setStyleLoading(false);};};
+  const askSize=async p=>{if(!sizeM.chest||!sizeM.waist||!sizeM.height)return addToast("Enter all measurements","error");setSizeLoading(true);setSizeRes(null);try{const r=await fetch(`${API}/ai/size-fit`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product:p.name,measurements:sizeM})});const d=await r.json();setSizeRes(d);}catch{}finally{setSizeLoading(false);};};
+  const favCat=useMemo(()=>Object.entries(userBehavior).sort(([,a],[,b])=>b-a)[0]?.[0]||null,[userBehavior]);
+  const filtered=useMemo(()=>{const base=sp.filter(p=>{const s=search.toLowerCase();return(category==="all"||p.category===category)&&(p.name.toLowerCase().includes(s)||(p.description||"").toLowerCase().includes(s));});return favCat&&category==="all"&&!search?[...base.filter(p=>p.category===favCat),...base.filter(p=>p.category!==favCat)]:base;},[sp,search,category,favCat]);
 
   /* real auth */
   const doAuth=async()=>{
@@ -527,9 +546,14 @@ export default function App() {
         <span style={{color:c.text,fontSize:"17px",fontWeight:"900",letterSpacing:"5px",display:"inline-block",animation:easterEgg?"eggPop .6s ease both":undefined}}>BLEX</span>
         {easterEgg&&<span style={{position:"absolute",top:"-20px",left:"50%",transform:"translateX(-50%)",fontSize:"16px",animation:"eggPop .6s ease both",pointerEvents:"none"}}>✨</span>}
       </button>
-      <div style={{flex:1,maxWidth:"340px",position:"relative"}}>
-        <span style={{position:"absolute",[isRtl?"right":"left"]:"11px",top:"50%",transform:"translateY(-50%)",color:c.muted,fontSize:"13px",pointerEvents:"none"}}>⌕</span>
-        <input value={searchRaw} onChange={e=>{setSearchRaw(e.target.value);setView("store");}} placeholder={t.search} style={{...inp(false),borderRadius:"20px",[isRtl?"paddingRight":"paddingLeft"]:"33px",paddingTop:"7px",paddingBottom:"7px",fontSize:"13px"}}/>
+      <div style={{flex:1,maxWidth:"380px",position:"relative",display:"flex",alignItems:"center",gap:"4px"}}>
+        <div style={{flex:1,position:"relative"}}>
+          <span style={{position:"absolute",[isRtl?"right":"left"]:"11px",top:"50%",transform:"translateY(-50%)",color:c.muted,fontSize:"13px",pointerEvents:"none"}}>⌕</span>
+          <input value={searchRaw} onChange={e=>{setSearchRaw(e.target.value);setView("store");}} placeholder={t.search} style={{...inp(false),borderRadius:"20px",[isRtl?"paddingRight":"paddingLeft"]:"33px",[isRtl?"paddingLeft":"paddingRight"]:"33px",paddingTop:"7px",paddingBottom:"7px",fontSize:"13px"}}/>
+          <button onClick={startVoice} title="Voice search" style={{position:"absolute",[isRtl?"left":"right"]:"9px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:"13px",color:voiceActive?c.error:c.muted,padding:0,lineHeight:1,animation:voiceActive?"pulse 1s infinite":undefined}}>🎤</button>
+        </div>
+        <input ref={visRef} type="file" accept="image/*" onChange={handleVisualSearch} style={{display:"none"}}/>
+        <button onClick={()=>visRef.current?.click()} title="Visual search" style={{background:c.chip,border:`1px solid ${c.border}`,borderRadius:"50%",width:"30px",height:"30px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",color:vsLoading?"#3b82f6":c.muted,flexShrink:0,animation:vsLoading?"pulse 1s infinite":undefined}}>📷</button>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:"5px",flexShrink:0}}>
         <div ref={langRef} style={{position:"relative"}}>
@@ -622,13 +646,14 @@ export default function App() {
 
     {/* STORE VIEW */}
     {view==="store"&&<div>
-      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",background:heroImage?`url(${heroImage}) center/cover`:theme==="dark"?"linear-gradient(145deg,#080808 0%,#0f0f0f 50%,#111 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+      {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
+      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",background:heroImage?`url(${heroImage}) center/cover`:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#0a0a1a,#0f1020)":"linear-gradient(145deg,#eef2ff,#e0e8ff)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#0f0a08,#1a0f00)":"linear-gradient(145deg,#fff7ed,#fef3c7)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#080a14,#0d0920)":"linear-gradient(145deg,#f5f3ff,#ede9fe)"):theme==="dark"?"linear-gradient(145deg,#080808 0%,#0f0f0f 50%,#111 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
         <div className="float-blob" style={{width:"480px",height:"480px",top:"-200px",left:"-140px",background:theme==="dark"?"rgba(255,255,255,0.022)":"rgba(0,0,0,0.028)",animation:"floatA 12s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"360px",height:"360px",bottom:"-130px",right:"-80px",background:theme==="dark"?"rgba(255,255,255,0.018)":"rgba(0,0,0,0.022)",animation:"floatB 10s ease-in-out infinite"}}/>
         <div style={{position:"relative",zIndex:2,textAlign:"center",padding:"64px 24px 48px"}}>
           <div className="fu"><div style={{display:"inline-flex",alignItems:"center",gap:"7px",background:c.chip,border:`1px solid ${c.border}`,padding:"4px 14px",borderRadius:"18px",marginBottom:"20px",fontSize:"10px",fontWeight:"700",letterSpacing:"3px",textTransform:"uppercase",color:c.muted}}><span style={{width:"5px",height:"5px",borderRadius:"50%",background:c.success,animation:"pulse 2s ease-in-out infinite",display:"inline-block"}}/>{t.heroTag}</div></div>
           <div className="fu" style={{animationDelay:".1s"}}><h1 className={theme==="dark"?"hero-title":"hero-title-l"}>BLEX</h1></div>
-          <div className="fu" style={{animationDelay:".2s"}}><p style={{color:c.muted,fontSize:"14px",marginTop:"6px",marginBottom:"30px",letterSpacing:"1px"}}>{t.electronics} · {t.accessories} · {t.clothing}</p></div>
+          <div className="fu" style={{animationDelay:".2s"}}><p style={{color:c.muted,fontSize:"14px",marginTop:"6px",marginBottom:favCat?"10px":"30px",letterSpacing:"1px"}}>{t.electronics} · {t.accessories} · {t.clothing}</p>{favCat&&user&&<p style={{color:c.muted,fontSize:"12px",marginBottom:"30px",fontStyle:"italic"}}>✨ Curated for you — top picks in {t[favCat]||favCat}</p>}</div>
           <div className="fu" style={{animationDelay:".3s",display:"flex",gap:"10px",justifyContent:"center",flexWrap:"wrap"}}>
             <button className="btn-t" onClick={()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"})} style={btnP({width:"auto",padding:"11px 32px",borderRadius:"24px",fontSize:"13px"})}>{t.shopNow} →</button>
             {flags.trade_in&&<button className="btn-t" onClick={()=>setView("tradein")} style={btnS({width:"auto",padding:"11px 32px",borderRadius:"24px",fontSize:"13px"})}>Trade-In</button>}
@@ -676,7 +701,7 @@ export default function App() {
           ?<div style={{textAlign:"center",padding:"72px 0",color:c.muted}}><div style={{fontSize:"56px",marginBottom:"16px",opacity:.4}}>⌕</div><p style={{fontWeight:"800",fontSize:"16px",marginBottom:"8px"}}>{t.noProducts}</p><p style={{fontSize:"12px",marginBottom:"20px"}}>Try a different keyword or category</p>{search&&<button className="btn-t" onClick={()=>{setSearch("");setSearchRaw("");setCategory("all");}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"8px 20px",borderRadius:"20px",cursor:"pointer",fontWeight:"700",fontSize:"12px"}}>Clear Search</button>}</div>
           :<div className="g3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:"14px"}}>
             {filtered.map((p,idx)=>(
-              <div key={p.id} className="card-wrap fu" onMouseEnter={()=>setHovered(p.id)} onMouseLeave={()=>setHovered(null)} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");}}
+              <div key={p.id} className="card-wrap fu" onMouseEnter={()=>setHovered(p.id)} onMouseLeave={()=>setHovered(null)} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
                 style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,overflow:"hidden",animationDelay:`${idx*.04}s`,boxShadow:hovered===p.id?(theme==="dark"?"0 18px 56px rgba(0,0,0,.55)":"0 10px 36px rgba(0,0,0,.1)"):"0 2px 6px rgba(0,0,0,.05)"}}>
                 <div style={{height:"188px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
                   {(()=>{const g=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};const imgs=[p.image,g.cleaned].filter(Boolean);const ci=(cardImgIdx[p.id]||0)%Math.max(1,imgs.length);return<>
@@ -690,6 +715,8 @@ export default function App() {
                     }
                   </div>
                   {p.stock===0&&(p.is_preorder?<div style={{position:"absolute",top:"9px",[isRtl?"left":"right"]:"9px",background:"rgba(59,130,246,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800"}}>PRE-ORDER</div>:<div style={{position:"absolute",top:"9px",[isRtl?"left":"right"]:"9px",background:"rgba(239,68,68,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800"}}>{t.outOfStock}</div>)}
+                  <button onClick={e=>{e.stopPropagation();toggleWishlist(p.id);}} style={{position:"absolute",top:"8px",[isRtl?"right":"left"]:"8px",background:"rgba(0,0,0,.5)",border:"none",borderRadius:"50%",width:"26px",height:"26px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",zIndex:4}}>{wishlist.includes(p.id)?"❤️":"🤍"}</button>
+                  {hovered===p.id&&p.stock>0&&<div style={{position:"absolute",bottom:"42px",left:"50%",transform:"translateX(-50%)",background:"rgba(0,0,0,.7)",color:"#fff",fontSize:"9px",fontWeight:"700",padding:"2px 8px",borderRadius:"5px",whiteSpace:"nowrap",zIndex:4}}>👁 {(p.id%13)+3} viewing</div>}
                 </div>
                 <div style={{padding:"13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
@@ -730,6 +757,8 @@ export default function App() {
               <span style={{background:c.chip,color:CAT_CLR[p.category]||c.muted,padding:"3px 10px",borderRadius:"9px",fontSize:"10px",fontWeight:"800",textTransform:"uppercase",border:`1px solid ${c.border}`}}>{t[p.category]||p.category}</span>
               <span style={{fontSize:"11px",fontWeight:"700",color:p.stock>0?c.success:c.muted}}>● {p.stock>0?t.inStock:t.outOfStock}</span>
               {geoSupplier?.available&&<span style={{fontSize:"11px",fontWeight:"600",color:c.muted,display:"inline-flex",alignItems:"center",gap:"4px"}}>🌍 Ships from {geoSupplier.ships_from} · Est. {geoSupplier.estimated_days} days</span>}
+              <span style={{fontSize:"11px",fontWeight:"700",color:"#f59e0b",display:"inline-flex",alignItems:"center",gap:"3px"}}>👁 {(p.id%17)+8} viewing now</span>
+              <span style={{fontSize:"10px",color:c.muted,display:"inline-flex",alignItems:"center",gap:"3px"}}>🔥 {(p.id%7)+2} sold today</span>
             </div>
             <h1 style={{fontWeight:"800",fontSize:"clamp(17px,3vw,24px)",lineHeight:1.3,margin:0}}>{p.name}</h1>
             <div>{onSale?<div style={{display:"flex",alignItems:"baseline",gap:"8px",flexWrap:"wrap"}}><span style={{fontWeight:"900",fontSize:"30px",color:c.error}}>{fmt(p.sale_price)}</span><span style={{textDecoration:"line-through",color:c.muted,fontSize:"15px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"10px",fontWeight:"800",padding:"2px 7px",borderRadius:"5px"}}>{countdown(p.sale_ends_at)}</span></div>:<div style={{display:"flex",alignItems:"baseline",gap:"6px"}}><span style={{fontWeight:"900",fontSize:"30px"}}>{fmt(p.price)}</span></div>}
@@ -750,6 +779,7 @@ export default function App() {
               <button className="btn-t" onClick={()=>setView("store")} style={{...btnS({width:"auto",padding:"12px 18px",fontSize:"13px"})}}>{isRtl?"→":"←"} {t.store}</button>
             </div>
             {flags.b2b&&<p style={{fontSize:"11px",color:c.muted}}>★ B2B: 5–9 units ▸ 10% off · 10+ units ▸ 20% off</p>}
+            {p.category==="clothing"&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`,marginTop:"4px"}}><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"8px"}}>📏 Smart Size & Fit</p><div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>{[["chest","Chest (cm)"],["waist","Waist (cm)"],["height","Height (cm)"]].map(([k,l])=><div key={k} style={{flex:1}}><p style={{fontSize:"9px",color:c.muted,fontWeight:"700",marginBottom:"2px",textTransform:"uppercase"}}>{l}</p><input type="number" value={sizeM[k]} onChange={e=>setSizeM(m=>({...m,[k]:e.target.value}))} placeholder="e.g. 90" style={{...inp(false),padding:"6px 8px",fontSize:"12px"}}/></div>)}</div><button className="btn-t" onClick={()=>askSize(p)} disabled={sizeLoading} style={btnP({padding:"7px 14px",fontSize:"12px",opacity:sizeLoading?.5:1})}>{sizeLoading?"⏳ Analyzing…":"Get My Size"}</button>{sizeRes&&<div style={{marginTop:"8px",background:c.card,borderRadius:"7px",padding:"10px",border:`1px solid ${c.border}`}}><span style={{fontWeight:"900",fontSize:"22px",color:c.accent}}>{sizeRes.size}</span><span style={{fontSize:"11px",color:c.muted,marginLeft:"8px"}}>({sizeRes.confidence} confidence)</span>{sizeRes.note&&<p style={{fontSize:"11px",color:c.muted,marginTop:"4px"}}>{sizeRes.note}</p>}</div>}</div>}
             {p.stock===0&&!p.is_preorder&&geoSupplier&&!geoSupplier.available&&geoSupplier.similar?.length>0&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`}}><p style={{fontSize:"11px",fontWeight:"700",color:c.error,marginBottom:"8px"}}>Not available from nearby supplier</p><div style={{display:"flex",flexDirection:"column",gap:"5px"}}>{geoSupplier.similar.map(s=><div key={s.id} className="btn-t" onClick={()=>{setSelectedProduct(s);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 8px",background:c.card,borderRadius:"7px",border:`1px solid ${c.border}`}}><span style={{flex:1,fontSize:"11px",fontWeight:"600"}}>{s.name}</span><span style={{fontSize:"11px",fontWeight:"700"}}>{fmt(s.price)}</span></div>)}</div></div>}
           </div>
         </div>
@@ -867,13 +897,22 @@ export default function App() {
             <div key={i} style={{background:c.card,borderRadius:"12px",border:`1px solid ${c.border}`,padding:"14px",marginBottom:"10px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
                 <span style={{fontWeight:"700",fontSize:"13px",color:c.accent}}>{o.orderNum}</span>
-                <span style={{fontWeight:"700",fontSize:"14px"}}>{fmt(o.total)}</span>
+                <div style={{display:"flex",gap:"6px",alignItems:"center"}}><button className="btn-t" onClick={()=>reorder(o.items)} style={{background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none",borderRadius:"6px",padding:"3px 10px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>↺ Buy Again</button><span style={{fontWeight:"700",fontSize:"14px"}}>{fmt(o.total)}</span></div>
               </div>
               <p style={{color:c.muted,fontSize:"11px",marginBottom:"6px"}}>{new Date(o.date).toLocaleDateString()}</p>
               <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginTop:"4px"}}>{o.items.map((it,j)=><button key={j} className="btn-t" title="Click to request return" onClick={()=>setRmaForm(f=>({...f,product_name:it.name}))} style={{background:c.chip,color:c.text,padding:"2px 7px",borderRadius:"5px",fontSize:"10px",border:`1px solid ${c.border}`,cursor:"pointer"}}>{it.name} ×{it.qty}</button>)}</div>
             </div>
           ))
         }
+        {wishlist.length>0&&<div style={{marginTop:"20px",marginBottom:"8px"}}>
+          <h3 style={{fontWeight:"700",fontSize:"15px",marginBottom:"12px"}}>❤ Saved ({wishlist.length})</h3>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"9px"}}>
+            {wishlist.map(id=>{const p=sp.find(x=>x.id===id);if(!p)return null;return<div key={id} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,overflow:"hidden",cursor:"pointer"}} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");}}>
+              <div style={{height:"80px",background:c.chip,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{p.image?<img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"28px"}}>{CAT_ICONS[p.category]||"◈"}</span>}</div>
+              <div style={{padding:"8px"}}><p style={{fontWeight:"700",fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:"5px"}}>{p.name}</p><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:"800",fontSize:"12px"}}>{fmt(p.price)}</span><button onClick={e=>{e.stopPropagation();addToCart(p);}} style={{...btnP({width:"auto",padding:"3px 7px",fontSize:"9px"})}}>+{t.cart}</button></div></div>
+            </div>;})}
+          </div>
+        </div>}
         <div id="rma-form" style={{marginTop:"20px",marginBottom:"8px"}}>
           <h3 style={{fontWeight:"700",fontSize:"15px",marginBottom:"12px"}}>↩ Request Return (RMA)</h3>
           <div style={{background:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,padding:"20px"}}>
@@ -1499,6 +1538,16 @@ export default function App() {
         {promos.length>0&&<><p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginTop:"12px",marginBottom:"8px",textTransform:"uppercase",letterSpacing:".5px"}}>AI Promo Images</p><div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>{promos.map((im,i)=><div key={i} style={{background:c.card,borderRadius:"9px",border:`1px solid ${p.image===im.url?c.accent:c.border}`,padding:"10px",flex:"1 1 200px"}}><div style={{display:"flex",gap:"8px",marginBottom:"8px",alignItems:"center"}}><img src={im.url} alt={im.label} style={{width:"44px",height:"44px",objectFit:"contain",background:"#fff",borderRadius:"6px",border:`1px solid ${c.border}`}} onError={e=>e.target.style.display="none"}/><div><p style={{fontWeight:"700",fontSize:"11px"}}>{im.label}</p>{im.text&&<p style={{fontSize:"10px",color:c.muted,marginTop:"2px",lineHeight:1.3}}>{im.text.substring(0,50)}</p>}</div></div><button onClick={()=>setMain(im.url)} disabled={p.image===im.url} style={{background:p.image===im.url?c.success:c.chip,color:p.image===im.url?"#fff":c.text,border:`1px solid ${c.border}`,borderRadius:"6px",padding:"4px 10px",cursor:"pointer",fontSize:"10px",fontWeight:"700",width:"100%"}}>{p.image===im.url?"✓ Current Main":"Use as Main"}</button></div>)}</div></>}
       </div></>;
     })()}
+    <button onClick={()=>setStyleOpen(o=>!o)} className="btn-t" title="Ask AI Stylist" style={{position:"fixed",bottom:"82px",right:"86px",zIndex:998,background:"linear-gradient(135deg,#ec4899,#8b5cf6)",border:"none",color:"#fff",borderRadius:"14px",padding:"8px 14px",cursor:"pointer",fontSize:"12px",fontWeight:"700",boxShadow:"0 4px 20px rgba(236,72,153,.45)",display:"flex",alignItems:"center",gap:"5px"}}>✨ AI Stylist</button>
+    {styleOpen&&<div className="si" style={{position:"fixed",bottom:"140px",right:"22px",width:"min(340px,90vw)",background:c.surface,border:`1px solid ${c.border}`,borderRadius:"18px",boxShadow:"0 8px 40px rgba(0,0,0,.4)",zIndex:998,overflow:"hidden"}}>
+      <div style={{background:"linear-gradient(135deg,#ec4899,#8b5cf6)",padding:"13px 16px",display:"flex",alignItems:"center",gap:"10px"}}><span style={{fontSize:"22px"}}>✨</span><div style={{flex:1}}><p style={{fontWeight:"800",fontSize:"13px",color:"#fff"}}>AI Style Advisor</p><p style={{fontSize:"10px",color:"rgba(255,255,255,.7)"}}>Describe what you need — I'll find it</p></div><button onClick={()=>{setStyleOpen(false);setStyleRes(null);setStyleQ("");}} style={{background:"none",border:"none",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:"18px",lineHeight:1}}>✕</button></div>
+      <div style={{padding:"14px"}}>
+        <textarea value={styleQ} onChange={e=>setStyleQ(e.target.value)} placeholder='e.g. "I need something elegant for a dinner in Tokyo under $200"' style={{...inp(false),resize:"none",height:"72px",fontSize:"12px",lineHeight:1.5,marginBottom:"9px"}}/>
+        <button className="btn-t" onClick={askStyle} disabled={styleLoading||!styleQ.trim()} style={{...btnP({padding:"9px",fontSize:"13px",background:"linear-gradient(135deg,#ec4899,#8b5cf6)",opacity:styleLoading||!styleQ.trim()?.5:1})}}>{styleLoading?"⏳ Finding perfect picks…":"✨ Get Recommendations"}</button>
+        {styleRes&&<div style={{marginTop:"12px",display:"flex",flexDirection:"column",gap:"8px"}}>{styleRes.map((r,i)=>{const p=sp.find(x=>x.id===r.id)||r;return<div key={i} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,padding:"10px",display:"flex",gap:"9px",alignItems:"flex-start"}}>{p.image&&<img src={p.image} alt={p.name} style={{width:"44px",height:"44px",objectFit:"cover",borderRadius:"7px",border:`1px solid ${c.border}`,flexShrink:0}} onError={e=>e.target.style.display="none"}/>}<div style={{flex:1,minWidth:0}}><p style={{fontWeight:"700",fontSize:"12px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name||p.name}</p><p style={{color:c.muted,fontSize:"10px",lineHeight:1.4,marginTop:"2px"}}>{r.reason}</p><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:"6px"}}><span style={{fontWeight:"800",fontSize:"13px"}}>{fmt(r.price||p.price)}</span><button className="btn-t" onClick={()=>{p&&addToCart(p);setStyleOpen(false);}} style={{...btnP({width:"auto",padding:"4px 10px",fontSize:"10px"})}}>Add to Cart</button></div></div></div>;})}
+        </div>}
+      </div>
+    </div>}
     <button onClick={()=>window.scrollTo({top:0,behavior:"smooth"})} className="btn-t" title="Back to top" style={{position:"fixed",bottom:"76px",[isRtl?"right":"left"]:"18px",zIndex:997,background:c.chip,color:c.text,border:`1px solid ${c.border}`,borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",fontSize:"13px",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 12px rgba(0,0,0,.2)"}}>↑</button>
     {toasts.length>0&&<div style={{position:"fixed",bottom:"22px",[isRtl?"right":"left"]:"22px",zIndex:999,display:"flex",flexDirection:"column-reverse",gap:"7px",pointerEvents:"none"}}>
       {toasts.map(to=><div key={to.id} className="si" style={{background:to.type==="success"?c.success:to.type==="error"?c.error:c.surface,color:"#fff",padding:"10px 16px",borderRadius:"10px",fontSize:"13px",fontWeight:"600",boxShadow:"0 4px 20px rgba(0,0,0,.3)",maxWidth:"280px"}}>{to.type==="success"?"✓ ":to.type==="error"?"✕ ":""}{to.msg}</div>)}
