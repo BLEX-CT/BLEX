@@ -254,6 +254,7 @@ export default function App() {
   const [morphIdx,setMorphIdx]=useState(0);
   const [arOpen,setArOpen]=useState(false);
   const [bundleSugg,setBundleSugg]=useState(null);const [bundleLoading,setBundleLoading]=useState(false);
+  const [contentLoading,setContentLoading]=useState({});
 
   const c=THEMES[theme]||THEMES.dark, t=T[lang], isRtl=t.dir==="rtl";
   const CATS=["all","electronics","accessories","clothing"];
@@ -504,6 +505,7 @@ export default function App() {
   const applyPrice=async(id,price)=>{try{const p=sp.find(x=>x.id===id);if(!p)return;await fetch(`${API}/products/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...p,price,stock:p.stock||0,category:p.category||"electronics"})});setProducts(await fetch(`${API}/products`).then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));setPriceReport(pr=>pr.map(r=>r.id===id?{...r,status:"good"}:r));}catch{}};
   const generateImageSet=async()=>{if(!pForm.image&&!pForm.name)return;setImgGalleryLoading(true);try{const r=await fetch(`${API}/ai/generate-product-images`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:pForm.name,category:pForm.category,image_url:pForm.image||null})});const d=await r.json();if(d.error){addToast(d.error,"error");}else{setPGallery(d);if(d.original&&!pForm.image)setPForm(f=>({...f,image:d.original}));addToast("Image set generated!","success");}}catch(e){addToast(e.message,"error");}finally{setImgGalleryLoading(false);};};
   const generateAIDesc=async()=>{if(!pForm.name)return;setAiGenerating(true);try{const r=await fetch(`${API}/ai/generate-description`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:pForm.name,category:pForm.category,price:pForm.price})});const d=await r.json();if(d.descriptions?.en)setPForm(f=>({...f,description:d.descriptions.en}));}catch{}finally{setAiGenerating(false);};};
+  const generateAllContent=async(pId)=>{setContentLoading(p=>({...p,[pId]:true}));try{const r=await fetch(API+"/ai/content-agent",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pId})});const d=await r.json();if(d.error)addToast(d.error,"error");else{addToast(`Content generated for ${d.results?.[0]?.name||"product"} ✓`,"success");fetch(API+"/products").then(r=>r.json()).then(d=>Array.isArray(d)&&setProducts(d));}}catch(e){addToast(e.message,"error");}finally{setContentLoading(p=>{const n={...p};delete n[pId];return n;});};};
   const saveCoupon=()=>{if(!cpForm.code.trim()||!cpForm.val)return;const ncp=[...getCoupons(),{code:cpForm.code.toUpperCase().trim(),type:cpForm.type,val:Number(cpForm.val),active:true}];LSS('bx_cp',ncp);setCouponsState(ncp);setCpForm({code:"",type:"pct",val:""});};
   const toggleCoupon=code=>{const ncp=getCoupons().map(cp=>cp.code===code?{...cp,active:!cp.active}:cp);LSS('bx_cp',ncp);setCouponsState(ncp);};
   const delCoupon=code=>{const ncp=getCoupons().filter(cp=>cp.code!==code);LSS('bx_cp',ncp);setCouponsState(ncp);};
@@ -670,7 +672,7 @@ export default function App() {
     {/* STORE VIEW */}
     {view==="store"&&<div>
       {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
-      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",background:heroImage?`url(${heroImage}) center/cover`:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#060618,#0a0a2a)":"linear-gradient(145deg,#eef2ff,#e0e8ff)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#0f0618,#180a28)":"linear-gradient(145deg,#fff7ed,#fef3c7)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#06100e,#0a1e18)":"linear-gradient(145deg,#f5f3ff,#ede9fe)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",background:heroImage?`url(${heroImage}) center/cover`:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)",display:"flex",flexDirection:"column",justifyContent:"center"}}>
         <div className="float-blob" style={{width:"540px",height:"540px",top:"-220px",left:"-160px",background:theme==="dark"?"rgba(0,212,255,0.14)":"rgba(0,100,200,0.06)",animation:"floatA 14s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"420px",height:"420px",bottom:"-160px",right:"-100px",background:theme==="dark"?"rgba(123,47,247,0.16)":"rgba(100,0,200,0.06)",animation:"floatB 11s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"280px",height:"280px",top:"25%",right:"12%",background:theme==="dark"?"rgba(255,215,0,0.07)":"rgba(200,150,0,0.04)",animation:"floatA 19s ease-in-out infinite reverse"}}/>
@@ -702,6 +704,28 @@ export default function App() {
               <p style={{fontWeight:"800",fontSize:"15px",marginBottom:"5px"}}>{b.name}</p>
               <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px",lineHeight:1.5}}>{b.description}</p>
               <p style={{fontWeight:"900",fontSize:"22px"}}>{fmt(b.price)}</p>
+            </div>
+          ))}
+        </div>
+      </div>}
+
+      {user&&favCat&&sp.filter(p=>p.category===favCat).length>0&&<div style={{padding:"24px 22px 0"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"9px",marginBottom:"14px"}}>
+          <span style={{fontSize:"22px"}}>✨</span>
+          <h2 style={{fontWeight:"800",fontSize:"17px"}}>Picked for you</h2>
+          <span style={{fontSize:"11px",color:c.muted,fontStyle:"italic",fontWeight:"500"}}>Based on your browsing in {t[favCat]||favCat}</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:"10px"}}>
+          {sp.filter(p=>p.category===favCat).slice(0,6).map(p=>(
+            <div key={p.id} className="card-wrap btn-t" onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}} style={{cursor:"pointer",background:c.card,borderRadius:"13px",border:`1.5px solid ${CAT_CLR[p.category]||c.accent}33`,overflow:"hidden"}}>
+              <div style={{height:"118px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
+                {p.image?<img src={p.image} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"38px",opacity:.6,color:CAT_CLR[p.category]||c.muted}}>{CAT_ICONS[p.category]||"◈"}</span>}
+                <div style={{position:"absolute",top:"6px",right:"6px",background:`${CAT_CLR[p.category]||c.accent}cc`,color:"#fff",fontSize:"8px",fontWeight:"800",padding:"2px 6px",borderRadius:"6px",letterSpacing:"1px"}}>FOR YOU</div>
+              </div>
+              <div style={{padding:"9px"}}>
+                <p style={{fontWeight:"700",fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+                <p style={{fontWeight:"800",fontSize:"13px",color:CAT_CLR[p.category]||c.accent,marginTop:"3px"}}>{fmt(p.price)}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -1145,6 +1169,7 @@ export default function App() {
                       <td style={{padding:"9px 13px"}}><div style={{display:"flex",gap:"4px"}}>
                         <button className="btn-t" onClick={()=>startEdit(p)} style={{background:c.chip,border:"none",color:c.text,padding:"4px 10px",borderRadius:"5px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>{t.edit}</button>
                         <button className="btn-t" onClick={()=>setImgMgrProd(p)} title="Manage Images" style={{background:c.chip,border:"none",color:c.text,padding:"4px 8px",borderRadius:"5px",cursor:"pointer",fontSize:"12px"}}>🖼️</button>
+                        <button className="btn-t" onClick={()=>generateAllContent(p.id)} disabled={!!contentLoading[p.id]} title="Auto-Generate All Content (descriptions in 10 languages, marketing angles, social captions, SEO keywords)" style={{background:"linear-gradient(135deg,#7c3aed,#3b82f6)",color:"#fff",border:"none",padding:"4px 9px",borderRadius:"5px",cursor:"pointer",fontSize:"9px",fontWeight:"700",whiteSpace:"nowrap",opacity:contentLoading[p.id]?0.6:1}}>{contentLoading[p.id]?"⏳":"✨"}</button>
                         <button className="btn-t" onClick={()=>delProduct(p.id)} style={{background:"none",border:`1px solid ${c.error}`,color:c.error,padding:"4px 10px",borderRadius:"5px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>{t.delete}</button>
                       </div></td>
                     </tr>

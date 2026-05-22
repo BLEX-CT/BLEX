@@ -291,6 +291,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS payment_terms VARCHAR(100) DEFAULT 'Net 30'`);
   await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS password_hash TEXT`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS routed_supplier_id INTEGER`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_content JSONB`);
 
   // Seed all 11 feature flags enabled by default
   const FLAGS = ['loyalty_points','wallet','b2b','trade_in','group_cart','back_in_stock','smart_bundles','digital_warranty','coupons','vat','cod'];
@@ -1712,6 +1713,38 @@ app.post('/ai/generate-description', async (req, res) => {
   }
 });
 
+// ─── AI Content Agent ────────────────────────────────────────────────────────
+
+app.post('/ai/content-agent', async (req, res) => {
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    const { product_id } = req.body;
+    let products;
+    if (product_id) {
+      const { rows } = await pool.query('SELECT id,name,price,category FROM products WHERE id=$1', [product_id]);
+      products = rows;
+    } else {
+      const { rows } = await pool.query(`SELECT id,name,price,category FROM products WHERE description IS NULL OR description='' OR description='Trending product — auto imported' LIMIT 5`);
+      products = rows;
+    }
+    if (!products.length) return res.json({ generated: 0, message: 'All products already have content' });
+    const results = [];
+    for (const p of products) {
+      try {
+        const text = await callClaude(`You are a multilingual marketing expert for BLEX Saudi e-commerce. Product: "${p.name}" | Category: ${p.category} | Price: ${p.price} SAR. Return ONLY valid JSON: {"descriptions":{"en":"...","ar":"...","zh":"...","ko":"...","ja":"...","fr":"...","es":"...","de":"...","it":"...","pt":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3","kw4","kw5"]}`, 2048);
+        const m = text.match(/\{[\s\S]*\}/);
+        if (m) {
+          const content = JSON.parse(m[0]);
+          await pool.query('UPDATE products SET description=$1,ai_content=$2 WHERE id=$3', [content.descriptions?.en || '', content, p.id]);
+          results.push({ product_id: p.id, name: p.name, content });
+          await auditLog('content_agent', `Generated multilingual content: ${p.name}`);
+        }
+      } catch (e) { results.push({ product_id: p.id, name: p.name, error: e.message }); }
+    }
+    res.json({ generated: results.filter(r => !r.error).length, results });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── Smart Promotions ────────────────────────────────────────────────────────
 
 app.post('/ai/generate-promotion', async (req, res) => {
@@ -1874,21 +1907,21 @@ app.post('/autopilot/run', async (req, res) => {
       if (results.webhooks_sent) await auditLog('autopilot', `Sent ${results.webhooks_sent} low-stock webhooks`);
     } catch (e) { results.errors.push('webhooks:' + e.message.slice(0, 50)); }
 
-    // d. Generate AI descriptions for products missing them (batched)
+    // d. Content Agent — multilingual content + marketing angles + SEO for products missing descriptions
     if (hasKey) try {
-      const { rows: nd } = await pool.query(`SELECT id,name,category,price FROM products WHERE description IS NULL OR description='' OR description='Trending product — auto imported' LIMIT 5`);
+      const { rows: nd } = await pool.query(`SELECT id,name,price,category FROM products WHERE description IS NULL OR description='' OR description='Trending product — auto imported' LIMIT 5`);
       if (nd.length) {
-        const text = await callClaude(`Write a 2-sentence product description for each product. Return ONLY JSON array: [{id,description}]\nProducts: ${JSON.stringify(nd.map(p => ({ id: p.id, name: p.name, category: p.category, price: p.price + ' SAR' })))}`);
-        const m = text.match(/\[[\s\S]*\]/);
-        if (m) {
-          for (const d of JSON.parse(m[0])) {
-            await pool.query('UPDATE products SET description=$1 WHERE id=$2', [d.description, d.id]);
+        const text = await callClaude(`Multilingual marketing content for BLEX Saudi e-commerce. Return ONLY JSON array: [{"id":1,"descriptions":{"en":"...","ar":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3"]}]\nProducts: ${JSON.stringify(nd.map(p=>({id:p.id,name:p.name,category:p.category,price:p.price+' SAR'})))}`, 2048);
+        const ma = text.match(/\[[\s\S]*\]/);
+        if (ma) {
+          for (const d of JSON.parse(ma[0])) {
+            await pool.query('UPDATE products SET description=$1,ai_content=$2 WHERE id=$3', [d.descriptions?.en || '', d, d.id]);
             results.descriptions_generated++;
           }
         }
-        if (results.descriptions_generated) await auditLog('autopilot', `Generated ${results.descriptions_generated} descriptions`);
+        if (results.descriptions_generated) await auditLog('content_agent', `Autopilot generated content for ${results.descriptions_generated} products`);
       }
-    } catch (e) { results.errors.push('descriptions:' + e.message.slice(0, 50)); }
+    } catch (e) { results.errors.push('content_agent:' + e.message.slice(0, 50)); }
 
     // e. Inventory Agent - predict stock-outs
     if (hasKey) try {
