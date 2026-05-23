@@ -233,6 +233,8 @@ export default function App() {
   const chatRef=useRef();const arRef=useRef();
   const logoTaps=useRef(0),logoTimer=useRef(null);
   const [heroImage,setHeroImage]=useState(LS('bx_hi')||"");
+  const [heroMediaType,setHeroMediaType]=useState(()=>{try{return JSON.parse(LS('bx_hm')||'{}').type||'gradient';}catch{return'gradient';}});
+  const [heroVideoUrl,setHeroVideoUrl]=useState(()=>{try{return JSON.parse(LS('bx_hm')||'{}').videoUrl||'';}catch{return'';}});
   const [chatTheme,setChatTheme]=useState(LS('bx_ct')||'default');
   const [easterEgg,setEasterEgg]=useState(false);
   const [cjSelected,setCjSelected]=useState(null);
@@ -264,7 +266,7 @@ export default function App() {
     injectCSS();
     LSS('bx_visits',(LS('bx_visits')||0)+1);
     fetch(API+"/products").then(r=>r.json()).then(d=>{setProducts(Array.isArray(d)?d:[]);setLoading(false);}).catch(()=>setLoading(false));
-    fetch(API+"/feature-flags").then(r=>r.json()).then(arr=>{const o={};arr.forEach(f=>o[f.name]=f.enabled);setFlags(o);}).catch(()=>{});
+    fetch(API+"/feature-flags").then(r=>r.json()).then(arr=>{const o={};arr.forEach(f=>{o[f.name]=f.enabled;if(f.name==='hero_media'&&f.description){try{const d=JSON.parse(f.description);if(d.type)setHeroMediaType(d.type);if(d.url)setHeroImage(d.url);if(d.videoUrl)setHeroVideoUrl(d.videoUrl);}catch{}}});setFlags(o);}).catch(()=>{});
     fetch(API+"/maintenance").then(r=>r.json()).then(d=>{setMaintenance(d);setMaintForm({msg:d.message||"",date:d.launch_date?d.launch_date.slice(0,10):""});}).catch(()=>{});
     fetch(API+"/bundles").then(r=>r.json()).then(setBundles).catch(()=>{});
     if(getToken()) fetch(API+"/stock-alerts",{headers:authH()}).then(r=>r.json()).then(a=>setAlerts(Array.isArray(a)?a:[])).catch(()=>{});
@@ -439,6 +441,7 @@ export default function App() {
     if(r.status===404) await fetch(`${API}/feature-flags`,{method:"POST",headers:h,body:JSON.stringify({name,enabled:val,description:name.replace(/_/g,' ')})});
     setFlags(prev=>({...prev,[name]:val}));
   };
+  const saveHeroMedia=async()=>{const cfg={type:heroMediaType,url:heroImage,videoUrl:heroVideoUrl};LSS('bx_hi',heroImage);LSS('bx_hm',JSON.stringify(cfg));const h=authH();const r=await fetch(`${API}/feature-flags/hero_media`,{method:"PATCH",headers:h,body:JSON.stringify({enabled:true,description:JSON.stringify(cfg)})});if(r.status===404)await fetch(`${API}/feature-flags`,{method:"POST",headers:h,body:JSON.stringify({name:"hero_media",enabled:true,description:JSON.stringify(cfg)})});addToast("Hero media saved","success");};
 
   /* checkout */
   const validate=()=>{
@@ -672,7 +675,8 @@ export default function App() {
     {/* STORE VIEW */}
     {view==="store"&&<div>
       {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
-      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",...(heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:{background:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
+      <div style={{position:"relative",overflow:"hidden",minHeight:"500px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType==="video"?{}:{background:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
+        {heroMediaType==="video"&&heroVideoUrl&&<video autoPlay muted loop playsInline src={heroVideoUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
         <div className="float-blob" style={{width:"540px",height:"540px",top:"-220px",left:"-160px",background:theme==="dark"?"rgba(0,212,255,0.14)":"rgba(0,100,200,0.06)",animation:"floatA 14s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"420px",height:"420px",bottom:"-160px",right:"-100px",background:theme==="dark"?"rgba(123,47,247,0.16)":"rgba(100,0,200,0.06)",animation:"floatB 11s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"280px",height:"280px",top:"25%",right:"12%",background:theme==="dark"?"rgba(255,215,0,0.07)":"rgba(200,150,0,0.04)",animation:"floatA 19s ease-in-out infinite reverse"}}/>
@@ -1534,7 +1538,18 @@ export default function App() {
               <h3 style={{fontWeight:"800",fontSize:"15px",marginBottom:"4px"}}>🎨 Store Appearance</h3>
               <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Customize the look and feel of your storefront.</p>
               <div style={{background:c.card,borderRadius:"12px",border:`1px solid ${c.border}`,padding:"16px",marginBottom:"24px",display:"flex",flexDirection:"column",gap:"14px"}}>
-                <div><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"6px",color:c.muted}}>HERO IMAGE URL</p><input value={heroImage} onChange={e=>{setHeroImage(e.target.value);LSS('bx_hi',e.target.value);}} placeholder="https://… (leave blank for default)" style={{...inp(false),fontSize:"12px"}}/></div>
+                <div>
+                  <p style={{fontWeight:"700",fontSize:"12px",marginBottom:"8px",color:c.muted}}>HERO MEDIA</p>
+                  <div style={{display:"flex",gap:"5px",marginBottom:"10px"}}>{["gradient","image","video"].map(mt=><button key={mt} className="btn-t" onClick={()=>setHeroMediaType(mt)} style={{background:heroMediaType===mt?c.accent:c.chip,color:heroMediaType===mt?c.accentTxt:c.text,border:`1px solid ${heroMediaType===mt?c.accent:c.border}`,padding:"5px 12px",borderRadius:"6px",cursor:"pointer",fontSize:"11px",fontWeight:"700"}}>{mt==="gradient"?"🌈 Gradient":mt==="image"?"🖼 Image":"🎬 Video"}</button>)}</div>
+                  {heroMediaType==="image"&&<><input value={heroImage} onChange={e=>setHeroImage(e.target.value)} placeholder="https://… image URL" style={{...inp(false),fontSize:"12px",marginBottom:"8px"}}/><div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:"5px",marginBottom:"10px"}}>{["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800","https://images.unsplash.com/photo-1560472355-536de3962603?w=800","https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800","https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800","https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800","https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800"].map((u,i)=><img key={i} src={u} alt="" onClick={()=>setHeroImage(u)} style={{width:"100%",aspectRatio:"16/9",objectFit:"cover",borderRadius:"5px",cursor:"pointer",border:`2px solid ${heroImage===u?c.accent:"transparent"}`,transition:"border .15s"}}/>)}</div></>}
+                  {heroMediaType==="video"&&<><input value={heroVideoUrl} onChange={e=>setHeroVideoUrl(e.target.value)} placeholder="MP4 or YouTube embed URL" style={{...inp(false),fontSize:"12px",marginBottom:"8px"}}/>{heroVideoUrl&&<div style={{borderRadius:"7px",overflow:"hidden",height:"100px",marginBottom:"8px"}}><video src={heroVideoUrl} muted autoPlay loop style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>}</>}
+                  <div style={{height:"110px",borderRadius:"8px",overflow:"hidden",marginBottom:"9px",border:`1px solid ${c.border}`,position:"relative",background:heroMediaType!=="image"&&heroMediaType!=="video"?(theme==="dark"?"linear-gradient(145deg,#0a0a0f,#080818)":"linear-gradient(145deg,#f0f0f0,#e8e8e8)"):"#111"}}>
+                    {heroMediaType==="image"&&heroImage&&<img src={heroImage} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
+                    {heroMediaType==="video"&&heroVideoUrl&&<video src={heroVideoUrl} muted autoPlay loop style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
+                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,.7)",fontWeight:"900",fontSize:"18px",letterSpacing:"6px",textShadow:"0 2px 8px rgba(0,0,0,.6)"}}>BLEX</span></div>
+                  </div>
+                  <button className="btn-t" onClick={saveHeroMedia} style={btnP({fontSize:"11px",padding:"8px 20px",width:"auto"})}>Save Hero Media</button>
+                </div>
                 <div><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"6px",color:c.muted}}>STORE THEME</p><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"6px"}}>{Object.entries(THEME_LABELS).map(([key,label])=><button key={key} className="btn-t" onClick={()=>setTheme(key)} style={{background:theme===key?c.accent:c.chip,color:theme===key?c.accentTxt:c.text,border:`1.5px solid ${theme===key?c.accent:c.border}`,padding:"8px 6px",borderRadius:"8px",cursor:"pointer",fontSize:"11px",fontWeight:"700",transition:"all .2s"}}>{label}</button>)}</div></div>
                 <div><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"6px",color:c.muted}}>CHAT WIDGET THEME</p><div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>{["default","minimal","rounded","professional"].map(ct=><button key={ct} className="btn-t" onClick={()=>{setChatTheme(ct);LSS('bx_ct',ct);}} style={{background:chatTheme===ct?c.accent:c.chip,color:chatTheme===ct?c.accentTxt:c.text,border:`1.5px solid ${chatTheme===ct?c.accent:c.border}`,padding:"7px 14px",borderRadius:"8px",cursor:"pointer",fontSize:"11px",fontWeight:"700",transition:"all .2s",textTransform:"capitalize"}}>{ct}</button>)}</div></div>
               </div>
