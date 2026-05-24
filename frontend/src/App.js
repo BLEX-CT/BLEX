@@ -204,6 +204,8 @@ export default function App() {
   const [trendsData,setTrendsData]=useState([]);
   const [trendsLoading,setTrendsLoading]=useState(false);
   const [trendsLastAt,setTrendsLastAt]=useState(null);
+  const [trendsImporting,setTrendsImporting]=useState(new Set());
+  const [importProgress,setImportProgress]=useState('');
   const [apEnabled,setApEnabled]=useState(false);
   const [apHour,setApHour]=useState(2);
   const [apRunning,setApRunning]=useState(false);
@@ -491,7 +493,32 @@ export default function App() {
   const maintSubscribe=async()=>{if(!maintNotify.email.includes("@"))return;try{await fetch(API+"/maintenance/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:maintNotify.email})});setMaintNotify({email:"",done:true});}catch{}};
   const fetchTrends=async()=>{setTrendsLoading(true);try{const r=await fetch(`${API}/ai/trends`);const d=await r.json();const arr=Array.isArray(d)?d:(Array.isArray(d.results)?d.results:[]);if(arr.length){setTrendsData(arr);setTrendsLastAt(new Date().toLocaleString());if(d.google_terms?.length)addToast(`Google Trends: ${d.google_terms.slice(0,3).join(', ')}…`,"info");}}catch{}finally{setTrendsLoading(false);}};
   const trendSearchCJ=async name=>{setAdminTab("dropshipping");setCjKeyword(name);setCjLoading(true);setCjMsg("");try{const r=await fetch(`${API}/cj/products?keyword=${encodeURIComponent(name)}`);const d=await r.json();setCjResults(d.error?[]:(Array.isArray(d.list)?d.list:[]));}catch{}setCjLoading(false);};
-  const trendAddProduct=async tr=>{try{const price=Number(tr.price_range?.match(/\d+/)?.[0]||99);const r=await fetch(`${API}/ai/trend-approve`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:tr.name,price,category:tr.category||"electronics",description:tr.reason||""})});if(r.ok){setProducts(await fetch(API+"/products").then(x=>x.json()).then(d=>Array.isArray(d)?d:[]));addToast(`${tr.name} added to store!`,"success");}}catch{}};
+  const trendAddProduct=async tr=>{
+    if(products.some(p=>p.name.toLowerCase()===tr.name.toLowerCase())){addToast(`${tr.name} already in store`,"info");return false;}
+    setTrendsImporting(s=>{const n=new Set(s);n.add(tr.name);return n;});
+    try{
+      const price=Number(tr.price_range?.match(/\d+/)?.[0]||99);
+      const r=await fetch(`${API}/ai/trend-approve`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:tr.name,price,category:tr.category||"electronics",description:tr.reason||"",source:"manual"})});
+      const d=await r.json();
+      if(r.ok){setProducts(await fetch(API+"/products").then(x=>x.json()).then(d=>Array.isArray(d)?d:[]));addToast(`${tr.name} added to store!`,"success");return true;}
+      else if(r.status===409){addToast(`${tr.name} already in store`,"info");return false;}
+      else{addToast(d.error||"Error adding product","error");return false;}
+    }catch{return false;}
+    finally{setTrendsImporting(s=>{const n=new Set(s);n.delete(tr.name);return n;});}
+  };
+  const trendImportAll=async()=>{
+    const toImport=trendsData.filter(tr=>!products.some(p=>p.name.toLowerCase()===tr.name.toLowerCase()));
+    if(!toImport.length){addToast("All trends already in store","info");return;}
+    let done=0;
+    for(const tr of toImport){
+      setImportProgress(`Importing ${done+1}/${toImport.length}…`);
+      await trendAddProduct(tr);
+      done++;
+    }
+    setImportProgress('');
+    setProducts(await fetch(API+"/products").then(x=>x.json()).then(d=>Array.isArray(d)?d:[]));
+    addToast(`Done: ${done} trends processed`,"success");
+  };
   const generatePromo=async()=>{setPromoLoading(true);try{const r=await fetch(API+"/ai/generate-promotion",{method:"POST",headers:{"Content-Type":"application/json"}});const d=await r.json();if(d.error){addToast(d.error,"error");}else{setPromoData(d);fetchPromos();}}catch(e){addToast(e.message,"error");}finally{setPromoLoading(false);};};
   const fetchPromos=async()=>{try{const r=await fetch(API+"/ai/promotions");const d=await r.json();setPromoList(Array.isArray(d)?d:[]);}catch{}};
   const runPriceMonitor=async()=>{setPriceMonitorLoading(true);try{const r=await fetch(`${API}/ai/price-monitor`);const d=await r.json();if(d.error){addToast(d.error,"error");}else{setPriceMonitor(Array.isArray(d)?d:[]);}}catch(e){addToast(e.message,"error");}finally{setPriceMonitorLoading(false);};};
@@ -1584,19 +1611,40 @@ export default function App() {
             </div>}
             {adminTab==="trends"&&<div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}}>
-                <div><h3 style={{fontWeight:"700"}}>🔥 AI Trend Detection</h3>{trendsLastAt&&<p style={{color:c.muted,fontSize:"11px",marginTop:"2px"}}>Last analyzed: {trendsLastAt}</p>}</div>
-                <button className="btn-t" onClick={fetchTrends} disabled={trendsLoading} style={btnP({width:"auto",padding:"7px 16px",fontSize:"12px",background:"linear-gradient(135deg,#f59e0b,#ef4444)"})}>{trendsLoading?"⏳ Analyzing…":"🔥 Analyze Trends"}</button>
+                <div><h3 style={{fontWeight:"700"}}>🔥 AI Trend Detection</h3>{trendsLastAt&&<p style={{color:c.muted,fontSize:"11px",marginTop:"2px"}}>Last analyzed: {trendsLastAt} · {trendsData.length} trends</p>}</div>
+                <div style={{display:"flex",gap:"7px",alignItems:"center",flexWrap:"wrap"}}>
+                  {importProgress&&<span style={{fontSize:"11px",color:c.muted,fontWeight:"700"}}>{importProgress}</span>}
+                  {trendsData.length>0&&<button className="btn-t" onClick={trendImportAll} disabled={!!importProgress||trendsLoading} style={{background:"#22c55e22",border:"1.5px solid #22c55e",color:"#22c55e",padding:"7px 14px",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontWeight:"800",opacity:importProgress?0.6:1}}>⬇ Import All ({trendsData.filter(tr=>!products.some(p=>p.name.toLowerCase()===tr.name.toLowerCase())).length} new)</button>}
+                  <button className="btn-t" onClick={fetchTrends} disabled={trendsLoading} style={btnP({width:"auto",padding:"7px 16px",fontSize:"12px",background:"linear-gradient(135deg,#f59e0b,#ef4444)"})}>{trendsLoading?"⏳ Analyzing…":"🔥 Analyze Trends"}</button>
+                </div>
               </div>
               {trendsData.length===0&&!trendsLoading&&<div style={{textAlign:"center",padding:"50px 20px",color:c.muted,background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`}}><p style={{fontSize:"36px",marginBottom:"8px"}}>🔥</p><p style={{fontWeight:"700",marginBottom:"4px"}}>No trend data yet</p><p style={{fontSize:"12px"}}>Click "Analyze Trends" to discover what's hot right now.</p></div>}
               <div style={{display:"flex",flexDirection:"column",gap:"9px"}}>
-                {trendsData.map((tr,i)=>{const cl={electronics:"#3b82f6",accessories:"#a855f7",clothing:"#f59e0b"}[tr.category]||"#888";return(
-                  <div key={i} style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"13px 16px",display:"flex",gap:"12px",alignItems:"flex-start"}}>
+                {trendsData.map((tr,i)=>{
+                  const cl={electronics:"#3b82f6",accessories:"#a855f7",clothing:"#f59e0b"}[tr.category]||"#888";
+                  const alreadyIn=products.some(p=>p.name.toLowerCase()===tr.name.toLowerCase());
+                  const isImporting=trendsImporting.has(tr.name);
+                  return(
+                  <div key={i} style={{background:c.card,border:`1px solid ${alreadyIn?"#22c55e44":c.border}`,borderRadius:"12px",padding:"13px 16px",display:"flex",gap:"12px",alignItems:"flex-start",opacity:alreadyIn?0.75:1}}>
                     <div style={{width:"30px",height:"30px",borderRadius:"50%",background:`${cl}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"15px",flexShrink:0}}>{i<3?"🔥":"📈"}</div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap",marginBottom:"3px"}}><span style={{fontWeight:"700",fontSize:"13px"}}>{tr.name}</span><span style={{fontSize:"10px",fontWeight:"700",color:cl,background:`${cl}22`,padding:"2px 8px",borderRadius:"4px"}}>{tr.category}</span>{tr.trending_score&&<span style={{fontSize:"10px",color:"#f59e0b",fontWeight:"700"}}>★ {tr.trending_score}/10</span>}{tr.google_signal&&<span style={{fontSize:"9px",fontWeight:"700",color:"#4285f4",background:"#4285f422",padding:"1px 6px",borderRadius:"4px"}}>G Trends</span>}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap",marginBottom:"3px"}}>
+                        <span style={{fontWeight:"700",fontSize:"13px"}}>{tr.name}</span>
+                        <span style={{fontSize:"10px",fontWeight:"700",color:cl,background:`${cl}22`,padding:"2px 8px",borderRadius:"4px"}}>{tr.category}</span>
+                        {tr.trending_score&&<span style={{fontSize:"10px",color:"#f59e0b",fontWeight:"700"}}>★ {tr.trending_score}/10</span>}
+                        {tr.google_signal&&<span style={{fontSize:"9px",fontWeight:"700",color:"#4285f4",background:"#4285f422",padding:"1px 6px",borderRadius:"4px"}}>G Trends</span>}
+                        {alreadyIn&&<span style={{fontSize:"9px",fontWeight:"700",color:"#22c55e",background:"#22c55e22",padding:"1px 6px",borderRadius:"4px"}}>✓ In Store</span>}
+                      </div>
                       <p style={{fontSize:"11px",color:c.muted,marginBottom:"5px",lineHeight:1.4}}>{tr.reason}</p>
-                      <div style={{display:"flex",gap:"10px",fontSize:"11px",color:c.muted,marginBottom:"7px"}}><span>💰 {tr.price_range}</span><span>📊 {tr.estimated_demand}</span></div>
-                      <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}><button className="btn-t" onClick={()=>trendSearchCJ(tr.name)} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"4px 10px",borderRadius:"6px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>Search in CJ</button><button className="btn-t" onClick={()=>trendAddProduct(tr)} style={{background:cl,color:"#fff",border:"none",padding:"4px 10px",borderRadius:"6px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>Add to Store</button></div>
+                      <div style={{display:"flex",gap:"10px",fontSize:"11px",color:c.muted,marginBottom:"7px",flexWrap:"wrap"}}>
+                        <span>💰 {tr.price_range}</span>
+                        <span>📊 {tr.estimated_demand}</span>
+                        {tr.profit_margin!=null&&<span style={{color:"#22c55e",fontWeight:"700"}}>📈 ~{tr.profit_margin}% margin</span>}
+                      </div>
+                      <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                        <button className="btn-t" onClick={()=>trendSearchCJ(tr.name)} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"4px 10px",borderRadius:"6px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>Search in CJ</button>
+                        <button className="btn-t" onClick={()=>trendAddProduct(tr)} disabled={alreadyIn||isImporting} style={{background:alreadyIn?"#22c55e22":cl,color:alreadyIn?"#22c55e":"#fff",border:alreadyIn?"1px solid #22c55e44":"none",padding:"4px 10px",borderRadius:"6px",cursor:alreadyIn?"default":"pointer",fontSize:"10px",fontWeight:"700",opacity:isImporting?0.6:1}}>{isImporting?"Adding…":alreadyIn?"✓ Added":"Add to Store"}</button>
+                      </div>
                     </div>
                   </div>
                 );})}

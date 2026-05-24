@@ -292,6 +292,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS password_hash TEXT`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS routed_supplier_id INTEGER`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_content JSONB`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS source VARCHAR(50)`);
 
   // Seed all 11 feature flags enabled by default
   const FLAGS = ['loyalty_points','wallet','b2b','trade_in','group_cart','back_in_stock','smart_bundles','digital_warranty','coupons','vat','cod'];
@@ -1434,17 +1435,18 @@ app.get('/ai/trends', async (req, res) => {
     if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
     const googleTerms = await scrapeTrends();
     const ctx = googleTerms.length ? `Real Google Trends today: ${googleTerms.slice(0, 12).join(', ')}. Use these as inspiration.` : 'Use your 2026 knowledge.';
-    const prompt = `It is 2026. ${ctx}\n\nIdentify 10 trending products for a Saudi Arabian e-commerce store (electronics, accessories, clothing).\nReturn ONLY a JSON array of exactly 10 objects: {name (string), category ("electronics"|"accessories"|"clothing"), estimated_demand ("Very High"|"High"|"Medium"), price_range (string e.g. "250-450 SAR"), reason (string max 15 words), trending_score (integer 1-10), google_signal (boolean, true if inspired by Google Trends)}.`;
+    const prompt = `It is 2026. ${ctx}\n\nIdentify 15 trending products for a Saudi Arabian e-commerce store (electronics, accessories, clothing).\nReturn ONLY a JSON array of exactly 15 objects: {name (string), category ("electronics"|"accessories"|"clothing"), estimated_demand ("Very High"|"High"|"Medium"), price_range (string e.g. "250-450 SAR"), reason (string max 15 words), trending_score (integer 1-10), google_signal (boolean, true if inspired by Google Trends), profit_margin (integer, estimated profit % between 10 and 60)}.`;
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, messages: [{ role: 'user', content: prompt }] })
     });
     const d = await r.json();
     if (!r.ok) return res.status(500).json({ error: d.error?.message || 'Claude API error' });
     const m = (d.content?.[0]?.text || '').match(/\[[\s\S]*\]/);
     if (!m) return res.status(500).json({ error: 'Failed to parse AI response' });
-    const results = JSON.parse(m[0]);
+    let results;
+    try { results = JSON.parse(m[0]); } catch { return res.status(500).json({ error: 'Failed to parse trend data' }); }
     res.json({ results, google_terms: googleTerms.slice(0, 12) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1468,17 +1470,42 @@ app.get('/ai/trend-import', async (req, res) => {
 
 app.post('/ai/trend-approve', async (req, res) => {
   try {
-    const { name, price, category, description, image } = req.body;
+    const { name, price, category, description, image, source } = req.body;
     if (!name || !price) return res.status(400).json({ error: 'name and price are required' });
+    const dup = await pool.query('SELECT id FROM products WHERE LOWER(name)=LOWER($1)', [name]);
+    if (dup.rows.length) return res.status(409).json({ error: 'duplicate', id: dup.rows[0].id });
     const result = await pool.query(
-      'INSERT INTO products (name, price, category, description, stock, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [name, Number(price), category || 'electronics', description || '', 999, image || null]
+      'INSERT INTO products (name, price, category, description, stock, image, source) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [name, Number(price), category || 'electronics', description || '', 999, image || null, source || 'manual']
     );
     await auditLog('trend_import', `Trend product added: ${name} at ${price} SAR`);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post('/ai/trend-import-all', async (req, res) => {
+  try {
+    const { trends } = req.body;
+    if (!Array.isArray(trends) || !trends.length) return res.status(400).json({ error: 'trends array required' });
+    const results = { imported: 0, skipped: 0, errors: [] };
+    for (const tr of trends) {
+      try {
+        const ex = await pool.query('SELECT id FROM products WHERE LOWER(name)=LOWER($1)', [tr.name]);
+        if (ex.rows.length) { results.skipped++; continue; }
+        const price = Number(tr.price_range?.match(/\d+/)?.[0] || 99);
+        const image = await getProductImage(tr.name);
+        await pool.query(
+          'INSERT INTO products (name,price,category,description,stock,image,source) VALUES($1,$2,$3,$4,$5,$6,$7)',
+          [tr.name, price, tr.category || 'electronics', tr.reason || 'Trending product — auto imported', 999, image, 'autopilot']
+        );
+        results.imported++;
+      } catch (e) { results.errors.push(`${tr.name?.slice(0, 20)}: ${e.message.slice(0, 40)}`); }
+    }
+    if (results.imported) await auditLog('trend_import', `Bulk imported ${results.imported} trending products`);
+    res.json(results);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ─── AI Price Monitor ────────────────────────────────────────────────────────
@@ -1858,27 +1885,48 @@ async function getCJImage(name) {
   }
 }
 
+async function getUnsplashImage(name) {
+  try {
+    const key = process.env.UNSPLASH_ACCESS_KEY;
+    if (!key) return null;
+    const r = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(name)}&per_page=1&orientation=landscape`, {
+      headers: { Authorization: `Client-ID ${key}` }
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.results?.[0]?.urls?.regular || null;
+  } catch { return null; }
+}
+
+async function getProductImage(name) {
+  const img = await getCJImage(name);
+  return img || await getUnsplashImage(name);
+}
+
 app.post('/autopilot/run', async (req, res) => {
   const results = { imported: 0, prices_updated: 0, descriptions_generated: 0, webhooks_sent: 0, inventory_orders: 0, price_changes: 0, errors: [] };
   try {
     const hasKey = !!process.env.ANTHROPIC_API_KEY;
 
-    // a. Fetch trending products (Google Trends + AI) and import top 3
+    // a. Fetch trending products (Google Trends + AI) and import top 10
     if (hasKey) try {
       const gTerms = await scrapeTrends();
       const ctx = gTerms.length ? `Google Trends: ${gTerms.slice(0, 8).join(', ')}. ` : '';
-      const text = await callClaude(`It is 2026. ${ctx}List 3 trending products for a Saudi e-commerce store.\nReturn ONLY JSON array: [{name,category("electronics"|"accessories"|"clothing"),price_range}]`, 512);
+      const text = await callClaude(`It is 2026. ${ctx}List 10 trending products for a Saudi e-commerce store.\nReturn ONLY JSON array: [{name,category("electronics"|"accessories"|"clothing"),price_range,description}]`, 1024);
       const m = text.match(/\[[\s\S]*\]/);
       if (m) {
-        for (const tr of JSON.parse(m[0]).slice(0, 3)) {
-          const ex = await pool.query('SELECT id FROM products WHERE LOWER(name)=LOWER($1)', [tr.name]);
-          if (!ex.rows.length) {
+        let trendList;
+        try { trendList = JSON.parse(m[0]); } catch { trendList = []; }
+        for (const tr of trendList.slice(0, 10)) {
+          try {
+            const ex = await pool.query('SELECT id FROM products WHERE LOWER(name)=LOWER($1)', [tr.name]);
+            if (ex.rows.length) continue;
             const price = Number(tr.price_range?.match(/\d+/)?.[0] || 99);
-            const image = await getCJImage(tr.name);
-            await pool.query('INSERT INTO products (name,price,category,description,stock,image) VALUES($1,$2,$3,$4,$5,$6)',
-              [tr.name, price, tr.category || 'electronics', 'Trending product — auto imported', 999, image]);
+            const image = await getProductImage(tr.name);
+            await pool.query('INSERT INTO products (name,price,category,description,stock,image,source) VALUES($1,$2,$3,$4,$5,$6,$7)',
+              [tr.name, price, tr.category || 'electronics', tr.description || 'Trending product — auto imported', 999, image, 'autopilot']);
             results.imported++;
-          }
+          } catch (e) { results.errors.push(`trend:${(tr.name||'').slice(0, 20)}:${e.message.slice(0, 30)}`); }
         }
       }
       if (results.imported) await auditLog('autopilot', `Imported ${results.imported} trending products`);
@@ -1907,20 +1955,33 @@ app.post('/autopilot/run', async (req, res) => {
       if (results.webhooks_sent) await auditLog('autopilot', `Sent ${results.webhooks_sent} low-stock webhooks`);
     } catch (e) { results.errors.push('webhooks:' + e.message.slice(0, 50)); }
 
-    // d. Content Agent — multilingual content + marketing angles + SEO for products missing descriptions
+    // d. Content Agent — multilingual content for all products missing descriptions (batches of 5)
     if (hasKey) try {
-      const { rows: nd } = await pool.query(`SELECT id,name,price,category FROM products WHERE description IS NULL OR description='' OR description='Trending product — auto imported' LIMIT 5`);
-      if (nd.length) {
-        const text = await callClaude(`Multilingual marketing content for BLEX Saudi e-commerce. Return ONLY JSON array: [{"id":1,"descriptions":{"en":"...","ar":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3"]}]\nProducts: ${JSON.stringify(nd.map(p=>({id:p.id,name:p.name,category:p.category,price:p.price+' SAR'})))}`, 2048);
-        const ma = text.match(/\[[\s\S]*\]/);
-        if (ma) {
-          for (const d of JSON.parse(ma[0])) {
-            await pool.query('UPDATE products SET description=$1,ai_content=$2 WHERE id=$3', [d.descriptions?.en || '', d, d.id]);
-            results.descriptions_generated++;
+      const { rows: nd } = await pool.query(`SELECT id,name,price,category FROM products WHERE description IS NULL OR description='' OR description='Trending product — auto imported' ORDER BY id`);
+      const BATCH = 5;
+      for (let bi = 0; bi < nd.length; bi += BATCH) {
+        const batch = nd.slice(bi, bi + BATCH);
+        const contentPrompt = `Multilingual marketing content for BLEX Saudi e-commerce. Return ONLY JSON array: [{"id":1,"descriptions":{"en":"...","ar":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3"]}]\nProducts: ${JSON.stringify(batch.map(p=>({id:p.id,name:p.name,category:p.category,price:p.price+' SAR'})))}`;
+        let parsed = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const text = await callClaude(contentPrompt, 4096);
+            const ma = text.match(/\[[\s\S]*\]/);
+            if (ma) { parsed = JSON.parse(ma[0]); break; }
+          } catch (parseErr) {
+            if (attempt === 1) await auditLog('content_agent', `Parse error batch ${bi}: ${parseErr.message.slice(0, 60)}`);
           }
         }
-        if (results.descriptions_generated) await auditLog('content_agent', `Autopilot generated content for ${results.descriptions_generated} products`);
+        if (parsed) {
+          for (const d of parsed) {
+            try {
+              await pool.query('UPDATE products SET description=$1,ai_content=$2 WHERE id=$3', [d.descriptions?.en || '', d, d.id]);
+              results.descriptions_generated++;
+            } catch (dbErr) { results.errors.push('content_db:' + dbErr.message.slice(0, 40)); }
+          }
+        }
       }
+      if (results.descriptions_generated) await auditLog('content_agent', `Autopilot generated content for ${results.descriptions_generated} products`);
     } catch (e) { results.errors.push('content_agent:' + e.message.slice(0, 50)); }
 
     // e. Inventory Agent - predict stock-outs
