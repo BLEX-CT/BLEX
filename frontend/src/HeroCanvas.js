@@ -1,10 +1,9 @@
 import { useEffect, useRef } from "react";
+import * as THREE from "three";
 
 export default function HeroCanvas({ color }) {
   const ref = useRef();
   useEffect(() => {
-    const THREE = window.THREE;
-    if (!THREE) return;
     const canvas = ref.current;
     if (!canvas) return;
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
