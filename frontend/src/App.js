@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import HeroCanvas from './HeroCanvas';
+import { useScrollReveal, useRipple, confetti, flyToCart, CountUp } from './animations';
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const LS  = k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}};
@@ -91,7 +93,7 @@ function injectCSS(){
     .btn-t::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);transform:translateX(-100%);transition:transform .5s;pointer-events:none}
     .btn-t:hover::after{transform:translateX(100%)}
     .card-wrap{transition:transform .32s ease,box-shadow .32s ease}
-    .card-wrap:hover{transform:translateY(-8px) perspective(800px) rotateX(2deg) rotateY(-1deg)}
+    .card-wrap:hover{transform:translateY(-8px) perspective(600px) rotateX(2deg) rotateY(-1deg)}
     .holo-card{position:relative;overflow:hidden}
     .holo-card::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(0,212,255,.07) 50%,rgba(123,47,247,.07) 60%,rgba(255,215,0,.04) 70%,transparent 80%);background-size:200% 100%;opacity:0;transition:opacity .3s;pointer-events:none;z-index:5}
     .holo-card:hover::after{opacity:1;animation:holoShine 1.8s linear infinite}
@@ -262,6 +264,7 @@ export default function App() {
   const [contentLoading,setContentLoading]=useState({});
 
   const c=THEMES[theme]||THEMES.dark, t=T[lang], isRtl=t.dir==="rtl";
+  useScrollReveal(); useRipple();
   const CATS=["all","electronics","accessories","clothing"];
   const MQ=[...CATS.slice(1),...CATS.slice(1),...CATS.slice(1),...CATS.slice(1)];
 
@@ -464,7 +467,7 @@ export default function App() {
       await fetch(API+"/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,items:cart,total:cartTotal.toFixed(2),order_ref:num})});
       const rec={orderNum:num,customerId:user?.id,customerEmail:form.email,items:cart,subtotal:cartSub,discount,total:cartTotal,date:new Date().toISOString()};
       setLocalOrders([rec,...getLocalOrders()]);
-      setOrderNum(num); setOrdered(true); setCart([]); setAppliedCoupon(null); setCouponInput(""); addToast(t.orderSuccess,"success");
+      setOrderNum(num); setOrdered(true); setCart([]); setAppliedCoupon(null); setCouponInput(""); addToast(t.orderSuccess,"success"); confetti();
     }catch{}
   };
 
@@ -633,7 +636,7 @@ export default function App() {
           </>
           :<button onClick={()=>{setAuthOpen(true);setAuthMode("login");}} className="btn-t" style={{...btnS({width:"auto",padding:"5px 12px",fontSize:"12px"})}}>{t.signIn}</button>
         }
-        <button onClick={()=>setCartOpen(o=>!o)} className="btn-t" style={{background:c.accent,color:c.accentTxt,border:"none",borderRadius:"50%",width:"34px",height:"34px",cursor:"pointer",fontSize:"14px",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <button onClick={()=>setCartOpen(o=>!o)} data-cart className="btn-t" style={{background:c.accent,color:c.accentTxt,border:"none",borderRadius:"50%",width:"34px",height:"34px",cursor:"pointer",fontSize:"14px",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           🛒{cartCount>0&&<span style={{position:"absolute",top:"-5px",right:"-5px",background:"#ef4444",color:"#fff",borderRadius:"50%",width:"15px",height:"15px",fontSize:"9px",fontWeight:"900",display:"flex",alignItems:"center",justifyContent:"center"}}>{cartCount}</span>}
         </button>
         <button onClick={()=>setMobileMenuOpen(o=>!o)} className="show-mob btn-t" style={{display:"none",background:c.chip,border:`1px solid ${c.border}`,color:c.text,borderRadius:"7px",padding:"5px 8px",cursor:"pointer",fontSize:"16px",lineHeight:1,flexShrink:0}}>{mobileMenuOpen?"×":"☰"}</button>
@@ -705,6 +708,7 @@ export default function App() {
       {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
       <div style={{position:"relative",overflow:"hidden",minHeight:"500px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType==="video"?{}:{background:favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
         {heroMediaType==="video"&&heroVideoUrl&&<video autoPlay muted loop playsInline src={heroVideoUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
+        {heroMediaType==="gradient"&&<HeroCanvas color={c.accent}/>}
         <div className="float-blob" style={{width:"540px",height:"540px",top:"-220px",left:"-160px",background:theme==="dark"?"rgba(0,212,255,0.14)":"rgba(0,100,200,0.06)",animation:"floatA 14s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"420px",height:"420px",bottom:"-160px",right:"-100px",background:theme==="dark"?"rgba(123,47,247,0.16)":"rgba(100,0,200,0.06)",animation:"floatB 11s ease-in-out infinite"}}/>
         <div className="float-blob" style={{width:"280px",height:"280px",top:"25%",right:"12%",background:theme==="dark"?"rgba(255,215,0,0.07)":"rgba(200,150,0,0.04)",animation:"floatA 19s ease-in-out infinite reverse"}}/>
@@ -782,8 +786,8 @@ export default function App() {
           ?<div style={{textAlign:"center",padding:"72px 0",color:c.muted}}><div style={{fontSize:"56px",marginBottom:"16px",opacity:.4}}>⌕</div><p style={{fontWeight:"800",fontSize:"16px",marginBottom:"8px"}}>{t.noProducts}</p><p style={{fontSize:"12px",marginBottom:"20px"}}>Try a different keyword or category</p>{search&&<button className="btn-t" onClick={()=>{setSearch("");setSearchRaw("");setCategory("all");}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"8px 20px",borderRadius:"20px",cursor:"pointer",fontWeight:"700",fontSize:"12px"}}>Clear Search</button>}</div>
           :<div className="g3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:"14px"}}>
             {filtered.map((p,idx)=>(
-              <div key={p.id} className="card-wrap holo-card fu" onMouseEnter={()=>setHovered(p.id)} onMouseLeave={()=>setHovered(null)} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
-                style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,overflow:"hidden",animationDelay:`${idx*.04}s`,boxShadow:hovered===p.id?(theme==="dark"?"0 18px 56px rgba(0,0,0,.55)":"0 10px 36px rgba(0,0,0,.1)"):"0 2px 6px rgba(0,0,0,.05)"}}>
+              <div key={p.id} className="card-wrap holo-card reveal-card" data-delay={(idx*100).toString()} onMouseEnter={()=>setHovered(p.id)} onMouseMove={e=>{const r=e.currentTarget.getBoundingClientRect();const rx=(e.clientX-r.left)/r.width-.5;const ry=(e.clientY-r.top)/r.height-.5;e.currentTarget.style.transform=`perspective(600px) rotateX(${-ry*14}deg) rotateY(${rx*14}deg) translateY(-8px)`;e.currentTarget.style.boxShadow=theme==="dark"?`${-rx*6}px ${-ry*6}px 32px rgba(0,0,0,.55)`:`${-rx*4}px ${-ry*4}px 20px rgba(0,0,0,.12)`;}} onMouseLeave={e=>{setHovered(null);e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';}} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
+                style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,overflow:"hidden",boxShadow:"0 2px 6px rgba(0,0,0,.05)"}}>
                 <div style={{height:"188px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
                   {(()=>{const g=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};const imgs=[p.image,g.cleaned].filter(Boolean);const ci=(cardImgIdx[p.id]||0)%Math.max(1,imgs.length);return<>
                     {imgs[ci]?<img src={imgs[ci]} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",transition:"opacity .25s"}} onError={e=>{e.target.style.display="none"}}/>:<span style={{fontSize:"50px",opacity:.65,color:CAT_CLR[p.category]||c.muted}}>{CAT_ICONS[p.category]||"◈"}</span>}
@@ -791,7 +795,7 @@ export default function App() {
                   </>})()}
                   <div className="img-ov" style={{position:"absolute",inset:0,background:"rgba(0,0,0,.44)",display:"flex",alignItems:"flex-end",padding:"12px"}}>
                     {(p.stock>0||p.is_preorder)
-                      ?<button className="btn-t" onClick={e=>{e.stopPropagation();addToCart(p);}} style={btnP({borderRadius:"8px",padding:"8px 14px",fontSize:"12px",width:"100%"})}>{p.is_preorder?"Pre-Order":t.addToCart}</button>
+                      ?<button className="btn-t" onClick={e=>{e.stopPropagation();addToCart(p);flyToCart(e);}} style={btnP({borderRadius:"8px",padding:"8px 14px",fontSize:"12px",width:"100%"})}>{p.is_preorder?"Pre-Order":t.addToCart}</button>
                       :flags.back_in_stock&&<button className="btn-t" onClick={e=>{e.stopPropagation();toggleAlert(p.id);}} style={{...btnP({borderRadius:"8px",padding:"8px 14px",fontSize:"12px",width:"100%"}),background:alertedIds.includes(p.id)?c.success:c.accent}}>{alertedIds.includes(p.id)?"✓ Notified":"🔔 Notify Me"}</button>
                     }
                   </div>
@@ -808,7 +812,7 @@ export default function App() {
                   <p style={{color:c.muted,fontSize:"11px",marginBottom:"11px",lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.description}</p>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"900",fontSize:"17px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"800",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span className={theme==="dark"?"neon-price":""} style={{fontWeight:"900",fontSize:"19px"}}>{fmt(p.price)}</span></div>}</div>
-                    <button className="btn-t" onClick={e=>{e.stopPropagation();(p.stock>0||p.is_preorder)&&addToCart(p);}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"6px 11px",borderRadius:"7px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"11px",fontWeight:"700",opacity:(p.stock>0||p.is_preorder)?1:.4}}>+ {t.cart}</button>
+                    <button className="btn-t" onClick={e=>{e.stopPropagation();if(p.stock>0||p.is_preorder){addToCart(p);flyToCart(e);}}} style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"6px 11px",borderRadius:"7px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"11px",fontWeight:"700",opacity:(p.stock>0||p.is_preorder)?1:.4}}>+ {t.cart}</button>
                   </div>
                   {flags.b2b&&<p style={{fontSize:"8px",color:c.muted,marginTop:"3px",letterSpacing:".3px"}}>★ B2B tiers: 5–9 ▸ 10% off · 10+ ▸ 20% off</p>}
                   {hovered===p.id&&(()=>{const rel=products.filter(x=>x.category===p.category&&x.id!==p.id&&x.stock>0).slice(0,2);return rel.length?<div style={{marginTop:"8px",paddingTop:"8px",borderTop:`1px solid ${c.border}`}}><p style={{fontSize:"9px",color:c.muted,fontWeight:"700",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>You may also like</p>{rel.map(r=><button key={r.id} className="btn-t" onClick={e=>{e.stopPropagation();addToCart(r);}} style={{display:"block",width:"100%",background:c.chip,border:"none",borderRadius:"5px",padding:"4px 7px",marginBottom:"3px",cursor:"pointer",textAlign:"left"}}><span style={{fontSize:"10px",fontWeight:"600",color:c.text}}>{r.name.substring(0,22)}</span><span style={{float:"right",fontSize:"10px",color:c.muted}}>{fmt(r.price)}</span></button>)}</div>:null;})()}
@@ -1364,7 +1368,7 @@ export default function App() {
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:"10px",marginBottom:"16px"}}>
                 {(()=>{const visits=LS('bx_visits')||1;const conv=allOrders.length?((allOrders.length/visits)*100).toFixed(1):0;return[[t.orders,allOrders.length,"📦"],[t.revenue,fmt(totalRev,0),"💰"],["Avg",allOrders.length?fmt(totalRev/allOrders.length,0):"–","📊"],["Conv.",conv+"%","📈"]]})().map(([label,val,icon])=>(
-                  <div key={label} style={{background:c.card,borderRadius:"12px",border:`1px solid ${c.border}`,padding:"14px"}}><p style={{fontSize:"18px",marginBottom:"5px"}}>{icon}</p><p style={{fontWeight:"800",fontSize:"17px"}}>{val}</p><p style={{color:c.muted,fontSize:"10px",marginTop:"2px"}}>{label}</p></div>
+                  <div key={label} style={{background:c.card,borderRadius:"12px",border:`1px solid ${c.border}`,padding:"14px"}}><p style={{fontSize:"18px",marginBottom:"5px"}}>{icon}</p><p style={{fontWeight:"800",fontSize:"17px"}}>{typeof val==="number"?<CountUp val={val}/>:val}</p><p style={{color:c.muted,fontSize:"10px",marginTop:"2px"}}>{label}</p></div>
                 ))}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"14px"}}>
