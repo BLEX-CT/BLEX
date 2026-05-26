@@ -2611,28 +2611,66 @@ app.post('/ai/pricing-agent', authenticate, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Shared trends agent logic
+async function runTrendsAgent(focusCategory, targetNum, onProgress = null) {
+  const gTerms = await scrapeTrends().catch(() => []);
+  const ctx = gTerms.length ? `Live Google Trends: ${gTerms.slice(0,6).join(', ')}. ` : '';
+  const catCtx = focusCategory ? `Focus on "${focusCategory}" category. ` : '';
+  const keywordHints = focusCategory === 'electronics'
+    ? '"earbuds","USB cable","LED light","ring light","charger","case","lens","fan","keyboard","mouse","cable","pad","stand","lamp","purifier","speaker","headphone","camera","tripod","battery","sensor","switch","light"'
+    : '"bracelet","necklace","ring","earring","pendant","bag","wallet","belt","cap","hat","scarf","sunglasses","watch","gloves","dress","top","blouse","skirt","jacket","shorts"';
+  const { result, tool_log, iterations, session_id } = await callAgent(
+    'trends_agent',
+    `You are a product sourcing AI for BLEX Saudi e-commerce. ${ctx}${catCtx}CRITICAL: CJ search only works with short 1-2 word keywords — multi-word phrases return 0 results. Effective keywords: ${keywordHints}. Search each keyword, import every product with a valid image. Keep going until you have ${targetNum} successful imports.`,
+    `Import ${targetNum} ${focusCategory || 'trending'} products from CJ. Use short keyword searches. Import each product with an image immediately. Target: ${targetNum} successful imports.`,
+    ['search_cj_products','import_product','generate_description','set_product_description','get_products','send_alert'],
+    Math.max(targetNum + 10, 20),
+    onProgress
+  );
+  const imported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
+  const skipped  = tool_log.filter(l => l.tool === 'import_product' && l.result?.skipped).length;
+  const dupes    = tool_log.filter(l => l.tool === 'import_product' && l.result?.error === 'already_exists').length;
+  return { result, tool_log, iterations, session_id, imported, skipped, dupes, target: targetNum };
+}
+
+// Regular POST (for small targets ≤5; larger use the stream endpoint)
 app.post('/ai/trends-agent', authenticate, async (req, res) => {
   try {
-    // Optional params: category (specific focus) and target (number of products to import)
-    const { category: focusCategory, target = 8 } = req.body || {};
-    const targetNum = Math.min(Number(target) || 8, 25);
-    const gTerms = await scrapeTrends().catch(() => []);
-    const ctx = gTerms.length ? `Live Google Trends right now: ${gTerms.slice(0,6).join(', ')}. Use these as search inspiration. ` : '';
-    const catCtx = focusCategory ? `Focus exclusively on the "${focusCategory}" category. ` : 'Search multiple categories (electronics, accessories, clothing). ';
-    const { result, tool_log, iterations, session_id } = await callAgent(
-      'trends_agent',
-      `You are a product sourcing AI for BLEX Saudi e-commerce. ${ctx}${catCtx}Search CJ Dropshipping and import the best products found. CRITICAL: CJ search only works with short 1-2 word keywords. Good electronics keywords: "earbuds", "LED light", "USB cable", "ring light", "charger", "case", "lens", "fan", "keyboard", "mouse", "cable", "pad", "stand", "lamp", "purifier", "speaker", "headphone", "camera", "tripod", "battery". Search each keyword, review the results, import every product that has an image. Keep searching with new keywords until you reach ${targetNum} successful imports.`,
-      `Import ${targetNum} "${focusCategory || 'electronics'}" products from CJ. Use many short keyword searches (1-2 words each). Import each product with a valid image. Keep going until ${targetNum} products are imported.`,
-      ['search_cj_products','import_product','generate_description','set_product_description','get_products','send_alert'],
-      Math.max(targetNum + 8, 18)
-    );
-    const imported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
-    const skipped = tool_log.filter(l => l.tool === 'import_product' && l.result?.skipped).length;
-    const dupes = tool_log.filter(l => l.tool === 'import_product' && l.result?.error === 'already_exists').length;
-    const data = { result, tool_log, iterations, session_id, imported, skipped, dupes, target: targetNum, ran_at: new Date().toISOString() };
+    const { category: focusCategory, target = 5 } = req.body || {};
+    const targetNum = Math.min(Number(target) || 5, 5); // cap at 5 for non-streaming
+    const data = { ...(await runTrendsAgent(focusCategory, targetNum)), ran_at: new Date().toISOString() };
     await apSet('trends_agent_last', JSON.stringify(data));
     res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// SSE streaming POST — use this for target > 5 to avoid HTTP timeout
+app.post('/ai/trends-agent-stream', authenticate, async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
+
+  const { category: focusCategory, target = 20 } = req.body || {};
+  const targetNum = Math.min(Number(target) || 20, 30);
+  try {
+    let imported = 0;
+    const onProgress = (ev) => {
+      if (ev.tool === 'import_product' && ev.result?.success) {
+        imported++;
+        send({ type: 'progress', message: `Imported: ${ev.result.name} (${imported}/${targetNum})`, imported });
+      } else if (ev.tool === 'search_cj_products') {
+        send({ type: 'progress', message: `Searched "${ev.input?.keyword}" → ${ev.result?.total || 0} results`, imported });
+      }
+    };
+    const data = { ...(await runTrendsAgent(focusCategory, targetNum, onProgress)), ran_at: new Date().toISOString() };
+    await apSet('trends_agent_last', JSON.stringify(data));
+    send({ type: 'complete', ...data });
+  } catch (err) {
+    send({ type: 'error', message: err.message });
+  }
+  res.end();
 });
 
 app.post('/ai/content-agent', authenticate, async (req, res) => {
