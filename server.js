@@ -1974,7 +1974,7 @@ async function toolImportProduct({ cj_product_id }) {
   // Auto-detect category from CJ category name
   const cjCat = (p.categoryName || p.categoryNameEn || '').toLowerCase();
   const category = cjCat.includes('cloth') || cjCat.includes('shirt') || cjCat.includes('dress') || cjCat.includes('fashion') ? 'clothing'
-    : cjCat.includes('jew') || cjCat.includes('ring') || cjCat.includes('necklace') || cjCat.includes('bracelet') || cjCat.includes('bag') || cjCat.includes('watch') ? 'accessories'
+    : (cjCat.includes('jew') || cjCat.includes('ring') || cjCat.includes('necklace') || cjCat.includes('bracelet') || cjCat.includes('bag') || cjCat.includes('watch')) && !cjCat.includes('smartwatch') && !cjCat.includes('smart watch') ? 'accessories'
     : 'electronics';
   const ins = await pool.query(
     'INSERT INTO products (name,price,cost_price,description,stock,category,image,source) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,name',
@@ -2127,29 +2127,28 @@ async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], m
     if (!r.ok) throw new Error(d.error?.message || 'Claude API error');
     messages.push({ role: 'assistant', content: d.content });
 
-    if (d.stop_reason === 'end_turn') {
+    // Execute any tool_use blocks regardless of stop_reason (handles max_tokens + tool_use)
+    const toolUses = d.content.filter(b => b.type === 'tool_use');
+    if (!toolUses.length) {
+      // No tool calls — done (end_turn or max_tokens with no tools)
       const finalResult = d.content.find(b => b.type === 'text')?.text || '';
       await pool.query('INSERT INTO agent_logs(agent_name,session_id,final_result,iterations) VALUES($1,$2,$3,$4)',
         [agentName, sessionId, finalResult.slice(0,1000), iter+1]).catch(()=>{});
       return { result: finalResult, tool_log: toolLog, iterations: iter+1, session_id: sessionId };
     }
-
-    if (d.stop_reason === 'tool_use') {
-      const reasoning = d.content.find(b => b.type === 'text')?.text || '';
-      const toolResults = [];
-      for (const block of d.content) {
-        if (block.type !== 'tool_use') continue;
-        let toolResult;
-        try { toolResult = await executeTool(block.name, block.input); }
-        catch(e) { toolResult = { error: e.message }; }
-        toolLog.push({ tool: block.name, input: block.input, result: toolResult, reasoning: reasoning.slice(0,300), ts: new Date().toISOString() });
-        await pool.query('INSERT INTO agent_logs(agent_name,session_id,tool_name,tool_input,tool_result,reasoning) VALUES($1,$2,$3,$4,$5,$6)',
-          [agentName, sessionId, block.name, block.input, toolResult, reasoning.slice(0,500)]).catch(()=>{});
-        if (onProgress) try { onProgress({ phase: agentName, tool: block.name, input: block.input, result: toolResult, iter, reasoning: reasoning.slice(0,200) }); } catch {}
-        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(toolResult) });
-      }
-      messages.push({ role: 'user', content: toolResults });
+    const reasoning = d.content.find(b => b.type === 'text')?.text || '';
+    const toolResults = [];
+    for (const block of toolUses) {
+      let toolResult;
+      try { toolResult = await executeTool(block.name, block.input); }
+      catch(e) { toolResult = { error: e.message }; }
+      toolLog.push({ tool: block.name, input: block.input, result: toolResult, reasoning: reasoning.slice(0,300), ts: new Date().toISOString() });
+      await pool.query('INSERT INTO agent_logs(agent_name,session_id,tool_name,tool_input,tool_result,reasoning) VALUES($1,$2,$3,$4,$5,$6)',
+        [agentName, sessionId, block.name, block.input, toolResult, reasoning.slice(0,500)]).catch(()=>{});
+      if (onProgress) try { onProgress({ phase: agentName, tool: block.name, input: block.input, result: toolResult, iter, reasoning: reasoning.slice(0,200) }); } catch {}
+      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(toolResult) });
     }
+    messages.push({ role: 'user', content: toolResults });
   }
   return { result: `Max iterations (${maxIterations}) reached`, tool_log: toolLog, iterations: maxIterations, session_id: sessionId };
 }
@@ -2699,7 +2698,9 @@ app.post('/ai/content-agent', authenticate, async (req, res) => {
       `You are a product content AI for BLEX Saudi e-commerce. For each product: 1) call generate_description to create a compelling marketing description, 2) immediately call set_product_description to save it to the database. Work through every product. Be thorough and efficient.`,
       `Write and save descriptions for these ${nd.length} products: ${JSON.stringify(nd.map(p => ({ id: p.id, name: p.name, category: p.category })))}`,
       ['generate_description', 'set_product_description', 'send_alert'],
-      nd.length * 2 + 8
+      nd.length * 2 + 8,
+      null,
+      'claude-haiku-4-5-20251001'
     );
     const descriptions = tool_log.filter(l => l.tool === 'set_product_description' && l.result?.success).length;
     const data = { result, tool_log, iterations, session_id, descriptions, ran_at: new Date().toISOString() };
