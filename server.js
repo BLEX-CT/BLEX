@@ -2093,7 +2093,7 @@ async function executeTool(name, input) {
 }
 
 // Agentic loop: send message → Claude picks tools → execute → repeat until end_turn
-async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], maxIterations = 10, onProgress = null) {
+async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], maxIterations = 10, onProgress = null, model = 'claude-sonnet-4-6') {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
   const tools = toolNames.length ? BLEX_TOOLS.filter(t => toolNames.includes(t.name)) : BLEX_TOOLS;
@@ -2102,12 +2102,22 @@ async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], m
   const toolLog = [];
 
   for (let iter = 0; iter < maxIterations; iter++) {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: systemPrompt, tools, messages })
-    });
-    const d = await r.json();
+    let r, d, attempt = 0;
+    while (true) {
+      r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model, max_tokens: 4096, system: systemPrompt, tools, messages })
+      });
+      d = await r.json();
+      if (r.status === 529 || (r.status === 429 && attempt < 3)) {
+        attempt++;
+        const wait = r.status === 529 ? 30000 : 60000;
+        await new Promise(res => setTimeout(res, wait));
+        continue;
+      }
+      break;
+    }
     if (!r.ok) throw new Error(d.error?.message || 'Claude API error');
     messages.push({ role: 'assistant', content: d.content });
 
@@ -2625,7 +2635,8 @@ async function runTrendsAgent(focusCategory, targetNum, onProgress = null) {
     `Import ${targetNum} ${focusCategory || 'trending'} products from CJ. Use short keyword searches. Import each product with an image immediately. Target: ${targetNum} successful imports.`,
     ['search_cj_products','import_product','generate_description','set_product_description','get_products','send_alert'],
     Math.max(targetNum + 10, 20),
-    onProgress
+    onProgress,
+    'claude-haiku-4-5-20251001'
   );
   const imported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
   const skipped  = tool_log.filter(l => l.tool === 'import_product' && l.result?.skipped).length;

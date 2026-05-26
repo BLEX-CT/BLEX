@@ -71,7 +71,10 @@ async function streamPost(path, body, onEvent, timeoutMs = 600000) {
       signal: controller.signal
     });
     clearTimeout(timer);
-    if (!r.ok) return { error: `HTTP ${r.status}` };
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      return { type: 'error', message: `HTTP ${r.status}: ${body.slice(0, 120)}` };
+    }
     const reader = r.body.getReader();
     const dec = new TextDecoder();
     let buf = '';
@@ -90,7 +93,7 @@ async function streamPost(path, body, onEvent, timeoutMs = 600000) {
     return lastEvent;
   } catch (e) {
     clearTimeout(timer);
-    return { error: e.message };
+    return { type: 'error', message: e.message };
   }
 }
 
@@ -267,7 +270,7 @@ async function runContentAgent() {
   sep();
   log('CONTENT', 'Running content_agent…');
   const t0 = Date.now();
-  const r = await api('POST', '/ai/content-agent', {}, 300000);
+  const r = await api('POST', '/ai/content-agent', {}, 600000);
   const elapsed = ((Date.now()-t0)/1000).toFixed(1);
   if (!r.ok) { fail('CONTENT', JSON.stringify(r.data).slice(0,100)); return 0; }
   const descriptions = r.data.descriptions || (r.data.tool_log||[]).filter(l=>l.tool==='set_product_description'&&l.result?.success).length;
@@ -298,7 +301,7 @@ async function runPricingAgent() {
   sep();
   log('PRICING', 'Running pricing_agent…');
   const t0 = Date.now();
-  const r = await api('POST', '/ai/pricing-agent', {}, 300000);
+  const r = await api('POST', '/ai/pricing-agent', {}, 600000);
   const elapsed = ((Date.now()-t0)/1000).toFixed(1);
   if (!r.ok) { fail('PRICING', JSON.stringify(r.data).slice(0,100)); return 0; }
   const changes = (r.data.tool_log||[]).filter(l=>l.tool==='update_product_price'&&l.result?.success);
@@ -325,16 +328,17 @@ async function main() {
   log('BASELINE', `${prodsBefore.length} products in store before test`);
 
   const newProds  = await runTrendsAgent(prodsBefore);
-  const verified  = newProds.length ? verifyProducts(newProds) : 0;
   const descs     = await runContentAgent();
   const imgs      = await runImageAgent();
   const prices    = await runPricingAgent();
 
-  // Final re-read
+  // Final re-read: verify ALL newly imported products regardless of whether stream errored
   sep();
   const finalRes = await api('GET', '/products');
   const allProds = Array.isArray(finalRes.data) ? finalRes.data : [];
   const finalNew = allProds.filter(p => !prodsBefore.includes(p.id));
+
+  const verified = finalNew.length ? verifyProducts(finalNew) : 0;
 
   let imgOk=0, descOk=0, cleanBgOk=0;
   for (const p of finalNew) {
