@@ -1971,10 +1971,13 @@ async function toolImportProduct({ cj_product_id }) {
   // Price = 2.5× CJ sell price (CJ sellPrice is your cost; may be range string "7.11-8.28")
   const costPrice = parseCJPrice(p.sellPrice) || parseCJPrice(p.variants?.[0]?.variantSellPrice) || 40;
   const price = +(costPrice * 2.5).toFixed(2);
-  // Auto-detect category from CJ category name
+  // Auto-detect category; check product name for electronics override before CJ category
   const cjCat = (p.categoryName || p.categoryNameEn || '').toLowerCase();
-  const category = cjCat.includes('cloth') || cjCat.includes('shirt') || cjCat.includes('dress') || cjCat.includes('fashion') ? 'clothing'
-    : (cjCat.includes('jew') || cjCat.includes('ring') || cjCat.includes('necklace') || cjCat.includes('bracelet') || cjCat.includes('bag') || cjCat.includes('watch')) && !cjCat.includes('smartwatch') && !cjCat.includes('smart watch') ? 'accessories'
+  const nameLow = name.toLowerCase();
+  const hasElecKw = ['camera','phone','video','sensor','wifi','usb','bluetooth','charger','battery','led','cable','keyboard','mouse','speaker','headphone','earphone','earbuds','laptop','tablet','router','drone','gadget'].some(k => nameLow.includes(k));
+  const category = hasElecKw ? 'electronics'
+    : (cjCat.includes('cloth') || cjCat.includes('shirt') || cjCat.includes('dress') || cjCat.includes('fashion') || cjCat.includes('apparel')) ? 'clothing'
+    : (cjCat.includes('jew') || cjCat.includes('ring') || cjCat.includes('necklace') || cjCat.includes('bracelet') || cjCat.includes('bag') || (cjCat.includes('watch') && !cjCat.includes('smart'))) ? 'accessories'
     : 'electronics';
   const ins = await pool.query(
     'INSERT INTO products (name,price,cost_price,description,stock,category,image,source) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,name',
@@ -2691,7 +2694,7 @@ app.post('/ai/trends-agent-stream', authenticate, async (req, res) => {
 
 app.post('/ai/content-agent', authenticate, async (req, res) => {
   try {
-    const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported' OR ai_content IS NULL) ORDER BY id DESC LIMIT 40`);
+    const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported' OR ai_content IS NULL) ORDER BY id DESC LIMIT 15`);
     if (!nd.length) return res.json({ result: 'All products have AI descriptions', descriptions: 0, tool_log: [], iterations: 0 });
     const { result, tool_log, iterations, session_id } = await callAgent(
       'content_agent',
