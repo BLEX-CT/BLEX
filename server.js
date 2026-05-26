@@ -1754,7 +1754,7 @@ app.post('/ai/generate-description', async (req, res) => {
 
 // ─── AI Content Agent ────────────────────────────────────────────────────────
 
-app.post('/ai/content-agent', async (req, res) => {
+app.post('/ai/content-agent-legacy', async (req, res) => {
   try {
     if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
     const { product_id } = req.body;
@@ -1946,8 +1946,14 @@ async function toolSearchCJ({ keyword, limit = 10 }) {
 
 async function toolImportProduct({ cj_product_id }) {
   const token = await getCJToken();
-  const r = await fetch(`${CJ_BASE}/product/query?pid=${encodeURIComponent(cj_product_id)}`, { headers: { 'CJ-Access-Token': token } });
-  const d = await cjParseJSON(r);
+  let r, d;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(res => setTimeout(res, 1200 * attempt));
+    r = await fetch(`${CJ_BASE}/product/query?pid=${encodeURIComponent(cj_product_id)}`, { headers: { 'CJ-Access-Token': token } });
+    d = await cjParseJSON(r);
+    if (d.message && String(d.message).includes('Too Many Requests')) continue;
+    break;
+  }
   if (!d.result || !d.data) return { success: false, error: d.message || 'Not found on CJ' };
   const p = d.data;
   const name = p.productNameEn || p.productName;
@@ -2686,8 +2692,8 @@ app.post('/ai/trends-agent-stream', authenticate, async (req, res) => {
 
 app.post('/ai/content-agent', authenticate, async (req, res) => {
   try {
-    const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 40`);
-    if (!nd.length) return res.json({ result: 'All products have descriptions', descriptions: 0, tool_log: [], iterations: 0 });
+    const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported' OR ai_content IS NULL) ORDER BY id DESC LIMIT 40`);
+    if (!nd.length) return res.json({ result: 'All products have AI descriptions', descriptions: 0, tool_log: [], iterations: 0 });
     const { result, tool_log, iterations, session_id } = await callAgent(
       'content_agent',
       `You are a product content AI for BLEX Saudi e-commerce. For each product: 1) call generate_description to create a compelling marketing description, 2) immediately call set_product_description to save it to the database. Work through every product. Be thorough and efficient.`,
