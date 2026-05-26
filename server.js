@@ -1896,7 +1896,7 @@ function safeParseJSON(text) {
 // ─── Agentic AI Infrastructure ────────────────────────────────────────────────
 
 const BLEX_TOOLS = [
-  { name: 'search_cj_products', description: 'Search CJ Dropshipping catalog for products by keyword. Returns list with PIDs, names, prices.', input_schema: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'integer', default: 10, description: 'Max results 1-20' } }, required: ['keyword'] } },
+  { name: 'search_cj_products', description: 'Search CJ Dropshipping catalog for products by keyword. Returns list with PIDs, names, prices. IMPORTANT: Use SHORT single-word or two-word keywords only — complex phrases return 0 results. Good keywords: "earbuds", "USB cable", "ring light", "LED light", "bracelet", "case", "lens", "fan", "pad", "stand", "watch", "bag". Bad keywords: "bluetooth speaker", "smart phone holder", "portable charger" (too long — return nothing).', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: 'Short 1-2 word keyword. Single English words work best.' }, limit: { type: 'integer', default: 10, description: 'Max results 1-20' } }, required: ['keyword'] } },
   { name: 'import_product', description: 'Import a CJ Dropshipping product into the BLEX store by its PID. Checks for duplicates automatically.', input_schema: { type: 'object', properties: { cj_product_id: { type: 'string' } }, required: ['cj_product_id'] } },
   { name: 'update_product_price', description: 'Update the price of a product already in the store.', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, new_price: { type: 'number', description: 'New price in SAR (must be > 0)' } }, required: ['product_id', 'new_price'] } },
   { name: 'get_sales_data', description: 'Retrieve order volume, revenue, and per-product sales totals from the database.', input_schema: { type: 'object', properties: { days: { type: 'integer', default: 30, description: 'Look-back window, max 90' } }, required: [] } },
@@ -1909,12 +1909,39 @@ const BLEX_TOOLS = [
   { name: 'set_product_description', description: 'Save a description (and optionally category) to a product in the database. Always call this after generate_description to persist the result.', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, description: { type: 'string', description: 'The description text to save' }, category: { type: 'string', description: 'Optional: electronics | accessories | clothing' } }, required: ['product_id', 'description'] } }
 ];
 
+// CJ sellPrice can be a range string "7.11-8.28" — parse the lower bound as cost
+function parseCJPrice(val) {
+  if (!val && val !== 0) return 0;
+  if (typeof val === 'number') return val;
+  const m = String(val).match(/[\d.]+/);
+  return m ? Number(m[0]) : 0;
+}
+
+// CJ returns productImageSet as: array (detail), semicolon-string (some list), JSON-array-string, or null
+// productImage in detail is a JSON-array string; in list it's a plain URL
+function extractCJImage(productImageSet, productImage) {
+  if (Array.isArray(productImageSet) && productImageSet.length) return String(productImageSet[0]);
+  if (typeof productImageSet === 'string' && productImageSet) {
+    if (productImageSet.startsWith('[')) { try { const a = JSON.parse(productImageSet); if (a?.[0]) return String(a[0]); } catch {} }
+    const u = productImageSet.split(';')[0]?.trim();
+    if (u?.startsWith('http')) return u;
+  }
+  if (typeof productImage === 'string' && productImage) {
+    if (productImage.startsWith('[')) { try { const a = JSON.parse(productImage); if (a?.[0]) return String(a[0]); } catch {} }
+    if (productImage.startsWith('http')) return productImage;
+  }
+  return null;
+}
+
 async function toolSearchCJ({ keyword, limit = 10 }) {
   const token = await getCJToken();
   const r = await fetch(`${CJ_BASE}/product/list?productNameEn=${encodeURIComponent(keyword)}&pageNum=1&pageSize=${Math.min(Number(limit)||10, 20)}`, { headers: { 'CJ-Access-Token': token } });
   const d = await cjParseJSON(r);
   const list = Array.isArray(d.data?.list) ? d.data.list : [];
-  return { total: d.data?.total || 0, products: list.map(p => ({ pid: p.pid, name: p.productNameEn || p.productName, price: Number(p.sellPrice || 0), rating: Number(p.productStar || p.productAverageRating || 0), hasImage: !!(p.productImageSet || p.productImage), image: p.productImageSet?.split(';')?.[0]?.trim() || p.productImage || null })) };
+  return { total: d.data?.total || 0, products: list.map(p => {
+    const img = extractCJImage(p.productImageSet, p.productImage);
+    return { pid: p.pid, name: p.productNameEn || p.productName, price: parseCJPrice(p.sellPrice), rating: Number(p.productStar || p.productAverageRating || 0), hasImage: !!img, image: img };
+  }) };
 }
 
 async function toolImportProduct({ cj_product_id }) {
@@ -1925,18 +1952,18 @@ async function toolImportProduct({ cj_product_id }) {
   const p = d.data;
   const name = p.productNameEn || p.productName;
   if (!name) return { success: false, error: 'no_name' };
-  // Quality filter: must have image
-  const img = p.productImageSet?.split(';')?.[0]?.trim() || p.productImage || null;
+  // Quality filter: must have image (use unified extractor — CJ detail has array/JSON-array-string)
+  const img = extractCJImage(p.productImageSet, p.productImage);
   if (!img) return { success: false, skipped: true, reason: 'No product image — quality filter' };
-  // Quality filter: rating >= 4.0 (only enforce if CJ returns a rating)
+  // Quality filter: rating >= 4.0 (only enforce if CJ actually returns a rating value)
   const rating = Number(p.productStar || p.productAverageRating || 0);
   if (rating > 0 && rating < 4.0) return { success: false, skipped: true, reason: `Rating ${rating} < 4.0 — quality filter` };
   // Deduplicate: exact name + fuzzy 3-word prefix
   const shortName = (name||'').split(' ').slice(0,3).join(' ');
   const ex = await pool.query(`SELECT id FROM products WHERE LOWER(name)=LOWER($1) OR (LOWER(name) LIKE LOWER($2) AND LENGTH(name)>5)`, [name, `%${shortName}%`]);
   if (ex.rows.length) return { success: false, error: 'already_exists', product_id: ex.rows[0].id };
-  // Price = 2.5× CJ sell price (CJ sellPrice is your cost)
-  const costPrice = Number(p.sellPrice || p.variants?.[0]?.sellPrice || 40);
+  // Price = 2.5× CJ sell price (CJ sellPrice is your cost; may be range string "7.11-8.28")
+  const costPrice = parseCJPrice(p.sellPrice) || parseCJPrice(p.variants?.[0]?.variantSellPrice) || 40;
   const price = +(costPrice * 2.5).toFixed(2);
   // Auto-detect category from CJ category name
   const cjCat = (p.categoryName || p.categoryNameEn || '').toLowerCase();
@@ -2123,8 +2150,7 @@ async function getCJImage(name) {
       const d = await cjParseJSON(r);
       const list = Array.isArray(d.data?.list) ? d.data.list : [];
       if (!list.length) continue;
-      // productImageSet is a semicolon-separated string, not an array
-      const img = list[0]?.productImageSet?.split(';')?.[0]?.trim() || list[0]?.productImage || null;
+      const img = extractCJImage(list[0]?.productImageSet, list[0]?.productImage);
       if (img) return img;
     }
     return null;
@@ -2183,18 +2209,18 @@ async function runAutopilotAgents(onProgress = null) {
     const gTerms = await scrapeTrends().catch(() => []);
     const trendsCtx = gTerms.length ? `Current trending searches: ${gTerms.slice(0,6).join(', ')}. Use these as inspiration. ` : '';
     const CATEGORIES = [
-      { cat: 'electronics gadgets smart', label: 'Electronics' },
-      { cat: 'fashion jewelry accessories', label: 'Jewelry & Accessories' },
-      { cat: 'clothing fashion apparel', label: 'Clothing' },
-      { cat: 'home accessories bags watches', label: 'Accessories' }
+      { cat: 'electronics', label: 'Electronics', keywords: 'earbuds, cable, charger, LED light, ring light, keyboard, mouse, fan, lamp, case, stand, pad, lens, headphone, battery, purifier' },
+      { cat: 'jewelry', label: 'Jewelry', keywords: 'bracelet, necklace, ring, earring, pendant, chain, anklet, bangle, choker, brooch' },
+      { cat: 'clothing', label: 'Clothing', keywords: 'dress, top, blouse, skirt, leggings, jacket, shirt, coat, jeans, shorts' },
+      { cat: 'accessories', label: 'Accessories', keywords: 'bag, wallet, belt, cap, hat, scarf, sunglasses, watch, gloves, keychain' }
     ];
-    for (const { cat, label } of CATEGORIES) {
+    for (const { cat, label, keywords } of CATEGORIES) {
       sendPhase('trends', `Searching ${label} — targeting 20 products…`);
       try {
         const { tool_log } = await callAgent(
           'trends_agent',
-          `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. Your goal is to import exactly 20 high-quality products. Strategy: search with 3-4 different keyword variations, evaluate results, import the best ones. Only import products that have images. Work systematically until you reach 20 imports or exhaust all reasonable search options.`,
-          `Find and import 20 "${cat}" products from CJ Dropshipping. Use varied search keywords to find a diverse selection. Import each good product immediately after finding it.`,
+          `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have 20 successful imports.`,
+          `Import 20 "${label}" products. Search with short keywords (1-2 words). Suggested keywords: ${keywords}. Import each product with an image immediately after finding it.`,
           ['search_cj_products', 'import_product', 'send_alert'],
           18,
           progressCb
@@ -2595,8 +2621,8 @@ app.post('/ai/trends-agent', authenticate, async (req, res) => {
     const catCtx = focusCategory ? `Focus exclusively on the "${focusCategory}" category. ` : 'Search multiple categories (electronics, accessories, clothing). ';
     const { result, tool_log, iterations, session_id } = await callAgent(
       'trends_agent',
-      `You are a product sourcing AI for BLEX Saudi e-commerce. ${ctx}${catCtx}Search CJ Dropshipping for trending products, evaluate results, and import the best ones. Quality filters: skip products without images. Price = 2.5× CJ cost. Target: import exactly ${targetNum} high-potential products. Use multiple keyword variations to find ${targetNum} products. Be systematic and thorough.`,
-      `Source ${targetNum} trending ${focusCategory || 'multi-category'} products from CJ Dropshipping. Search with varied keywords, import each good product found.`,
+      `You are a product sourcing AI for BLEX Saudi e-commerce. ${ctx}${catCtx}Search CJ Dropshipping and import the best products found. CRITICAL: CJ search only works with short 1-2 word keywords. Good electronics keywords: "earbuds", "LED light", "USB cable", "ring light", "charger", "case", "lens", "fan", "keyboard", "mouse", "cable", "pad", "stand", "lamp", "purifier", "speaker", "headphone", "camera", "tripod", "battery". Search each keyword, review the results, import every product that has an image. Keep searching with new keywords until you reach ${targetNum} successful imports.`,
+      `Import ${targetNum} "${focusCategory || 'electronics'}" products from CJ. Use many short keyword searches (1-2 words each). Import each product with a valid image. Keep going until ${targetNum} products are imported.`,
       ['search_cj_products','import_product','generate_description','set_product_description','get_products','send_alert'],
       Math.max(targetNum + 8, 18)
     );
