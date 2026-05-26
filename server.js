@@ -2587,16 +2587,23 @@ app.post('/ai/pricing-agent', authenticate, async (req, res) => {
 
 app.post('/ai/trends-agent', authenticate, async (req, res) => {
   try {
+    // Optional params: category (specific focus) and target (number of products to import)
+    const { category: focusCategory, target = 8 } = req.body || {};
+    const targetNum = Math.min(Number(target) || 8, 25);
     const gTerms = await scrapeTrends().catch(() => []);
     const ctx = gTerms.length ? `Live Google Trends right now: ${gTerms.slice(0,6).join(', ')}. Use these as search inspiration. ` : '';
+    const catCtx = focusCategory ? `Focus exclusively on the "${focusCategory}" category. ` : 'Search multiple categories (electronics, accessories, clothing). ';
     const { result, tool_log, iterations, session_id } = await callAgent(
       'trends_agent',
-      `You are a product sourcing AI for BLEX Saudi e-commerce (electronics, accessories, clothing for Saudi/MENA market). ${ctx}Search CJ Dropshipping for trending products, evaluate results, and import the best ones. Quality filters: skip products without images. Price imported products at 2.5x CJ cost. Be autonomous: search at least 3 different category keywords, review results carefully, and import 5-8 high-potential products.`,
-      `Source the best trending products for the store right now. Search multiple categories, import top products, then generate descriptions.`,
-      ['search_cj_products','import_product','generate_description','set_product_description','get_products','send_alert']
+      `You are a product sourcing AI for BLEX Saudi e-commerce. ${ctx}${catCtx}Search CJ Dropshipping for trending products, evaluate results, and import the best ones. Quality filters: skip products without images. Price = 2.5× CJ cost. Target: import exactly ${targetNum} high-potential products. Use multiple keyword variations to find ${targetNum} products. Be systematic and thorough.`,
+      `Source ${targetNum} trending ${focusCategory || 'multi-category'} products from CJ Dropshipping. Search with varied keywords, import each good product found.`,
+      ['search_cj_products','import_product','generate_description','set_product_description','get_products','send_alert'],
+      Math.max(targetNum + 8, 18)
     );
     const imported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
-    const data = { result, tool_log, iterations, session_id, imported, ran_at: new Date().toISOString() };
+    const skipped = tool_log.filter(l => l.tool === 'import_product' && l.result?.skipped).length;
+    const dupes = tool_log.filter(l => l.tool === 'import_product' && l.result?.error === 'already_exists').length;
+    const data = { result, tool_log, iterations, session_id, imported, skipped, dupes, target: targetNum, ran_at: new Date().toISOString() };
     await apSet('trends_agent_last', JSON.stringify(data));
     res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
