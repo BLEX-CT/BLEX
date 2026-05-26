@@ -2694,7 +2694,7 @@ app.post('/ai/trends-agent-stream', authenticate, async (req, res) => {
 
 app.post('/ai/content-agent', authenticate, async (req, res) => {
   try {
-    const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported' OR ai_content IS NULL) ORDER BY id DESC LIMIT 15`);
+    const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported' OR ai_content IS NULL) ORDER BY id DESC LIMIT 8`);
     if (!nd.length) return res.json({ result: 'All products have AI descriptions', descriptions: 0, tool_log: [], iterations: 0 });
     const { result, tool_log, iterations, session_id } = await callAgent(
       'content_agent',
