@@ -1439,14 +1439,21 @@ app.get('/ai/trends', async (req, res) => {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
     });
     const d = await r.json();
     if (!r.ok) return res.status(500).json({ error: d.error?.message || 'Claude API error' });
     const m = (d.content?.[0]?.text || '').match(/\[[\s\S]*\]/);
     if (!m) return res.status(500).json({ error: 'Failed to parse AI response' });
     let results;
-    try { results = JSON.parse(m[0]); } catch { return res.status(500).json({ error: 'Failed to parse trend data' }); }
+    try { results = safeParseJSON(m[0]); } catch { return res.status(500).json({ error: 'Failed to parse trend data' }); }
+    // Mark which products are already in the store (for duplicate prevention UI)
+    let existingNames = new Set();
+    try {
+      const { rows: ep } = await pool.query('SELECT LOWER(name) n FROM products');
+      existingNames = new Set(ep.map(r => r.n));
+    } catch {}
+    results = results.map(tr => ({ ...tr, already_imported: existingNames.has((tr.name || '').toLowerCase()) }));
     res.json({ results, google_terms: googleTerms.slice(0, 12) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1492,7 +1499,11 @@ app.post('/ai/trend-import-all', async (req, res) => {
     const results = { imported: 0, skipped: 0, errors: [] };
     for (const tr of trends) {
       try {
-        const ex = await pool.query('SELECT id FROM products WHERE LOWER(name)=LOWER($1)', [tr.name]);
+        const shortName = (tr.name || '').split(' ').slice(0, 3).join(' ');
+        const ex = await pool.query(
+          `SELECT id FROM products WHERE LOWER(name)=LOWER($1) OR (LOWER(name) LIKE LOWER($2) AND LENGTH(name)>5)`,
+          [tr.name, `%${shortName}%`]
+        );
         if (ex.rows.length) { results.skipped++; continue; }
         const price = Number(tr.price_range?.match(/\d+/)?.[0] || 99);
         const image = await getProductImage(tr.name);
@@ -1758,10 +1769,10 @@ app.post('/ai/content-agent', async (req, res) => {
     const results = [];
     for (const p of products) {
       try {
-        const text = await callClaude(`You are a multilingual marketing expert for BLEX Saudi e-commerce. Product: "${p.name}" | Category: ${p.category} | Price: ${p.price} SAR. Return ONLY valid JSON: {"descriptions":{"en":"...","ar":"...","zh":"...","ko":"...","ja":"...","fr":"...","es":"...","de":"...","it":"...","pt":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3","kw4","kw5"]}`, 2048);
+        const text = await callClaude(`You are a multilingual marketing expert for BLEX Saudi e-commerce. Product: "${p.name}" | Category: ${p.category} | Price: ${p.price} SAR.\nIMPORTANT: Return ONLY valid JSON, no other text. All string values must be on a single line — no literal newlines inside strings.\nFormat: {"descriptions":{"en":"...","ar":"...","zh":"...","ko":"...","ja":"...","fr":"...","es":"...","de":"...","it":"...","pt":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3","kw4","kw5"]}`, 4096);
         const m = text.match(/\{[\s\S]*\}/);
         if (m) {
-          const content = JSON.parse(m[0]);
+          const content = safeParseJSON(m[0]);
           await pool.query('UPDATE products SET description=$1,ai_content=$2 WHERE id=$3', [content.descriptions?.en || '', content, p.id]);
           results.push({ product_id: p.id, name: p.name, content });
           await auditLog('content_agent', `Generated multilingual content: ${p.name}`);
@@ -1871,15 +1882,34 @@ async function callClaude(prompt, maxTokens = 1024) {
   return d.content?.[0]?.text || '';
 }
 
+// Safely parse JSON from Claude responses — handles literal newlines inside string values
+function safeParseJSON(text) {
+  try { return JSON.parse(text); } catch {
+    // Replace literal control chars inside JSON string values only
+    const repaired = text.replace(/"(?:[^"\\]|\\.)*"/gs, m =>
+      m.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
+    );
+    return JSON.parse(repaired);
+  }
+}
+
 async function getCJImage(name) {
   try {
     const token = await getCJToken();
-    const r = await fetch(`${CJ_BASE}/product/list?productNameEn=${encodeURIComponent(name)}&pageNum=1&pageSize=5`, {
-      headers: { 'CJ-Access-Token': token }
-    });
-    const d = await cjParseJSON(r);
-    const list = Array.isArray(d.data?.list) ? d.data.list : [];
-    return list[0]?.productImageSet?.[0] || list[0]?.productImage || null;
+    // Try full name first, then first 2 words (CJ may not find verbose AI-generated names)
+    const queries = [name, name.split(' ').slice(0, 2).join(' ')].filter(Boolean);
+    for (const q of queries) {
+      const r = await fetch(`${CJ_BASE}/product/list?productNameEn=${encodeURIComponent(q)}&pageNum=1&pageSize=5`, {
+        headers: { 'CJ-Access-Token': token }
+      });
+      const d = await cjParseJSON(r);
+      const list = Array.isArray(d.data?.list) ? d.data.list : [];
+      if (!list.length) continue;
+      // productImageSet is a semicolon-separated string, not an array
+      const img = list[0]?.productImageSet?.split(';')?.[0]?.trim() || list[0]?.productImage || null;
+      if (img) return img;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -1912,14 +1942,19 @@ app.post('/autopilot/run', async (req, res) => {
     if (hasKey) try {
       const gTerms = await scrapeTrends();
       const ctx = gTerms.length ? `Google Trends: ${gTerms.slice(0, 8).join(', ')}. ` : '';
-      const text = await callClaude(`It is 2026. ${ctx}List 10 trending products for a Saudi e-commerce store.\nReturn ONLY JSON array: [{name,category("electronics"|"accessories"|"clothing"),price_range,description}]`, 1024);
+      const text = await callClaude(`It is 2026. ${ctx}List 10 trending products for a Saudi e-commerce store.\nReturn ONLY a JSON array of exactly 10 objects, no other text: [{name,category("electronics"|"accessories"|"clothing"),price_range,description}]\nIMPORTANT: All string values must be single-line with no line breaks.`, 2048);
       const m = text.match(/\[[\s\S]*\]/);
       if (m) {
         let trendList;
-        try { trendList = JSON.parse(m[0]); } catch { trendList = []; }
+        try { trendList = safeParseJSON(m[0]); } catch { trendList = []; }
         for (const tr of trendList.slice(0, 10)) {
           try {
-            const ex = await pool.query('SELECT id FROM products WHERE LOWER(name)=LOWER($1)', [tr.name]);
+            // Exact match + first-3-words fuzzy match to prevent near-duplicate imports
+            const shortName = (tr.name || '').split(' ').slice(0, 3).join(' ');
+            const ex = await pool.query(
+              `SELECT id FROM products WHERE LOWER(name)=LOWER($1) OR (LOWER(name) LIKE LOWER($2) AND LENGTH(name)>5)`,
+              [tr.name, `%${shortName}%`]
+            );
             if (ex.rows.length) continue;
             const price = Number(tr.price_range?.match(/\d+/)?.[0] || 99);
             const image = await getProductImage(tr.name);
@@ -1936,10 +1971,10 @@ app.post('/autopilot/run', async (req, res) => {
     if (hasKey) try {
       const { rows } = await pool.query('SELECT id,name,price,category FROM products ORDER BY id DESC LIMIT 30');
       if (rows.length) {
-        const text = await callClaude(`Analyze pricing for Saudi e-commerce products: ${JSON.stringify(rows)}\nReturn ONLY JSON array: [{id,suggested_price,status("good"|"adjust"|"expensive")}]`);
+        const text = await callClaude(`Analyze pricing for Saudi e-commerce products: ${JSON.stringify(rows)}\nReturn ONLY a JSON array, no other text: [{id,suggested_price,status("good"|"adjust"|"expensive")}]`);
         const m = text.match(/\[[\s\S]*\]/);
         if (m) {
-          for (const a of JSON.parse(m[0]).filter(x => x.status !== 'good')) {
+          for (const a of safeParseJSON(m[0]).filter(x => x.status !== 'good')) {
             await pool.query('UPDATE products SET price=$1 WHERE id=$2', [a.suggested_price, a.id]);
             results.prices_updated++;
           }
@@ -1955,19 +1990,19 @@ app.post('/autopilot/run', async (req, res) => {
       if (results.webhooks_sent) await auditLog('autopilot', `Sent ${results.webhooks_sent} low-stock webhooks`);
     } catch (e) { results.errors.push('webhooks:' + e.message.slice(0, 50)); }
 
-    // d. Content Agent — multilingual content for all products missing descriptions (batches of 5)
+    // d. Content Agent — multilingual content for all products missing descriptions (batches of 2)
     if (hasKey) try {
       const { rows: nd } = await pool.query(`SELECT id,name,price,category FROM products WHERE description IS NULL OR description='' OR description='Trending product — auto imported' ORDER BY id`);
-      const BATCH = 5;
+      const BATCH = 2;
       for (let bi = 0; bi < nd.length; bi += BATCH) {
         const batch = nd.slice(bi, bi + BATCH);
-        const contentPrompt = `Multilingual marketing content for BLEX Saudi e-commerce. Return ONLY JSON array: [{"id":1,"descriptions":{"en":"...","ar":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3"]}]\nProducts: ${JSON.stringify(batch.map(p=>({id:p.id,name:p.name,category:p.category,price:p.price+' SAR'})))}`;
+        const contentPrompt = `Multilingual marketing content for BLEX Saudi e-commerce.\nIMPORTANT: Return ONLY a valid JSON array, no other text. All string values must be on a single line — no literal newlines inside strings.\nFormat: [{"id":1,"descriptions":{"en":"...","ar":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3"]}]\nProducts: ${JSON.stringify(batch.map(p=>({id:p.id,name:p.name,category:p.category,price:p.price+' SAR'})))}`;
         let parsed = null;
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const text = await callClaude(contentPrompt, 4096);
+            const text = await callClaude(contentPrompt, 8192);
             const ma = text.match(/\[[\s\S]*\]/);
-            if (ma) { parsed = JSON.parse(ma[0]); break; }
+            if (ma) { parsed = safeParseJSON(ma[0]); break; }
           } catch (parseErr) {
             if (attempt === 1) await auditLog('content_agent', `Parse error batch ${bi}: ${parseErr.message.slice(0, 60)}`);
           }
@@ -1989,8 +2024,8 @@ app.post('/autopilot/run', async (req, res) => {
       const { rows: ap } = await pool.query('SELECT id,name,stock FROM products WHERE stock>=0 ORDER BY stock ASC LIMIT 20');
       const { rows: as } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '30 days' GROUP BY item->>'id'`);
       const asm=Object.fromEntries(as.map(s=>[s.pid,Number(s.sold)]));
-      const at=await callClaude(`Flag products needing reorder. Data:${JSON.stringify(ap.map(p=>({id:p.id,name:p.name,stock:p.stock,sold_30d:asm[String(p.id)]||0})))}\nReturn ONLY JSON:{"reorder":[{"product_id":1,"days_left":3}]}`,512);
-      const am=at.match(/\{[\s\S]*\}/);if(am){const ar=JSON.parse(am[0]);results.inventory_orders=(ar.reorder||[]).length;if(results.inventory_orders)await auditLog('inventory_agent',`Autopilot: ${results.inventory_orders} need reorder`);}
+      const at=await callClaude(`Flag products needing reorder. Data:${JSON.stringify(ap.map(p=>({id:p.id,name:p.name,stock:p.stock,sold_30d:asm[String(p.id)]||0})))}\nReturn ONLY a JSON object, no other text: {"reorder":[{"product_id":1,"days_left":3}]}`,768);
+      const am=at.match(/\{[\s\S]*\}/);if(am){const ar=safeParseJSON(am[0]);results.inventory_orders=(ar.reorder||[]).length;if(results.inventory_orders)await auditLog('inventory_agent',`Autopilot: ${results.inventory_orders} need reorder`);}
     } catch(e){results.errors.push('inventory:'+e.message.slice(0,50));}
 
     // f. Pricing Agent - dynamic price adjustments
@@ -1999,8 +2034,8 @@ app.post('/autopilot/run', async (req, res) => {
       const { rows: pd } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '7 days' GROUP BY item->>'id'`);
       const pdm=Object.fromEntries(pd.map(d=>[d.pid,Number(d.sold)]));
       const pdata=pp.map(p=>({id:p.id,name:p.name,price:Number(p.price),cost:Number(p.cost_price||p.price*0.6),stock:p.stock,sold_7d:pdm[String(p.id)]||0}));
-      const pt=await callClaude(`Dynamic pricing: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data:${JSON.stringify(pdata)}\nReturn ONLY JSON:{"changes":[{"product_id":1,"old_price":100,"new_price":115}]}`,768);
-      const pm=pt.match(/\{[\s\S]*\}/);if(pm){for(const ch of(JSON.parse(pm[0]).changes||[])){const orig=pdata.find(p=>p.id===ch.product_id);if(orig&&typeof ch.new_price==='number'&&isFinite(ch.new_price)&&ch.new_price>=orig.cost&&Math.abs(ch.new_price-ch.old_price)/ch.old_price>0.02){await pool.query('UPDATE products SET price=$1 WHERE id=$2',[ch.new_price,ch.product_id]);await auditLog('pricing_agent',`${orig.name}:${ch.old_price}→${ch.new_price}`);results.price_changes++;}}}
+      const pt=await callClaude(`Dynamic pricing: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data:${JSON.stringify(pdata)}\nReturn ONLY a JSON object, no other text: {"changes":[{"product_id":1,"old_price":100,"new_price":115}]}`,1024);
+      const pm=pt.match(/\{[\s\S]*\}/);if(pm){for(const ch of(safeParseJSON(pm[0]).changes||[])){const orig=pdata.find(p=>p.id===ch.product_id);if(orig&&typeof ch.new_price==='number'&&isFinite(ch.new_price)&&ch.new_price>=orig.cost&&Math.abs(ch.new_price-ch.old_price)/ch.old_price>0.02){await pool.query('UPDATE products SET price=$1 WHERE id=$2',[ch.new_price,ch.product_id]);await auditLog('pricing_agent',`${orig.name}:${ch.old_price}→${ch.new_price}`);results.price_changes++;}}}
     } catch(e){results.errors.push('pricing:'+e.message.slice(0,50));}
 
     const summary = { ...results, ran_at: new Date().toISOString() };
@@ -2218,7 +2253,7 @@ app.post('/ai/complete-look', async (req, res) => {
     const { name, category } = req.body;
     const text = await callClaude(`Personal stylist AI for BLEX e-commerce. Customer is viewing: "${name}" (${category}). Suggest 3 complementary products from different categories (${['electronics','accessories','clothing'].filter(c=>c!==category).join(', ')}) that pair well with this. Return ONLY JSON: {"products":[{"name":"<product name>","category":"accessories","reason":"<short reason>","price":150}]}`, 512);
     const m = text.match(/\{[\s\S]*\}/);
-    res.json(m ? JSON.parse(m[0]) : { products: [] });
+    res.json(m ? safeParseJSON(m[0]) : { products: [] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2227,7 +2262,7 @@ app.post('/ai/complete-look', async (req, res) => {
 app.get('/ai/agents/status', authenticate, async (req, res) => {
   try {
     const [s, inv, pr] = await Promise.all([apGet('sales_agent_last'), apGet('inventory_agent_last'), apGet('pricing_agent_last')]);
-    res.json({ sales_agent_last: s ? JSON.parse(s) : null, inventory_agent_last: inv ? JSON.parse(inv) : null, pricing_agent_last: pr ? JSON.parse(pr) : null });
+    res.json({ sales_agent_last: s ? safeParseJSON(s) : null, inventory_agent_last: inv ? safeParseJSON(inv) : null, pricing_agent_last: pr ? safeParseJSON(pr) : null });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2240,7 +2275,7 @@ app.post('/ai/sales-agent', authenticate, async (req, res) => {
     const cartValue = cart_items.reduce((s, i) => s + (Number(i.price) * (i.qty || 1)), 0);
     const text = await callClaude(`Sales AI for BLEX Saudi e-commerce. Customer: email=${email||'guest'}, cart=${cartValue} SAR (${cart_items.length} items), wishlist=${wishlist.length}, past orders=${pastOrders.length}, views=${views.length}, query="${query}". Decide ONE: discount_offer (cart abandon/loyalty), price_negotiate (wants better price), reorder_prompt (repeat buyer), none. Return ONLY JSON: {"action":"discount_offer","message":"<personalized EN message>","discount_pct":10,"confidence":"high"}`, 512);
     const m = text.match(/\{[\s\S]*\}/);
-    const result = m ? JSON.parse(m[0]) : { action: 'none', message: '', discount_pct: 0, confidence: 'low' };
+    const result = m ? safeParseJSON(m[0]) : { action: 'none', message: '', discount_pct: 0, confidence: 'low' };
     await apSet('sales_agent_last', JSON.stringify({ ...result, ran_at: new Date().toISOString() }));
     await auditLog('sales_agent', `Action: ${result.action} (${result.confidence})`);
     res.json(result);
@@ -2255,7 +2290,7 @@ app.post('/ai/inventory-agent', authenticate, async (req, res) => {
     const data = prods.map(p => ({ id: p.id, name: p.name, stock: p.stock, sold_30d: sm[String(p.id)] || 0 }));
     const text = await callClaude(`Inventory AI. Flag products needing reorder (stock<20 or daily_velocity>stock/14). Data: ${JSON.stringify(data)}\nReturn ONLY JSON: {"predictions":[{"product_id":1,"product_name":"X","stock":5,"daily_velocity":0.5,"days_until_stockout":10,"action":"reorder_now","reorder_qty":50}]}`, 1024);
     const m = text.match(/\{[\s\S]*\}/);
-    const result = m ? JSON.parse(m[0]) : { predictions: [] };
+    const result = m ? safeParseJSON(m[0]) : { predictions: [] };
     const criticals = (result.predictions || []).filter(p => p.action === 'reorder_now').length;
     await apSet('inventory_agent_last', JSON.stringify({ ...result, ran_at: new Date().toISOString() }));
     if (criticals) await auditLog('inventory_agent', `${criticals} products flagged for reorder`);
@@ -2271,7 +2306,7 @@ app.post('/ai/pricing-agent', authenticate, async (req, res) => {
     const data = prods.map(p => ({ id: p.id, name: p.name, price: Number(p.price), cost: Number(p.cost_price || p.price * 0.6), stock: p.stock, sold_7d: dm[String(p.id)] || 0 }));
     const text = await callClaude(`Dynamic pricing AI. Rules: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data: ${JSON.stringify(data)}\nReturn ONLY JSON: {"changes":[{"product_id":1,"old_price":100,"new_price":115,"reason":"high demand"}]}`, 1024);
     const m = text.match(/\{[\s\S]*\}/);
-    const changes = m ? (JSON.parse(m[0]).changes || []) : [];
+    const changes = m ? (safeParseJSON(m[0]).changes || []) : [];
     let applied = 0;
     for (const ch of changes) {
       const orig = data.find(p => p.id === ch.product_id);
