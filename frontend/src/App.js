@@ -490,11 +490,39 @@ export default function App() {
   const sendChat=async msg=>{if(!msg?.trim())return;const hist=chatMsgs;setChatMsgs(h=>[...h,{role:"user",content:msg}]);setChatInput("");setChatTyping(true);try{const r=await fetch(`${API}/ai/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,history:hist})});const d=await r.json();setChatMsgs(h=>[...h,{role:"assistant",content:d.response||"Sorry, something went wrong.",escalate:d.escalate,product:sp.find(p=>d.response&&p.name&&d.response.toLowerCase().includes(p.name.toLowerCase().slice(0,10)))||null}]);}catch{setChatMsgs(h=>[...h,{role:"assistant",content:"Connection error. Please try again."}]);}finally{setChatTyping(false);}};
   const fetchApStatus=async()=>{try{const r=await fetch(`${API}/autopilot/status`);const d=await r.json();setApStatus(d);setApEnabled(!!d.enabled);setApHour(d.hour??2);}catch{}};
   const fetchAgentStatus=async()=>{try{const r=await fetch(`${API}/ai/agents/status`,{headers:authH()});const d=await r.json();setAgentStatus(d);}catch{}};
-  const fetchAgentLogs=async()=>{setAgentLogsLoading(true);try{const r=await fetch(`${API}/ai/agent-logs?limit=30`,{headers:authH()});const d=await r.json();setAgentLogs(Array.isArray(d.logs)?d.logs:[]);}catch{}finally{setAgentLogsLoading(false);}};
+  const fetchAgentLogs=async()=>{setAgentLogsLoading(true);try{const r=await fetch(`${API}/ai/agent-logs?limit=40`,{headers:authH()});const d=await r.json();setAgentLogs(Array.isArray(d.logs)?d.logs:Array.isArray(d)?d:[]);}catch{}finally{setAgentLogsLoading(false);}};
   const runAgent=async(url,body,name)=>{addToast(`Running ${name}…`,"info");try{const r=await fetch(`${API}${url}`,{method:"POST",headers:{...authH(),"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();fetchAgentStatus();fetchAgentLogs();addToast(`${name} done ✓`+(d.result?`: ${String(d.result).slice(0,60)}`:""),"success");}catch{addToast(`${name} error`,"error");}};
 
   const fetchBundle=async p=>{if(!p)return;setBundleLoading(true);setBundleSugg(null);try{const r=await fetch(`${API}/ai/complete-look`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:p.name,category:p.category})});const d=await r.json();setBundleSugg(d);}catch{}finally{setBundleLoading(false);}};
-  const runAutoPilot=async()=>{setApRunning(true);try{const r=await fetch(`${API}/autopilot/run`,{method:"POST",headers:{"Content-Type":"application/json"}});const d=await r.json();setApStatus(s=>({...s,last_run:d}));addToast(`Auto-Pilot done: ${d.imported} imported, ${d.prices_updated} prices, ${d.descriptions_generated} descs`,"success");}catch{addToast("Auto-Pilot run failed","error");}finally{setApRunning(false);}};
+  const runAutoPilot=async()=>{
+    setApRunning(true);setImportProgress('Starting Auto-Pilot…');
+    try{
+      const r=await fetch(`${API}/autopilot/run-stream`,{method:"POST",headers:{...authH(),"Content-Type":"application/json"}});
+      if(!r.ok){addToast("Auto-Pilot failed","error");return;}
+      const reader=r.body.getReader();const dec=new TextDecoder();let buf='';
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split('\n');buf=lines.pop()||'';
+        for(const line of lines){
+          if(!line.startsWith('data: '))continue;
+          try{
+            const ev=JSON.parse(line.slice(6));
+            if(ev.type==='phase')setImportProgress(`[${ev.phase?.toUpperCase()}] ${ev.message}`);
+            else if(ev.type==='progress')setImportProgress(ev.message);
+            else if(ev.type==='tool'&&ev.tool==='import_product'&&ev.result?.success)setImportProgress(`Imported: ${ev.result.name} (${ev.imported} total)`);
+            else if(ev.type==='complete'){
+              setApStatus(s=>({...s,last_run:ev}));
+              addToast(`Auto-Pilot done: ${ev.imported||0} imported, ${ev.descriptions||0} descriptions, ${ev.prices||0} prices, ${ev.images||0} images`,"success");
+              fetchAgentLogs();
+            }
+            else if(ev.type==='error')addToast(`Auto-Pilot error: ${ev.message}`,"error");
+          }catch{}
+        }
+      }
+    }catch{addToast("Auto-Pilot run failed","error");}
+    finally{setApRunning(false);setImportProgress('');}
+  };
   const saveApSchedule=async(en,hr)=>{try{await fetch(`${API}/autopilot/schedule`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:en,hour:hr})});}catch{}};
   const saveMaintenance=async enabled=>{try{const r=await fetch(API+"/maintenance",{method:"POST",headers:authH(),body:JSON.stringify({enabled,message:maintForm.msg,launch_date:maintForm.date||null})});const d=await r.json();if(r.ok){setMaintenance(d);addToast("Saved","success");}else addToast(d.error||"Error","error");}catch{addToast("Error","error");}};
   const maintSubscribe=async()=>{if(!maintNotify.email.includes("@"))return;try{await fetch(API+"/maintenance/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:maintNotify.email})});setMaintNotify({email:"",done:true});}catch{}};
@@ -1532,19 +1560,20 @@ export default function App() {
               </div>
               <div style={{background:"linear-gradient(135deg,#7c3aed18,#3b82f618)",border:"1px solid #7c3aed33",borderRadius:"14px",padding:"16px",marginBottom:"22px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"8px",marginBottom:"13px"}}>
-                  <div><p style={{fontWeight:"800",fontSize:"15px",marginBottom:"2px"}}>🤖 Auto-Pilot</p><p style={{color:c.muted,fontSize:"11px"}}>Auto-imports trends, updates prices & generates descriptions daily.</p></div>
+                  <div><p style={{fontWeight:"800",fontSize:"15px",marginBottom:"2px"}}>🤖 Auto-Pilot</p><p style={{color:c.muted,fontSize:"11px"}}>5 agentic phases: import 80+ products, write descriptions, update prices, process images, check inventory.</p></div>
                   <div style={{display:"flex",gap:"7px",alignItems:"center"}}>
                     <button className="btn-t" onClick={()=>{const n=!apEnabled;setApEnabled(n);saveApSchedule(n,apHour);}} style={{background:apEnabled?c.success+"22":"transparent",border:`1.5px solid ${apEnabled?c.success:c.border}`,color:apEnabled?c.success:c.muted,padding:"7px 22px",borderRadius:"20px",cursor:"pointer",fontWeight:"800",fontSize:"12px",transition:"all .2s"}}>{apEnabled?"ON":"OFF"}</button>
                     <button className="btn-t" onClick={runAutoPilot} disabled={apRunning} style={btnP({width:"auto",padding:"7px 14px",fontSize:"12px",background:"linear-gradient(135deg,#7c3aed,#3b82f6)"})}>{apRunning?"⏳ Running…":"▶ Run Now"}</button>
                   </div>
                 </div>
+                {apRunning&&importProgress&&<div style={{background:"#7c3aed18",border:"1px solid #7c3aed33",borderRadius:"8px",padding:"8px 12px",marginBottom:"10px",fontSize:"11px",color:"#a78bfa",fontWeight:"700",animation:"neonPulse 2s ease-in-out infinite"}}>⚡ {importProgress}</div>}
                 <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:apStatus?.last_run?"13px":"0"}}>
                   <span style={{fontSize:"11px",fontWeight:"700",color:c.muted,whiteSpace:"nowrap"}}>DAILY AT</span>
                   <select value={apHour} onChange={e=>{const h=Number(e.target.value);setApHour(h);saveApSchedule(apEnabled,h);}} style={{...inp(false),width:"auto",padding:"5px 10px",fontSize:"12px"}}>{Array.from({length:24},(_,i)=><option key={i} value={i}>{String(i).padStart(2,"0")}:00</option>)}</select>
                 </div>
                 {apStatus?.last_run&&<div style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,padding:"12px 14px"}}>
                   <p style={{fontWeight:"700",fontSize:"10px",color:c.muted,marginBottom:"10px",textTransform:"uppercase",letterSpacing:".5px"}}>Last Run · {new Date(apStatus.last_run.ran_at).toLocaleString()}</p>
-                  <div style={{display:"flex",gap:"18px",flexWrap:"wrap"}}>{[["📦",apStatus.last_run.imported,"Imported"],["💰",apStatus.last_run.prices_updated,"Prices"],["✍️",apStatus.last_run.descriptions_generated,"Descs"],["📡",apStatus.last_run.webhooks_sent,"Webhooks"]].map(([ic,v,lb])=><div key={lb} style={{textAlign:"center"}}><p style={{fontSize:"22px",fontWeight:"800",color:c.text,lineHeight:1.1}}>{v||0}</p><p style={{fontSize:"10px",color:c.muted,marginTop:"2px"}}>{ic} {lb}</p></div>)}</div>
+                  <div style={{display:"flex",gap:"14px",flexWrap:"wrap"}}>{[["📦",apStatus.last_run.imported,"Imported"],["✍️",apStatus.last_run.descriptions,"Descriptions"],["💰",apStatus.last_run.prices,"Prices"],["🖼️",apStatus.last_run.images,"Images"],["📡",apStatus.last_run.webhooks_sent,"Webhooks"]].map(([ic,v,lb])=><div key={lb} style={{textAlign:"center",minWidth:"48px"}}><p style={{fontSize:"20px",fontWeight:"800",color:c.text,lineHeight:1.1}}>{v||0}</p><p style={{fontSize:"10px",color:c.muted,marginTop:"2px"}}>{ic} {lb}</p></div>)}</div>
                   {apStatus.last_run.errors?.length>0&&<p style={{marginTop:"8px",fontSize:"10px",color:c.error}}>⚠ {apStatus.last_run.errors.join(" · ")}</p>}
                 </div>}
               </div>
@@ -1664,28 +1693,35 @@ export default function App() {
                 <button className="btn-t" onClick={()=>{fetchAgentStatus();fetchAgentLogs();}} style={btnS({width:"auto",padding:"7px 16px",fontSize:"12px"})}>↻ Refresh</button>
               </div>
               {[
-                {k:"sales_agent_last",icon:"💰",name:"Sales Agent",desc:"Analyzes sales data, applies smart discounts, sends alerts",url:"/ai/sales-agent",body:{behavior:{}}},
-                {k:"inventory_agent_last",icon:"📦",name:"Inventory Agent",desc:"Predicts stock-outs, flags reorder needs, monitors low stock",url:"/ai/inventory-agent",body:{}},
-                {k:"pricing_agent_last",icon:"📊",name:"Dynamic Pricing",desc:"Scrapes competitor prices, adjusts pricing demand-based",url:"/ai/pricing-agent",body:{}},
-                {k:"trends_agent_last",icon:"🔥",name:"Trends Agent",desc:"Finds trending products from CJ and auto-imports them",url:"/ai/trends-agent",body:{}}
+                {k:"trends_agent_last",icon:"🔥",name:"Trends Agent",desc:"Searches CJ for 20 products/category (80 total), quality filters, 2.5× pricing",url:"/ai/trends-agent",body:{}},
+                {k:"content_agent_last",icon:"✍️",name:"Content Agent",desc:"Generates and saves descriptions for all products missing them",url:"/ai/content-agent",body:{}},
+                {k:"image_agent_last",icon:"🖼️",name:"Image Agent",desc:"Removes backgrounds with Remove.bg for clean product photos",url:"/ai/image-agent",body:{}},
+                {k:"pricing_agent_last",icon:"📊",name:"Pricing Agent",desc:"Demand-based price adjustments — raise hot sellers, discount stale stock",url:"/ai/pricing-agent",body:{}},
+                {k:"inventory_agent_last",icon:"📦",name:"Inventory Agent",desc:"Monitors stock levels, predicts stockouts, sends reorder alerts",url:"/ai/inventory-agent",body:{}},
+                {k:"sales_agent_last",icon:"💰",name:"Sales Agent",desc:"Analyzes customer behavior, applies targeted discounts, negotiates",url:"/ai/sales-agent",body:{behavior:{}}}
               ].map(ag=>{
                 const d=agentStatus[ag.k];
-                const logs=agentLogs.filter(l=>l.agent_name===ag.url.replace("/ai/","").replace("-","-"));
+                const agKey=ag.url.replace("/ai/","");
+                const logs=agentLogs.filter(l=>l.agent_name===agKey);
                 const recentSession=logs[0]?.session_id;
-                const sessionLogs=logs.filter(l=>l.session_id===recentSession).slice(0,6);
+                const sessionLogs=logs.filter(l=>l.session_id===recentSession).slice(0,5);
+                const successCount=d?.tool_log?.filter(l=>l.result?.success).length||0;
+                const totalCount=d?.tool_log?.length||0;
                 return<div key={ag.k} style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"13px 15px",marginBottom:"9px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:(d||sessionLogs.length)?"8px":"0"}}>
                     <span style={{fontSize:"22px"}}>{ag.icon}</span>
                     <div style={{flex:1}}><p style={{fontWeight:"700",fontSize:"13px"}}>{ag.name}</p><p style={{fontSize:"11px",color:c.muted}}>{ag.desc}</p></div>
-                    <span style={{fontSize:"10px",fontWeight:"700",padding:"3px 8px",borderRadius:"20px",background:d?"#22c55e22":"#88888822",color:d?"#22c55e":c.muted,marginRight:"8px"}}>{d?"ACTIVE":"IDLE"}</span>
+                    {d&&totalCount>0&&<span style={{fontSize:"10px",color:"#22c55e",fontWeight:"700",marginRight:"4px"}}>{successCount}/{totalCount}✓</span>}
+                    <span style={{fontSize:"10px",fontWeight:"700",padding:"3px 8px",borderRadius:"20px",background:d?"#22c55e22":"#88888822",color:d?"#22c55e":c.muted,marginRight:"8px"}}>{d?"RAN":"IDLE"}</span>
                     <button className="btn-t" onClick={()=>runAgent(ag.url,ag.body,ag.name)} style={{background:c.accent,color:c.accentTxt,border:"none",borderRadius:"7px",padding:"5px 12px",cursor:"pointer",fontSize:"11px",fontWeight:"700",flexShrink:0}}>▶ Run</button>
                   </div>
                   {d&&<div style={{background:c.chip,borderRadius:"8px",padding:"8px 10px",fontSize:"11px",color:c.muted,marginBottom:sessionLogs.length?"6px":"0"}}>
-                    <span>Last run: {new Date(d.ran_at).toLocaleString()}</span>
-                    {d.action&&<span> · Action: <b style={{color:c.text}}>{d.action}</b></span>}
-                    {d.discount_pct>0&&<span> · Discount: <b style={{color:"#22c55e"}}>{d.discount_pct}%</b></span>}
-                    {d.applied!=null&&<span> · Price changes: <b style={{color:c.text}}>{d.applied}</b></span>}
-                    {d.result&&<p style={{marginTop:"4px",color:c.text,lineHeight:1.4}}>{String(d.result).slice(0,120)}</p>}
+                    <span style={{fontWeight:"700",color:c.text}}>Last: {new Date(d.ran_at).toLocaleString()}</span>
+                    {d.imported>0&&<span> · <b style={{color:"#22c55e"}}>+{d.imported} imported</b></span>}
+                    {d.descriptions>0&&<span> · <b style={{color:"#0ea5e9"}}>{d.descriptions} descriptions</b></span>}
+                    {d.images>0&&<span> · <b style={{color:"#8b5cf6"}}>{d.images} images</b></span>}
+                    {d.iterations&&<span style={{color:c.muted}}> · {d.iterations} iterations</span>}
+                    {d.result&&<p style={{marginTop:"4px",color:c.text,lineHeight:1.4,fontSize:"11px"}}>{String(d.result).slice(0,100)}</p>}
                   </div>}
                   {sessionLogs.length>0&&<div style={{borderTop:`1px solid ${c.border}`,paddingTop:"8px",marginTop:"4px"}}>
                     <p style={{fontSize:"10px",color:c.muted,fontWeight:"700",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>Tool Decisions (last run)</p>

@@ -1904,7 +1904,9 @@ const BLEX_TOOLS = [
   { name: 'send_alert', description: 'Log a notification or finding to the audit system. Use for important agent decisions.', input_schema: { type: 'object', properties: { message: { type: 'string' }, type: { type: 'string', enum: ['info', 'warning', 'critical'] } }, required: ['message'] } },
   { name: 'analyze_competitor_price', description: 'Scrape approximate market / competitor prices for a product name from the web.', input_schema: { type: 'object', properties: { product_name: { type: 'string' } }, required: ['product_name'] } },
   { name: 'generate_description', description: 'Generate a compelling English product description using AI. Returns single-line text.', input_schema: { type: 'object', properties: { product_name: { type: 'string' }, category: { type: 'string' } }, required: ['product_name'] } },
-  { name: 'apply_discount', description: 'Apply a percentage sale discount to a product for 7 days (sets sale_price and sale_ends_at).', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, discount_pct: { type: 'number', description: 'Percentage 1-90' } }, required: ['product_id', 'discount_pct'] } }
+  { name: 'apply_discount', description: 'Apply a percentage sale discount to a product for 7 days (sets sale_price and sale_ends_at).', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, discount_pct: { type: 'number', description: 'Percentage 1-90' } }, required: ['product_id', 'discount_pct'] } },
+  { name: 'process_product_image', description: 'Remove background from a product image using Remove.bg API. Stores the cleaned white-background PNG in the product image gallery.', input_schema: { type: 'object', properties: { product_id: { type: 'integer', description: 'ID of the product whose image to process' } }, required: ['product_id'] } },
+  { name: 'set_product_description', description: 'Save a description (and optionally category) to a product in the database. Always call this after generate_description to persist the result.', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, description: { type: 'string', description: 'The description text to save' }, category: { type: 'string', description: 'Optional: electronics | accessories | clothing' } }, required: ['product_id', 'description'] } }
 ];
 
 async function toolSearchCJ({ keyword, limit = 10 }) {
@@ -1912,7 +1914,7 @@ async function toolSearchCJ({ keyword, limit = 10 }) {
   const r = await fetch(`${CJ_BASE}/product/list?productNameEn=${encodeURIComponent(keyword)}&pageNum=1&pageSize=${Math.min(Number(limit)||10, 20)}`, { headers: { 'CJ-Access-Token': token } });
   const d = await cjParseJSON(r);
   const list = Array.isArray(d.data?.list) ? d.data.list : [];
-  return { total: d.data?.total || 0, products: list.map(p => ({ pid: p.pid, name: p.productNameEn || p.productName, price: p.sellPrice, image: p.productImageSet?.split(';')?.[0]?.trim() || p.productImage })) };
+  return { total: d.data?.total || 0, products: list.map(p => ({ pid: p.pid, name: p.productNameEn || p.productName, price: Number(p.sellPrice || 0), rating: Number(p.productStar || p.productAverageRating || 0), hasImage: !!(p.productImageSet || p.productImage), image: p.productImageSet?.split(';')?.[0]?.trim() || p.productImage || null })) };
 }
 
 async function toolImportProduct({ cj_product_id }) {
@@ -1922,14 +1924,31 @@ async function toolImportProduct({ cj_product_id }) {
   if (!d.result || !d.data) return { success: false, error: d.message || 'Not found on CJ' };
   const p = d.data;
   const name = p.productNameEn || p.productName;
+  if (!name) return { success: false, error: 'no_name' };
+  // Quality filter: must have image
+  const img = p.productImageSet?.split(';')?.[0]?.trim() || p.productImage || null;
+  if (!img) return { success: false, skipped: true, reason: 'No product image — quality filter' };
+  // Quality filter: rating >= 4.0 (only enforce if CJ returns a rating)
+  const rating = Number(p.productStar || p.productAverageRating || 0);
+  if (rating > 0 && rating < 4.0) return { success: false, skipped: true, reason: `Rating ${rating} < 4.0 — quality filter` };
+  // Deduplicate: exact name + fuzzy 3-word prefix
   const shortName = (name||'').split(' ').slice(0,3).join(' ');
   const ex = await pool.query(`SELECT id FROM products WHERE LOWER(name)=LOWER($1) OR (LOWER(name) LIKE LOWER($2) AND LENGTH(name)>5)`, [name, `%${shortName}%`]);
   if (ex.rows.length) return { success: false, error: 'already_exists', product_id: ex.rows[0].id };
-  const price = Number(p.sellPrice || p.variants?.[0]?.sellPrice || 99);
-  const img = p.productImageSet?.split(';')?.[0]?.trim() || p.productImage || null;
-  const ins = await pool.query('INSERT INTO products (name,price,description,stock,category,image,source) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,name', [name, price, p.description||'', 999, 'electronics', img, 'agent']);
-  await auditLog('agent_import', `Imported CJ ${cj_product_id}: ${name}`);
-  return { success: true, product_id: ins.rows[0].id, name: ins.rows[0].name, price };
+  // Price = 2.5× CJ sell price (CJ sellPrice is your cost)
+  const costPrice = Number(p.sellPrice || p.variants?.[0]?.sellPrice || 40);
+  const price = +(costPrice * 2.5).toFixed(2);
+  // Auto-detect category from CJ category name
+  const cjCat = (p.categoryName || p.categoryNameEn || '').toLowerCase();
+  const category = cjCat.includes('cloth') || cjCat.includes('shirt') || cjCat.includes('dress') || cjCat.includes('fashion') ? 'clothing'
+    : cjCat.includes('jew') || cjCat.includes('ring') || cjCat.includes('necklace') || cjCat.includes('bracelet') || cjCat.includes('bag') || cjCat.includes('watch') ? 'accessories'
+    : 'electronics';
+  const ins = await pool.query(
+    'INSERT INTO products (name,price,cost_price,description,stock,category,image,source) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,name',
+    [name, price, costPrice, p.description || '', 999, category, img, 'agent']
+  );
+  await auditLog('agent_import', `Imported CJ ${cj_product_id}: ${name} @ ${price} SAR (cost ${costPrice})`);
+  return { success: true, product_id: ins.rows[0].id, name: ins.rows[0].name, price, cost_price: costPrice, category };
 }
 
 async function toolUpdatePrice({ product_id, new_price }) {
@@ -1990,6 +2009,45 @@ async function toolApplyDiscount({ product_id, discount_pct }) {
   return { success: true, product_id, name: p.name, original_price: Number(p.price), sale_price: salePrice, expires: exp };
 }
 
+async function toolProcessImage({ product_id }) {
+  const { rows } = await pool.query('SELECT id,name,image,image_gallery FROM products WHERE id=$1', [product_id]);
+  if (!rows.length) return { success: false, error: 'Product not found' };
+  const p = rows[0];
+  if (!p.image) return { success: false, error: 'No image URL on product' };
+  const apiKey = process.env.REMOVEBG_API_KEY;
+  if (!apiKey) return { success: false, error: 'REMOVEBG_API_KEY not configured' };
+  const r = await fetch('https://api.remove.bg/v1.0/removebg', {
+    method: 'POST',
+    headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ image_url: p.image, size: 'auto', bg_color: 'ffffff' })
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    return { success: false, error: e.errors?.[0]?.title || `Remove.bg error ${r.status}` };
+  }
+  const buf = await r.arrayBuffer();
+  const cleaned = `data:image/png;base64,${Buffer.from(buf).toString('base64')}`;
+  const gallery = { ...(p.image_gallery && typeof p.image_gallery === 'object' ? p.image_gallery : {}), cleaned };
+  await pool.query('UPDATE products SET image_gallery=$1 WHERE id=$2', [JSON.stringify(gallery), product_id]);
+  await auditLog('agent_image', `Processed image for product ${product_id}: ${p.name}`);
+  return { success: true, product_id, name: p.name };
+}
+
+async function toolSetDescription({ product_id, description, category }) {
+  if (!product_id || !description) return { success: false, error: 'product_id and description required' };
+  let q, params;
+  if (category) {
+    q = 'UPDATE products SET description=$1,category=$2 WHERE id=$3 RETURNING id,name';
+    params = [description, category, product_id];
+  } else {
+    q = 'UPDATE products SET description=$1 WHERE id=$2 RETURNING id,name';
+    params = [description, product_id];
+  }
+  const { rows } = await pool.query(q, params);
+  if (!rows.length) return { success: false, error: 'Product not found' };
+  return { success: true, product_id, name: rows[0].name };
+}
+
 async function executeTool(name, input) {
   switch (name) {
     case 'search_cj_products':       return toolSearchCJ(input);
@@ -2001,12 +2059,14 @@ async function executeTool(name, input) {
     case 'analyze_competitor_price': return toolAnalyzeCompetitorPrice(input);
     case 'generate_description':     return toolGenerateDescription(input);
     case 'apply_discount':           return toolApplyDiscount(input);
+    case 'process_product_image':    return toolProcessImage(input);
+    case 'set_product_description':  return toolSetDescription(input);
     default: throw new Error(`Unknown tool: ${name}`);
   }
 }
 
 // Agentic loop: send message → Claude picks tools → execute → repeat until end_turn
-async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], maxIterations = 10) {
+async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], maxIterations = 10, onProgress = null) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
   const tools = toolNames.length ? BLEX_TOOLS.filter(t => toolNames.includes(t.name)) : BLEX_TOOLS;
@@ -2042,6 +2102,7 @@ async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], m
         toolLog.push({ tool: block.name, input: block.input, result: toolResult, reasoning: reasoning.slice(0,300), ts: new Date().toISOString() });
         await pool.query('INSERT INTO agent_logs(agent_name,session_id,tool_name,tool_input,tool_result,reasoning) VALUES($1,$2,$3,$4,$5,$6)',
           [agentName, sessionId, block.name, block.input, toolResult, reasoning.slice(0,500)]).catch(()=>{});
+        if (onProgress) try { onProgress({ phase: agentName, tool: block.name, input: block.input, result: toolResult, iter, reasoning: reasoning.slice(0,200) }); } catch {}
         toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(toolResult) });
       }
       messages.push({ role: 'user', content: toolResults });
@@ -2090,117 +2151,168 @@ async function getProductImage(name) {
   return img || await getUnsplashImage(name);
 }
 
-app.post('/autopilot/run', async (req, res) => {
-  const results = { imported: 0, prices_updated: 0, descriptions_generated: 0, webhooks_sent: 0, inventory_orders: 0, price_changes: 0, errors: [] };
-  try {
-    const hasKey = !!process.env.ANTHROPIC_API_KEY;
+// Shared 5-agent autopilot logic (returns summary, accepts optional progress callback)
+async function runAutopilotAgents(onProgress = null) {
+  const results = { imported: 0, descriptions: 0, prices: 0, images: 0, inventory_alerts: 0, webhooks_sent: 0, errors: [] };
+  const hasKey = !!process.env.ANTHROPIC_API_KEY;
 
-    // a. Fetch trending products (Google Trends + AI) and import top 10
-    if (hasKey) try {
-      const gTerms = await scrapeTrends();
-      const ctx = gTerms.length ? `Google Trends: ${gTerms.slice(0, 8).join(', ')}. ` : '';
-      const text = await callClaude(`It is 2026. ${ctx}List 10 trending products for a Saudi e-commerce store.\nReturn ONLY a JSON array of exactly 10 objects, no other text: [{name,category("electronics"|"accessories"|"clothing"),price_range,description}]\nIMPORTANT: All string values must be single-line with no line breaks.`, 2048);
-      const m = text.match(/\[[\s\S]*\]/);
-      if (m) {
-        let trendList;
-        try { trendList = safeParseJSON(m[0]); } catch { trendList = []; }
-        for (const tr of trendList.slice(0, 10)) {
-          try {
-            // Exact match + first-3-words fuzzy match to prevent near-duplicate imports
-            const shortName = (tr.name || '').split(' ').slice(0, 3).join(' ');
-            const ex = await pool.query(
-              `SELECT id FROM products WHERE LOWER(name)=LOWER($1) OR (LOWER(name) LIKE LOWER($2) AND LENGTH(name)>5)`,
-              [tr.name, `%${shortName}%`]
-            );
-            if (ex.rows.length) continue;
-            const price = Number(tr.price_range?.match(/\d+/)?.[0] || 99);
-            const image = await getProductImage(tr.name);
-            await pool.query('INSERT INTO products (name,price,category,description,stock,image,source) VALUES($1,$2,$3,$4,$5,$6,$7)',
-              [tr.name, price, tr.category || 'electronics', tr.description || 'Trending product — auto imported', 999, image, 'autopilot']);
-            results.imported++;
-          } catch (e) { results.errors.push(`trend:${(tr.name||'').slice(0, 20)}:${e.message.slice(0, 30)}`); }
+  const send = (msg, extra = {}) => { if (onProgress) try { onProgress({ type: 'progress', message: msg, ...extra, ...results }); } catch {} };
+  const sendPhase = (phase, msg) => { if (onProgress) try { onProgress({ type: 'phase', phase, message: msg }); } catch {} };
+
+  const progressCb = (ev) => {
+    if (ev.tool === 'import_product' && ev.result?.success) {
+      results.imported++;
+      send(`Imported: ${ev.result.name} (${results.imported} total)`, { imported: results.imported });
+    } else if (ev.tool === 'set_product_description' && ev.result?.success) {
+      results.descriptions++;
+      send(`Description saved: ${ev.result.name} (${results.descriptions} total)`, { descriptions: results.descriptions });
+    } else if (ev.tool === 'process_product_image' && ev.result?.success) {
+      results.images++;
+      send(`Image processed: ${ev.result.name} (${results.images} total)`, { images: results.images });
+    } else if (ev.tool === 'update_product_price' && ev.result?.success) {
+      results.prices++;
+      send(`Price updated: ${ev.result.name} → ${ev.result.new_price} SAR`, { prices: results.prices });
+    } else if (ev.tool === 'send_alert') {
+      results.inventory_alerts++;
+    }
+    if (onProgress) try { onProgress({ type: 'tool', ...ev, ...results }); } catch {}
+  };
+
+  // Phase A: Trends Agent — 4 categories × 20 products = target 80
+  if (hasKey) {
+    const gTerms = await scrapeTrends().catch(() => []);
+    const trendsCtx = gTerms.length ? `Current trending searches: ${gTerms.slice(0,6).join(', ')}. Use these as inspiration. ` : '';
+    const CATEGORIES = [
+      { cat: 'electronics gadgets smart', label: 'Electronics' },
+      { cat: 'fashion jewelry accessories', label: 'Jewelry & Accessories' },
+      { cat: 'clothing fashion apparel', label: 'Clothing' },
+      { cat: 'home accessories bags watches', label: 'Accessories' }
+    ];
+    for (const { cat, label } of CATEGORIES) {
+      sendPhase('trends', `Searching ${label} — targeting 20 products…`);
+      try {
+        const { tool_log } = await callAgent(
+          'trends_agent',
+          `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. Your goal is to import exactly 20 high-quality products. Strategy: search with 3-4 different keyword variations, evaluate results, import the best ones. Only import products that have images. Work systematically until you reach 20 imports or exhaust all reasonable search options.`,
+          `Find and import 20 "${cat}" products from CJ Dropshipping. Use varied search keywords to find a diverse selection. Import each good product immediately after finding it.`,
+          ['search_cj_products', 'import_product', 'send_alert'],
+          18,
+          progressCb
+        );
+        const catImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
+        send(`${label} done — ${catImported} imported`, {});
+      } catch (e) { results.errors.push(`trends_${label.slice(0,10)}: ${e.message.slice(0,40)}`); }
+    }
+    if (results.imported) await auditLog('autopilot', `Agentic import: ${results.imported} products across 4 categories`);
+  }
+
+  // Phase B: Content Agent — generate + save descriptions for products without them
+  if (hasKey) {
+    sendPhase('content', 'Generating descriptions for new products…');
+    try {
+      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 80`);
+      if (nd.length) {
+        const batchSize = 20;
+        for (let i = 0; i < nd.length; i += batchSize) {
+          const batch = nd.slice(i, i + batchSize);
+          send(`Writing descriptions ${i+1}–${Math.min(i+batchSize, nd.length)} of ${nd.length}…`);
+          await callAgent(
+            'content_agent',
+            `You are a product content AI for BLEX Saudi e-commerce. For each product: 1) call generate_description to create a compelling description, 2) immediately call set_product_description to save it. Work through every product in the list. Be thorough.`,
+            `Write and save descriptions for these ${batch.length} products: ${JSON.stringify(batch.map(p => ({ id: p.id, name: p.name, category: p.category })))}`,
+            ['generate_description', 'set_product_description', 'send_alert'],
+            batch.length * 2 + 5,
+            progressCb
+          );
         }
+        if (results.descriptions) await auditLog('content_agent', `Generated ${results.descriptions} descriptions`);
       }
-      if (results.imported) await auditLog('autopilot', `Imported ${results.imported} trending products`);
-    } catch (e) { results.errors.push('trends:' + e.message.slice(0, 50)); }
+    } catch (e) { results.errors.push('content: ' + e.message.slice(0, 50)); }
+  }
 
-    // b. Analyze all product prices and auto-apply suggestions
-    if (hasKey) try {
-      const { rows } = await pool.query('SELECT id,name,price,category FROM products ORDER BY id DESC LIMIT 30');
-      if (rows.length) {
-        const text = await callClaude(`Analyze pricing for Saudi e-commerce products: ${JSON.stringify(rows)}\nReturn ONLY a JSON array, no other text: [{id,suggested_price,status("good"|"adjust"|"expensive")}]`);
-        const m = text.match(/\[[\s\S]*\]/);
-        if (m) {
-          for (const a of safeParseJSON(m[0]).filter(x => x.status !== 'good')) {
-            await pool.query('UPDATE products SET price=$1 WHERE id=$2', [a.suggested_price, a.id]);
-            results.prices_updated++;
-          }
-        }
-        if (results.prices_updated) await auditLog('autopilot', `Updated ${results.prices_updated} product prices`);
+  // Phase C: Pricing Agent — demand-based price adjustments
+  if (hasKey) {
+    sendPhase('pricing', 'Adjusting prices based on sales demand…');
+    try {
+      await callAgent(
+        'pricing_agent',
+        `Dynamic pricing AI for BLEX Saudi e-commerce. Rules: products with >5 sales in 7 days → raise price 5-15%; products with 0 sales and stock>20 → lower price 5-10%. Never below 60% of current price. Only apply if change >2%. Send a summary alert when complete.`,
+        `Analyze all products and apply optimal price adjustments. Be thorough.`,
+        ['get_products', 'get_sales_data', 'update_product_price', 'send_alert'],
+        12,
+        progressCb
+      );
+    } catch (e) { results.errors.push('pricing: ' + e.message.slice(0, 50)); }
+  }
+
+  // Phase D: Image Agent — remove.bg background removal
+  if (process.env.REMOVEBG_API_KEY && hasKey) {
+    sendPhase('images', 'Processing product images with Remove.bg…');
+    try {
+      const { rows: ni } = await pool.query(`SELECT id,name FROM products WHERE image IS NOT NULL AND (image_gallery IS NULL OR image_gallery->>'cleaned' IS NULL) ORDER BY id DESC LIMIT 20`);
+      if (ni.length) {
+        send(`Processing ${ni.length} product images…`);
+        await callAgent(
+          'image_agent',
+          `You are an image processing AI for BLEX. Call process_product_image for each product in the list. Process all of them to create clean white-background product photos.`,
+          `Process background removal for these ${ni.length} products: ${JSON.stringify(ni.map(p => ({ id: p.id, name: p.name })))}`,
+          ['process_product_image', 'send_alert'],
+          ni.length + 4,
+          progressCb
+        );
+        if (results.images) await auditLog('image_agent', `Processed ${results.images} product images`);
       }
-    } catch (e) { results.errors.push('prices:' + e.message.slice(0, 50)); }
+    } catch (e) { results.errors.push('images: ' + e.message.slice(0, 50)); }
+  }
 
-    // c. Check low stock and notify supplier webhooks
+  // Phase E: Inventory Agent — stock monitoring + webhooks
+  if (hasKey) {
+    sendPhase('inventory', 'Checking inventory levels…');
     try {
       const { rows: low } = await pool.query('SELECT * FROM products WHERE stock > 0 AND stock < 5');
       for (const p of low) { await notifySupplierWebhook(p.id, p.name, p.stock); results.webhooks_sent++; }
+      await callAgent(
+        'inventory_agent',
+        `Inventory management AI for BLEX. Use get_products(low_stock_only=true) then get_sales_data(30) to calculate daily sell velocity (total_sold/30). Flag any product with fewer than 14 days of stock remaining. Send a critical alert for each one with recommended reorder quantity.`,
+        `Run a full inventory check. Flag all products at risk of stockout and send alerts.`,
+        ['get_products', 'get_sales_data', 'send_alert'],
+        8,
+        progressCb
+      );
       if (results.webhooks_sent) await auditLog('autopilot', `Sent ${results.webhooks_sent} low-stock webhooks`);
-    } catch (e) { results.errors.push('webhooks:' + e.message.slice(0, 50)); }
+    } catch (e) { results.errors.push('inventory: ' + e.message.slice(0, 50)); }
+  }
 
-    // d. Content Agent — multilingual content for all products missing descriptions (batches of 2)
-    if (hasKey) try {
-      const { rows: nd } = await pool.query(`SELECT id,name,price,category FROM products WHERE description IS NULL OR description='' OR description='Trending product — auto imported' ORDER BY id`);
-      const BATCH = 2;
-      for (let bi = 0; bi < nd.length; bi += BATCH) {
-        const batch = nd.slice(bi, bi + BATCH);
-        const contentPrompt = `Multilingual marketing content for BLEX Saudi e-commerce.\nIMPORTANT: Return ONLY a valid JSON array, no other text. All string values must be on a single line — no literal newlines inside strings.\nFormat: [{"id":1,"descriptions":{"en":"...","ar":"..."},"marketing_angles":{"benefit":"...","lifestyle":"...","technical":"...","emotional":"..."},"social_captions":{"en":"#BLEX ...","ar":"#بليكس ..."},"seo_keywords":["kw1","kw2","kw3"]}]\nProducts: ${JSON.stringify(batch.map(p=>({id:p.id,name:p.name,category:p.category,price:p.price+' SAR'})))}`;
-        let parsed = null;
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            const text = await callClaude(contentPrompt, 8192);
-            const ma = text.match(/\[[\s\S]*\]/);
-            if (ma) { parsed = safeParseJSON(ma[0]); break; }
-          } catch (parseErr) {
-            if (attempt === 1) await auditLog('content_agent', `Parse error batch ${bi}: ${parseErr.message.slice(0, 60)}`);
-          }
-        }
-        if (parsed) {
-          for (const d of parsed) {
-            try {
-              await pool.query('UPDATE products SET description=$1,ai_content=$2 WHERE id=$3', [d.descriptions?.en || '', d, d.id]);
-              results.descriptions_generated++;
-            } catch (dbErr) { results.errors.push('content_db:' + dbErr.message.slice(0, 40)); }
-          }
-        }
-      }
-      if (results.descriptions_generated) await auditLog('content_agent', `Autopilot generated content for ${results.descriptions_generated} products`);
-    } catch (e) { results.errors.push('content_agent:' + e.message.slice(0, 50)); }
+  return results;
+}
 
-    // e. Inventory Agent - predict stock-outs
-    if (hasKey) try {
-      const { rows: ap } = await pool.query('SELECT id,name,stock FROM products WHERE stock>=0 ORDER BY stock ASC LIMIT 20');
-      const { rows: as } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '30 days' GROUP BY item->>'id'`);
-      const asm=Object.fromEntries(as.map(s=>[s.pid,Number(s.sold)]));
-      const at=await callClaude(`Flag products needing reorder. Data:${JSON.stringify(ap.map(p=>({id:p.id,name:p.name,stock:p.stock,sold_30d:asm[String(p.id)]||0})))}\nReturn ONLY a JSON object, no other text: {"reorder":[{"product_id":1,"days_left":3}]}`,768);
-      const am=at.match(/\{[\s\S]*\}/);if(am){const ar=safeParseJSON(am[0]);results.inventory_orders=(ar.reorder||[]).length;if(results.inventory_orders)await auditLog('inventory_agent',`Autopilot: ${results.inventory_orders} need reorder`);}
-    } catch(e){results.errors.push('inventory:'+e.message.slice(0,50));}
-
-    // f. Pricing Agent - dynamic price adjustments
-    if (hasKey) try {
-      const { rows: pp } = await pool.query('SELECT id,name,price,cost_price,stock FROM products ORDER BY id LIMIT 20');
-      const { rows: pd } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '7 days' GROUP BY item->>'id'`);
-      const pdm=Object.fromEntries(pd.map(d=>[d.pid,Number(d.sold)]));
-      const pdata=pp.map(p=>({id:p.id,name:p.name,price:Number(p.price),cost:Number(p.cost_price||p.price*0.6),stock:p.stock,sold_7d:pdm[String(p.id)]||0}));
-      const pt=await callClaude(`Dynamic pricing: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data:${JSON.stringify(pdata)}\nReturn ONLY a JSON object, no other text: {"changes":[{"product_id":1,"old_price":100,"new_price":115}]}`,1024);
-      const pm=pt.match(/\{[\s\S]*\}/);if(pm){for(const ch of(safeParseJSON(pm[0]).changes||[])){const orig=pdata.find(p=>p.id===ch.product_id);if(orig&&typeof ch.new_price==='number'&&isFinite(ch.new_price)&&ch.new_price>=orig.cost&&Math.abs(ch.new_price-ch.old_price)/ch.old_price>0.02){await pool.query('UPDATE products SET price=$1 WHERE id=$2',[ch.new_price,ch.product_id]);await auditLog('pricing_agent',`${orig.name}:${ch.old_price}→${ch.new_price}`);results.price_changes++;}}}
-    } catch(e){results.errors.push('pricing:'+e.message.slice(0,50));}
-
+app.post('/autopilot/run', async (req, res) => {
+  try {
+    const results = await runAutopilotAgents();
     const summary = { ...results, ran_at: new Date().toISOString() };
     await apSet('last_run', JSON.stringify(summary));
     res.json(summary);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// SSE streaming version — frontend uses this for live progress
+app.post('/autopilot/run-stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
+
+  try {
+    const results = await runAutopilotAgents((ev) => send(ev));
+    const summary = { ...results, ran_at: new Date().toISOString() };
+    await apSet('last_run', JSON.stringify(summary));
+    send({ type: 'complete', ...summary });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    send({ type: 'error', message: err.message });
   }
+  res.end();
 });
 
 app.get('/autopilot/status', async (req, res) => {
@@ -2418,7 +2530,7 @@ app.post('/ai/complete-look', async (req, res) => {
 
 app.get('/ai/agents/status', authenticate, async (req, res) => {
   try {
-    const keys = ['sales_agent_last','inventory_agent_last','pricing_agent_last','trends_agent_last'];
+    const keys = ['sales_agent_last','inventory_agent_last','pricing_agent_last','trends_agent_last','content_agent_last','image_agent_last'];
     const vals = await Promise.all(keys.map(k => apGet(k)));
     const out = {};
     keys.forEach((k,i) => { out[k] = vals[i] ? safeParseJSON(vals[i]) : null; });
@@ -2479,12 +2591,50 @@ app.post('/ai/trends-agent', authenticate, async (req, res) => {
     const ctx = gTerms.length ? `Live Google Trends right now: ${gTerms.slice(0,6).join(', ')}. Use these as search inspiration. ` : '';
     const { result, tool_log, iterations, session_id } = await callAgent(
       'trends_agent',
-      `You are a product sourcing AI for BLEX Saudi e-commerce (electronics, accessories, clothing for Saudi/MENA market). ${ctx}Search CJ Dropshipping for trending products, evaluate results, and import the best ones. After importing, generate good descriptions for each. Be autonomous: search at least 3 different category keywords, review results carefully, and import 5-8 high-potential products.`,
-      `Source the best trending products for the store right now. Search multiple categories, import the top products, and generate descriptions for them.`,
-      ['search_cj_products','import_product','generate_description','get_products','send_alert']
+      `You are a product sourcing AI for BLEX Saudi e-commerce (electronics, accessories, clothing for Saudi/MENA market). ${ctx}Search CJ Dropshipping for trending products, evaluate results, and import the best ones. Quality filters: skip products without images. Price imported products at 2.5x CJ cost. Be autonomous: search at least 3 different category keywords, review results carefully, and import 5-8 high-potential products.`,
+      `Source the best trending products for the store right now. Search multiple categories, import top products, then generate descriptions.`,
+      ['search_cj_products','import_product','generate_description','set_product_description','get_products','send_alert']
     );
-    const data = { result, tool_log, iterations, session_id, ran_at: new Date().toISOString() };
+    const imported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
+    const data = { result, tool_log, iterations, session_id, imported, ran_at: new Date().toISOString() };
     await apSet('trends_agent_last', JSON.stringify(data));
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/ai/content-agent', authenticate, async (req, res) => {
+  try {
+    const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 40`);
+    if (!nd.length) return res.json({ result: 'All products have descriptions', descriptions: 0, tool_log: [], iterations: 0 });
+    const { result, tool_log, iterations, session_id } = await callAgent(
+      'content_agent',
+      `You are a product content AI for BLEX Saudi e-commerce. For each product: 1) call generate_description to create a compelling marketing description, 2) immediately call set_product_description to save it to the database. Work through every product. Be thorough and efficient.`,
+      `Write and save descriptions for these ${nd.length} products: ${JSON.stringify(nd.map(p => ({ id: p.id, name: p.name, category: p.category })))}`,
+      ['generate_description', 'set_product_description', 'send_alert'],
+      nd.length * 2 + 8
+    );
+    const descriptions = tool_log.filter(l => l.tool === 'set_product_description' && l.result?.success).length;
+    const data = { result, tool_log, iterations, session_id, descriptions, ran_at: new Date().toISOString() };
+    await apSet('content_agent_last', JSON.stringify(data));
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/ai/image-agent', authenticate, async (req, res) => {
+  try {
+    if (!process.env.REMOVEBG_API_KEY) return res.status(500).json({ error: 'REMOVEBG_API_KEY not configured' });
+    const { rows: ni } = await pool.query(`SELECT id,name FROM products WHERE image IS NOT NULL AND (image_gallery IS NULL OR image_gallery->>'cleaned' IS NULL) ORDER BY id DESC LIMIT 15`);
+    if (!ni.length) return res.json({ result: 'All product images already processed', images: 0, tool_log: [], iterations: 0 });
+    const { result, tool_log, iterations, session_id } = await callAgent(
+      'image_agent',
+      `You are an image processing AI for BLEX. Call process_product_image for each product in the list to remove backgrounds and create clean white-background product photos. Process all products provided.`,
+      `Process background removal for these ${ni.length} products: ${JSON.stringify(ni.map(p => ({ id: p.id, name: p.name })))}`,
+      ['process_product_image', 'send_alert'],
+      ni.length + 4
+    );
+    const images = tool_log.filter(l => l.tool === 'process_product_image' && l.result?.success).length;
+    const data = { result, tool_log, iterations, session_id, images, ran_at: new Date().toISOString() };
+    await apSet('image_agent_last', JSON.stringify(data));
     res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2500,7 +2650,7 @@ app.get('/ai/agent-logs', authenticate, async (req, res) => {
     if (session) { q += ` AND session_id=$${p.length+1}`; p.push(session); }
     q += ` ORDER BY created_at DESC LIMIT $${p.length+1}`; p.push(limit);
     const { rows } = await pool.query(q, p);
-    res.json(rows);
+    res.json({ logs: rows, total: rows.length });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
