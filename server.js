@@ -293,6 +293,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS routed_supplier_id INTEGER`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_content JSONB`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS source VARCHAR(50)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS agent_logs (id SERIAL PRIMARY KEY, agent_name VARCHAR(100), session_id VARCHAR(50), tool_name VARCHAR(100), tool_input JSONB, tool_result JSONB, reasoning TEXT, final_result TEXT, iterations INTEGER, created_at TIMESTAMP DEFAULT NOW())`);
 
   // Seed all 11 feature flags enabled by default
   const FLAGS = ['loyalty_points','wallet','b2b','trade_in','group_cart','back_in_stock','smart_bundles','digital_warranty','coupons','vat','cod'];
@@ -1885,12 +1886,168 @@ async function callClaude(prompt, maxTokens = 1024) {
 // Safely parse JSON from Claude responses — handles literal newlines inside string values
 function safeParseJSON(text) {
   try { return JSON.parse(text); } catch {
-    // Replace literal control chars inside JSON string values only
     const repaired = text.replace(/"(?:[^"\\]|\\.)*"/gs, m =>
       m.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
     );
     return JSON.parse(repaired);
   }
+}
+
+// ─── Agentic AI Infrastructure ────────────────────────────────────────────────
+
+const BLEX_TOOLS = [
+  { name: 'search_cj_products', description: 'Search CJ Dropshipping catalog for products by keyword. Returns list with PIDs, names, prices.', input_schema: { type: 'object', properties: { keyword: { type: 'string' }, limit: { type: 'integer', default: 10, description: 'Max results 1-20' } }, required: ['keyword'] } },
+  { name: 'import_product', description: 'Import a CJ Dropshipping product into the BLEX store by its PID. Checks for duplicates automatically.', input_schema: { type: 'object', properties: { cj_product_id: { type: 'string' } }, required: ['cj_product_id'] } },
+  { name: 'update_product_price', description: 'Update the price of a product already in the store.', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, new_price: { type: 'number', description: 'New price in SAR (must be > 0)' } }, required: ['product_id', 'new_price'] } },
+  { name: 'get_sales_data', description: 'Retrieve order volume, revenue, and per-product sales totals from the database.', input_schema: { type: 'object', properties: { days: { type: 'integer', default: 30, description: 'Look-back window, max 90' } }, required: [] } },
+  { name: 'get_products', description: 'Read products from the store, optionally filtered by category or low-stock flag.', input_schema: { type: 'object', properties: { category: { type: 'string', description: 'electronics | accessories | clothing' }, low_stock_only: { type: 'boolean' } }, required: [] } },
+  { name: 'send_alert', description: 'Log a notification or finding to the audit system. Use for important agent decisions.', input_schema: { type: 'object', properties: { message: { type: 'string' }, type: { type: 'string', enum: ['info', 'warning', 'critical'] } }, required: ['message'] } },
+  { name: 'analyze_competitor_price', description: 'Scrape approximate market / competitor prices for a product name from the web.', input_schema: { type: 'object', properties: { product_name: { type: 'string' } }, required: ['product_name'] } },
+  { name: 'generate_description', description: 'Generate a compelling English product description using AI. Returns single-line text.', input_schema: { type: 'object', properties: { product_name: { type: 'string' }, category: { type: 'string' } }, required: ['product_name'] } },
+  { name: 'apply_discount', description: 'Apply a percentage sale discount to a product for 7 days (sets sale_price and sale_ends_at).', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, discount_pct: { type: 'number', description: 'Percentage 1-90' } }, required: ['product_id', 'discount_pct'] } }
+];
+
+async function toolSearchCJ({ keyword, limit = 10 }) {
+  const token = await getCJToken();
+  const r = await fetch(`${CJ_BASE}/product/list?productNameEn=${encodeURIComponent(keyword)}&pageNum=1&pageSize=${Math.min(Number(limit)||10, 20)}`, { headers: { 'CJ-Access-Token': token } });
+  const d = await cjParseJSON(r);
+  const list = Array.isArray(d.data?.list) ? d.data.list : [];
+  return { total: d.data?.total || 0, products: list.map(p => ({ pid: p.pid, name: p.productNameEn || p.productName, price: p.sellPrice, image: p.productImageSet?.split(';')?.[0]?.trim() || p.productImage })) };
+}
+
+async function toolImportProduct({ cj_product_id }) {
+  const token = await getCJToken();
+  const r = await fetch(`${CJ_BASE}/product/query?pid=${encodeURIComponent(cj_product_id)}`, { headers: { 'CJ-Access-Token': token } });
+  const d = await cjParseJSON(r);
+  if (!d.result || !d.data) return { success: false, error: d.message || 'Not found on CJ' };
+  const p = d.data;
+  const name = p.productNameEn || p.productName;
+  const shortName = (name||'').split(' ').slice(0,3).join(' ');
+  const ex = await pool.query(`SELECT id FROM products WHERE LOWER(name)=LOWER($1) OR (LOWER(name) LIKE LOWER($2) AND LENGTH(name)>5)`, [name, `%${shortName}%`]);
+  if (ex.rows.length) return { success: false, error: 'already_exists', product_id: ex.rows[0].id };
+  const price = Number(p.sellPrice || p.variants?.[0]?.sellPrice || 99);
+  const img = p.productImageSet?.split(';')?.[0]?.trim() || p.productImage || null;
+  const ins = await pool.query('INSERT INTO products (name,price,description,stock,category,image,source) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,name', [name, price, p.description||'', 999, 'electronics', img, 'agent']);
+  await auditLog('agent_import', `Imported CJ ${cj_product_id}: ${name}`);
+  return { success: true, product_id: ins.rows[0].id, name: ins.rows[0].name, price };
+}
+
+async function toolUpdatePrice({ product_id, new_price }) {
+  if (!product_id || !new_price || Number(new_price) <= 0) return { success: false, error: 'Invalid parameters' };
+  const r = await pool.query('UPDATE products SET price=$1 WHERE id=$2 RETURNING id,name,price', [Number(new_price), product_id]);
+  if (!r.rows.length) return { success: false, error: 'Product not found' };
+  await auditLog('agent_price', `Product ${product_id} → ${new_price} SAR`);
+  return { success: true, product_id: r.rows[0].id, name: r.rows[0].name, new_price: Number(r.rows[0].price) };
+}
+
+async function toolGetSalesData({ days = 30 } = {}) {
+  const d = Math.min(Number(days)||30, 90);
+  const { rows: top } = await pool.query(`SELECT item->>'id' product_id, SUM((item->>'qty')::int) total_sold FROM orders, jsonb_array_elements(items) item WHERE created_at > NOW()-make_interval(days=>$1) GROUP BY item->>'id' ORDER BY total_sold DESC LIMIT 20`, [d]);
+  const { rows: tot } = await pool.query(`SELECT COUNT(*) c, COALESCE(SUM(total),0) revenue FROM orders WHERE created_at > NOW()-make_interval(days=>$1)`, [d]);
+  return { period_days: d, total_orders: Number(tot[0].c), revenue_sar: Number(tot[0].revenue), top_products: top };
+}
+
+async function toolGetProducts({ category, low_stock_only } = {}) {
+  let q = 'SELECT id,name,price,category,stock,cost_price FROM products WHERE 1=1'; const p = [];
+  if (category) { q += ` AND LOWER(category)=LOWER($${p.length+1})`; p.push(category); }
+  if (low_stock_only) q += ' AND stock<10 AND stock>=0';
+  const { rows } = await pool.query(q+' ORDER BY id LIMIT 50', p);
+  return { count: rows.length, products: rows };
+}
+
+async function toolSendAlert({ message, type = 'info' }) {
+  await auditLog('agent_alert', `[${type.toUpperCase()}] ${message}`);
+  return { sent: true, message, type, timestamp: new Date().toISOString() };
+}
+
+async function toolAnalyzeCompetitorPrice({ product_name }) {
+  let browser;
+  try {
+    const puppeteer = require('puppeteer');
+    browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'] });
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    await page.goto(`https://www.google.com/search?q=${encodeURIComponent(product_name+' price SAR')}&tbm=shop`, { waitUntil: 'networkidle0', timeout: 12000 });
+    const prices = await page.evaluate(() => Array.from(document.querySelectorAll('[aria-label*="SAR"],[data-price]')).slice(0,5).map(e=>e.textContent?.trim()).filter(Boolean));
+    return { product: product_name, market_prices: prices, source: 'web' };
+  } catch(e) { return { product: product_name, market_prices: [], note: 'Could not scrape: '+e.message.slice(0,60) }; }
+  finally { if (browser) await browser.close().catch(()=>{}); }
+}
+
+async function toolGenerateDescription({ product_name, category }) {
+  const text = await callClaude(`Write a compelling single-sentence product description for "${product_name}" (${category||'general'}) for BLEX Saudi e-commerce. Return ONLY the description text, no JSON, no quotes.`, 128);
+  return { description: text.trim().slice(0, 200) };
+}
+
+async function toolApplyDiscount({ product_id, discount_pct }) {
+  if (!product_id || !discount_pct || Number(discount_pct)<=0 || Number(discount_pct)>90) return { success: false, error: 'Invalid discount (1-90%)' };
+  const { rows } = await pool.query('SELECT id,name,price FROM products WHERE id=$1', [product_id]);
+  if (!rows.length) return { success: false, error: 'Product not found' };
+  const p = rows[0]; const salePrice = +(Number(p.price)*(1-Number(discount_pct)/100)).toFixed(2);
+  const exp = new Date(Date.now()+7*24*3600*1000);
+  await pool.query('UPDATE products SET sale_price=$1,sale_ends_at=$2 WHERE id=$3', [salePrice, exp, product_id]);
+  await auditLog('agent_discount', `${p.name}: ${discount_pct}% off → ${salePrice} SAR`);
+  return { success: true, product_id, name: p.name, original_price: Number(p.price), sale_price: salePrice, expires: exp };
+}
+
+async function executeTool(name, input) {
+  switch (name) {
+    case 'search_cj_products':       return toolSearchCJ(input);
+    case 'import_product':           return toolImportProduct(input);
+    case 'update_product_price':     return toolUpdatePrice(input);
+    case 'get_sales_data':           return toolGetSalesData(input);
+    case 'get_products':             return toolGetProducts(input);
+    case 'send_alert':               return toolSendAlert(input);
+    case 'analyze_competitor_price': return toolAnalyzeCompetitorPrice(input);
+    case 'generate_description':     return toolGenerateDescription(input);
+    case 'apply_discount':           return toolApplyDiscount(input);
+    default: throw new Error(`Unknown tool: ${name}`);
+  }
+}
+
+// Agentic loop: send message → Claude picks tools → execute → repeat until end_turn
+async function callAgent(agentName, systemPrompt, userMessage, toolNames = [], maxIterations = 10) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
+  const tools = toolNames.length ? BLEX_TOOLS.filter(t => toolNames.includes(t.name)) : BLEX_TOOLS;
+  const sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const messages = [{ role: 'user', content: userMessage }];
+  const toolLog = [];
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: systemPrompt, tools, messages })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error?.message || 'Claude API error');
+    messages.push({ role: 'assistant', content: d.content });
+
+    if (d.stop_reason === 'end_turn') {
+      const finalResult = d.content.find(b => b.type === 'text')?.text || '';
+      await pool.query('INSERT INTO agent_logs(agent_name,session_id,final_result,iterations) VALUES($1,$2,$3,$4)',
+        [agentName, sessionId, finalResult.slice(0,1000), iter+1]).catch(()=>{});
+      return { result: finalResult, tool_log: toolLog, iterations: iter+1, session_id: sessionId };
+    }
+
+    if (d.stop_reason === 'tool_use') {
+      const reasoning = d.content.find(b => b.type === 'text')?.text || '';
+      const toolResults = [];
+      for (const block of d.content) {
+        if (block.type !== 'tool_use') continue;
+        let toolResult;
+        try { toolResult = await executeTool(block.name, block.input); }
+        catch(e) { toolResult = { error: e.message }; }
+        toolLog.push({ tool: block.name, input: block.input, result: toolResult, reasoning: reasoning.slice(0,300), ts: new Date().toISOString() });
+        await pool.query('INSERT INTO agent_logs(agent_name,session_id,tool_name,tool_input,tool_result,reasoning) VALUES($1,$2,$3,$4,$5,$6)',
+          [agentName, sessionId, block.name, block.input, toolResult, reasoning.slice(0,500)]).catch(()=>{});
+        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(toolResult) });
+      }
+      messages.push({ role: 'user', content: toolResults });
+    }
+  }
+  return { result: `Max iterations (${maxIterations}) reached`, tool_log: toolLog, iterations: maxIterations, session_id: sessionId };
 }
 
 async function getCJImage(name) {
@@ -2257,12 +2414,15 @@ app.post('/ai/complete-look', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ─── AI Agents ───────────────────────────────────────────────────────────────
+// ─── AI Agents (Agentic Loop via tool_use) ───────────────────────────────────
 
 app.get('/ai/agents/status', authenticate, async (req, res) => {
   try {
-    const [s, inv, pr] = await Promise.all([apGet('sales_agent_last'), apGet('inventory_agent_last'), apGet('pricing_agent_last')]);
-    res.json({ sales_agent_last: s ? safeParseJSON(s) : null, inventory_agent_last: inv ? safeParseJSON(inv) : null, pricing_agent_last: pr ? safeParseJSON(pr) : null });
+    const keys = ['sales_agent_last','inventory_agent_last','pricing_agent_last','trends_agent_last'];
+    const vals = await Promise.all(keys.map(k => apGet(k)));
+    const out = {};
+    keys.forEach((k,i) => { out[k] = vals[i] ? safeParseJSON(vals[i]) : null; });
+    res.json(out);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2272,52 +2432,75 @@ app.post('/ai/sales-agent', authenticate, async (req, res) => {
     const { cart_items = [], wishlist = [], views = [], query = '' } = behavior;
     let pastOrders = [];
     if (email) { const { rows } = await pool.query('SELECT id,total,created_at FROM orders WHERE email=$1 ORDER BY created_at DESC LIMIT 5', [email]); pastOrders = rows; }
-    const cartValue = cart_items.reduce((s, i) => s + (Number(i.price) * (i.qty || 1)), 0);
-    const text = await callClaude(`Sales AI for BLEX Saudi e-commerce. Customer: email=${email||'guest'}, cart=${cartValue} SAR (${cart_items.length} items), wishlist=${wishlist.length}, past orders=${pastOrders.length}, views=${views.length}, query="${query}". Decide ONE: discount_offer (cart abandon/loyalty), price_negotiate (wants better price), reorder_prompt (repeat buyer), none. Return ONLY JSON: {"action":"discount_offer","message":"<personalized EN message>","discount_pct":10,"confidence":"high"}`, 512);
-    const m = text.match(/\{[\s\S]*\}/);
-    const result = m ? safeParseJSON(m[0]) : { action: 'none', message: '', discount_pct: 0, confidence: 'low' };
-    await apSet('sales_agent_last', JSON.stringify({ ...result, ran_at: new Date().toISOString() }));
-    await auditLog('sales_agent', `Action: ${result.action} (${result.confidence})`);
-    res.json(result);
+    const cartValue = cart_items.reduce((s, i) => s + (Number(i.price)*(i.qty||1)), 0);
+    const { result, tool_log, iterations, session_id } = await callAgent(
+      'sales_agent',
+      `You are a sales optimization AI for BLEX Saudi e-commerce. Analyze the customer context provided, then use tools to gather more data and take the BEST action (apply discount OR send alert). Be decisive — always take exactly one concrete action per run.`,
+      `Customer context: email=${email||'guest'}, cart_value=${cartValue} SAR (${cart_items.length} items), wishlist=${wishlist.length}, past_orders=${pastOrders.length}, recent_views=${views.length}, query="${query}". Analyze, gather data if needed, and act.`,
+      ['get_products','get_sales_data','apply_discount','send_alert']
+    );
+    const data = { result, tool_log, iterations, session_id, ran_at: new Date().toISOString() };
+    await apSet('sales_agent_last', JSON.stringify(data));
+    res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/ai/inventory-agent', authenticate, async (req, res) => {
   try {
-    const { rows: prods } = await pool.query('SELECT id,name,stock,category FROM products WHERE stock>=0 ORDER BY stock ASC LIMIT 30');
-    const { rows: sales } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '30 days' GROUP BY item->>'id'`);
-    const sm = Object.fromEntries(sales.map(s => [s.pid, Number(s.sold)]));
-    const data = prods.map(p => ({ id: p.id, name: p.name, stock: p.stock, sold_30d: sm[String(p.id)] || 0 }));
-    const text = await callClaude(`Inventory AI. Flag products needing reorder (stock<20 or daily_velocity>stock/14). Data: ${JSON.stringify(data)}\nReturn ONLY JSON: {"predictions":[{"product_id":1,"product_name":"X","stock":5,"daily_velocity":0.5,"days_until_stockout":10,"action":"reorder_now","reorder_qty":50}]}`, 1024);
-    const m = text.match(/\{[\s\S]*\}/);
-    const result = m ? safeParseJSON(m[0]) : { predictions: [] };
-    const criticals = (result.predictions || []).filter(p => p.action === 'reorder_now').length;
-    await apSet('inventory_agent_last', JSON.stringify({ ...result, ran_at: new Date().toISOString() }));
-    if (criticals) await auditLog('inventory_agent', `${criticals} products flagged for reorder`);
-    res.json(result);
+    const { result, tool_log, iterations, session_id } = await callAgent(
+      'inventory_agent',
+      `You are an inventory management AI for BLEX. Your job is to identify products at risk of stockout. Use get_products(low_stock_only=true) to see critical items, get_sales_data(30) to calculate daily velocity (total_sold/30), then flag items with fewer than 14 days of stock remaining. Send a critical alert for each one.`,
+      `Run a full inventory check. Identify all products at risk of stockout and send appropriate alerts with reorder quantities.`,
+      ['get_products','get_sales_data','send_alert']
+    );
+    const data = { result, tool_log, iterations, session_id, ran_at: new Date().toISOString() };
+    await apSet('inventory_agent_last', JSON.stringify(data));
+    res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/ai/pricing-agent', authenticate, async (req, res) => {
   try {
-    const { rows: prods } = await pool.query('SELECT id,name,price,cost_price,stock,category FROM products ORDER BY id LIMIT 30');
-    const { rows: demand } = await pool.query(`SELECT item->>'id' pid,SUM((item->>'qty')::int) sold FROM orders,jsonb_array_elements(items) item WHERE created_at>NOW()-INTERVAL '7 days' GROUP BY item->>'id'`);
-    const dm = Object.fromEntries(demand.map(d => [d.pid, Number(d.sold)]));
-    const data = prods.map(p => ({ id: p.id, name: p.name, price: Number(p.price), cost: Number(p.cost_price || p.price * 0.6), stock: p.stock, sold_7d: dm[String(p.id)] || 0 }));
-    const text = await callClaude(`Dynamic pricing AI. Rules: sold_7d>5=+5-15%, sold_7d=0&stock>20=-5-10%, never below cost, only if diff>2%. Data: ${JSON.stringify(data)}\nReturn ONLY JSON: {"changes":[{"product_id":1,"old_price":100,"new_price":115,"reason":"high demand"}]}`, 1024);
-    const m = text.match(/\{[\s\S]*\}/);
-    const changes = m ? (safeParseJSON(m[0]).changes || []) : [];
-    let applied = 0;
-    for (const ch of changes) {
-      const orig = data.find(p => p.id === ch.product_id);
-      if (orig && typeof ch.new_price === 'number' && isFinite(ch.new_price) && ch.new_price >= orig.cost && Math.abs(ch.new_price - ch.old_price) / ch.old_price > 0.02) {
-        await pool.query('UPDATE products SET price=$1 WHERE id=$2', [ch.new_price, ch.product_id]);
-        await auditLog('pricing_agent', `${orig.name}: ${ch.old_price}→${ch.new_price} SAR (${ch.reason})`);
-        applied++;
-      }
-    }
-    await apSet('pricing_agent_last', JSON.stringify({ changes, applied, ran_at: new Date().toISOString() }));
-    res.json({ changes, applied });
+    const { result, tool_log, iterations, session_id } = await callAgent(
+      'pricing_agent',
+      `You are a dynamic pricing AI for BLEX Saudi e-commerce. Rules: if a product sold >5 units in 7 days, raise price 5-15%. If it sold 0 units with stock >20, lower price 5-10%. Never price below 60% of current price (estimated cost floor). Only change if diff >2%. For high-value items (price>500 SAR) you may check competitor prices first. Apply changes directly with update_product_price. Send a summary alert when done.`,
+      `Analyze all products and apply optimal price adjustments based on demand and stock levels. Be thorough and apply all warranted changes.`,
+      ['get_products','get_sales_data','update_product_price','analyze_competitor_price','send_alert']
+    );
+    const data = { result, tool_log, iterations, session_id, ran_at: new Date().toISOString() };
+    await apSet('pricing_agent_last', JSON.stringify(data));
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/ai/trends-agent', authenticate, async (req, res) => {
+  try {
+    const gTerms = await scrapeTrends().catch(() => []);
+    const ctx = gTerms.length ? `Live Google Trends right now: ${gTerms.slice(0,6).join(', ')}. Use these as search inspiration. ` : '';
+    const { result, tool_log, iterations, session_id } = await callAgent(
+      'trends_agent',
+      `You are a product sourcing AI for BLEX Saudi e-commerce (electronics, accessories, clothing for Saudi/MENA market). ${ctx}Search CJ Dropshipping for trending products, evaluate results, and import the best ones. After importing, generate good descriptions for each. Be autonomous: search at least 3 different category keywords, review results carefully, and import 5-8 high-potential products.`,
+      `Source the best trending products for the store right now. Search multiple categories, import the top products, and generate descriptions for them.`,
+      ['search_cj_products','import_product','generate_description','get_products','send_alert']
+    );
+    const data = { result, tool_log, iterations, session_id, ran_at: new Date().toISOString() };
+    await apSet('trends_agent_last', JSON.stringify(data));
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/ai/agent-logs', authenticate, async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit)||50, 200);
+    const agent = req.query.agent;
+    const session = req.query.session;
+    let q = 'SELECT id,agent_name,session_id,tool_name,tool_input,tool_result,reasoning,final_result,iterations,created_at FROM agent_logs WHERE 1=1';
+    const p = [];
+    if (agent) { q += ` AND agent_name=$${p.length+1}`; p.push(agent); }
+    if (session) { q += ` AND session_id=$${p.length+1}`; p.push(session); }
+    q += ` ORDER BY created_at DESC LIMIT $${p.length+1}`; p.push(limit);
+    const { rows } = await pool.query(q, p);
+    res.json(rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
