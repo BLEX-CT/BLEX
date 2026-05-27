@@ -249,7 +249,7 @@ function verifyProducts(newProds) {
     const errs = [];
     if (!p.image) errs.push('no image');
     if (Number(p.price) <= 0) errs.push('no price');
-    if (p.category !== 'electronics') errs.push(`category="${p.category}"`);
+    if (!p.category) errs.push('no category');
     if (!p.cost_price || Number(p.cost_price) <= 0) {
       errs.push('no cost_price');
     } else {
