@@ -455,7 +455,9 @@ app.get('/auth/me', authenticate, async (req, res) => {
 app.get('/products', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products ORDER BY id DESC');
-    res.json(result.rows);
+    const stripHtml = s => s ? s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : s;
+    const rows = result.rows.map(p => ({ ...p, description: stripHtml(p.description) }));
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
