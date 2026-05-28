@@ -293,7 +293,24 @@ async function initDB() {
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS routed_supplier_id INTEGER`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_content JSONB`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS source VARCHAR(50)`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cj_product_id VARCHAR(100)`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS products_cj_id_idx ON products(cj_product_id) WHERE cj_product_id IS NOT NULL`);
   await pool.query(`CREATE TABLE IF NOT EXISTS agent_logs (id SERIAL PRIMARY KEY, agent_name VARCHAR(100), session_id VARCHAR(50), tool_name VARCHAR(100), tool_input JSONB, tool_result JSONB, reasoning TEXT, final_result TEXT, iterations INTEGER, created_at TIMESTAMP DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS agent_progress (
+    id SERIAL PRIMARY KEY,
+    run_id VARCHAR(50) NOT NULL,
+    agent_name VARCHAR(100) NOT NULL,
+    total INTEGER DEFAULT 0,
+    processed INTEGER DEFAULT 0,
+    success_count INTEGER DEFAULT 0,
+    error_count INTEGER DEFAULT 0,
+    errors JSONB DEFAULT '[]',
+    status VARCHAR(50) DEFAULT 'running',
+    started_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    completed_at TIMESTAMP,
+    UNIQUE(run_id, agent_name)
+  )`);
 
   // Seed all 11 feature flags enabled by default
   const FLAGS = ['loyalty_points','wallet','b2b','trade_in','group_cart','back_in_stock','smart_bundles','digital_warranty','coupons','vat','cod'];
@@ -466,7 +483,7 @@ app.put('/products/:id', async (req, res) => {
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
     await auditLog('product_updated', `Product ${req.params.id}: ${name}`);
-    if (result.rows[0].stock < 5) notifySupplierWebhook(result.rows[0].id, result.rows[0].name, result.rows[0].stock);
+    if (result.rows[0].stock < 50) notifySupplierWebhook(result.rows[0].id, result.rows[0].name, result.rows[0].stock);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1870,13 +1887,13 @@ app.post('/ai/send-targeted-email', async (req, res) => {
 const AP_DDL = `CREATE TABLE IF NOT EXISTS autopilot_config (key VARCHAR(50) PRIMARY KEY, value TEXT)`;
 async function apGet(key) { await pool.query(AP_DDL); const r = await pool.query('SELECT value FROM autopilot_config WHERE key=$1', [key]); return r.rows[0]?.value || null; }
 async function apSet(key, val) { await pool.query(AP_DDL); await pool.query(`INSERT INTO autopilot_config(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value`, [key, String(val)]); }
-async function callClaude(prompt, maxTokens = 1024) {
+async function callClaude(prompt, maxTokens = 1024, model = 'claude-sonnet-4-6') {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
   });
   const d = await r.json();
   if (!r.ok) throw new Error(d.error?.message || 'Claude API error');
@@ -1903,10 +1920,10 @@ const BLEX_TOOLS = [
   { name: 'get_products', description: 'Read products from the store, optionally filtered by category or low-stock flag.', input_schema: { type: 'object', properties: { category: { type: 'string', description: 'electronics | accessories | clothing' }, low_stock_only: { type: 'boolean' } }, required: [] } },
   { name: 'send_alert', description: 'Log a notification or finding to the audit system. Use for important agent decisions.', input_schema: { type: 'object', properties: { message: { type: 'string' }, type: { type: 'string', enum: ['info', 'warning', 'critical'] } }, required: ['message'] } },
   { name: 'analyze_competitor_price', description: 'Scrape approximate market / competitor prices for a product name from the web.', input_schema: { type: 'object', properties: { product_name: { type: 'string' } }, required: ['product_name'] } },
-  { name: 'generate_description', description: 'Generate a compelling English product description using AI. Returns single-line text.', input_schema: { type: 'object', properties: { product_name: { type: 'string' }, category: { type: 'string' } }, required: ['product_name'] } },
+  { name: 'generate_description', description: 'Generate a compelling product description, Instagram social caption, and SEO keywords using AI. Returns description, social_caption, and seo_keywords fields.', input_schema: { type: 'object', properties: { product_name: { type: 'string' }, category: { type: 'string' } }, required: ['product_name'] } },
   { name: 'apply_discount', description: 'Apply a percentage sale discount to a product for 7 days (sets sale_price and sale_ends_at).', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, discount_pct: { type: 'number', description: 'Percentage 1-90' } }, required: ['product_id', 'discount_pct'] } },
-  { name: 'process_product_image', description: 'Remove background from a product image using Remove.bg API. Stores the cleaned white-background PNG in the product image gallery.', input_schema: { type: 'object', properties: { product_id: { type: 'integer', description: 'ID of the product whose image to process' } }, required: ['product_id'] } },
-  { name: 'set_product_description', description: 'Save a description (and optionally category) to a product in the database. Always call this after generate_description to persist the result.', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, description: { type: 'string', description: 'The description text to save' }, category: { type: 'string', description: 'Optional: electronics | accessories | clothing' } }, required: ['product_id', 'description'] } }
+  { name: 'process_product_image', description: 'Process product images: tries Remove.bg for background removal, or fetches all CJ image slots as fallback. Ensures every product has at least one clean image.', input_schema: { type: 'object', properties: { product_id: { type: 'integer', description: 'ID of the product whose image to process' } }, required: ['product_id'] } },
+  { name: 'set_product_description', description: 'Save description, social caption, and SEO keywords to a product in the database. Always call this after generate_description to persist all content fields.', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, description: { type: 'string', description: 'The description text to save' }, category: { type: 'string', description: 'Optional: electronics | accessories | clothing' }, social_caption: { type: 'string', description: 'Instagram/social media caption with hashtags' }, seo_keywords: { type: 'array', items: { type: 'string' }, description: 'List of 5-10 SEO keywords' } }, required: ['product_id', 'description'] } }
 ];
 
 // CJ sellPrice can be a range string "7.11-8.28" — parse the lower bound as cost
@@ -1958,19 +1975,22 @@ async function toolImportProduct({ cj_product_id }) {
   const p = d.data;
   const name = p.productNameEn || p.productName;
   if (!name) return { success: false, error: 'no_name' };
+  // Deduplicate: check by CJ product ID first (most reliable)
+  const cjIdEx = await pool.query('SELECT id FROM products WHERE cj_product_id=$1', [cj_product_id]);
+  if (cjIdEx.rows.length) return { success: false, error: 'already_exists', product_id: cjIdEx.rows[0].id, reason: 'cj_id_dedup' };
   // Quality filter: must have image (use unified extractor — CJ detail has array/JSON-array-string)
   const img = extractCJImage(p.productImageSet, p.productImage);
   if (!img) return { success: false, skipped: true, reason: 'No product image — quality filter' };
   // Quality filter: rating >= 4.0 (only enforce if CJ actually returns a rating value)
   const rating = Number(p.productStar || p.productAverageRating || 0);
   if (rating > 0 && rating < 4.0) return { success: false, skipped: true, reason: `Rating ${rating} < 4.0 — quality filter` };
-  // Deduplicate: exact name + fuzzy 3-word prefix
+  // Deduplicate: exact name + fuzzy 3-word prefix (secondary check)
   const shortName = (name||'').split(' ').slice(0,3).join(' ');
   const ex = await pool.query(`SELECT id FROM products WHERE LOWER(name)=LOWER($1) OR (LOWER(name) LIKE LOWER($2) AND LENGTH(name)>5)`, [name, `%${shortName}%`]);
   if (ex.rows.length) return { success: false, error: 'already_exists', product_id: ex.rows[0].id };
   // Price = 2.5× CJ sell price (CJ sellPrice is your cost; may be range string "7.11-8.28")
   const costPrice = parseCJPrice(p.sellPrice) || parseCJPrice(p.variants?.[0]?.variantSellPrice) || 40;
-  const price = +(costPrice * 2.5).toFixed(2);
+  const price = Math.max(10, +(costPrice * 2.5).toFixed(2)); // enforce 10 SAR minimum floor
   // Auto-detect category; check product name for electronics override before CJ category
   const cjCat = (p.categoryName || p.categoryNameEn || '').toLowerCase();
   const nameLow = name.toLowerCase();
@@ -1980,18 +2000,19 @@ async function toolImportProduct({ cj_product_id }) {
     : (cjCat.includes('jew') || cjCat.includes('ring') || cjCat.includes('necklace') || cjCat.includes('bracelet') || cjCat.includes('bag') || (cjCat.includes('watch') && !cjCat.includes('smart'))) ? 'accessories'
     : 'electronics';
   const ins = await pool.query(
-    'INSERT INTO products (name,price,cost_price,description,stock,category,image,source) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,name',
-    [name, price, costPrice, p.description || '', 999, category, img, 'agent']
+    'INSERT INTO products (name,price,cost_price,description,stock,category,image,source,cj_product_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,name',
+    [name, price, costPrice, p.description || '', 999, category, img, 'agent', cj_product_id]
   );
   await auditLog('agent_import', `Imported CJ ${cj_product_id}: ${name} @ ${price} SAR (cost ${costPrice})`);
-  return { success: true, product_id: ins.rows[0].id, name: ins.rows[0].name, price, cost_price: costPrice, category };
+  return { success: true, product_id: ins.rows[0].id, name: ins.rows[0].name, price, cost_price: costPrice, category, cj_product_id };
 }
 
 async function toolUpdatePrice({ product_id, new_price }) {
   if (!product_id || !new_price || Number(new_price) <= 0) return { success: false, error: 'Invalid parameters' };
-  const r = await pool.query('UPDATE products SET price=$1 WHERE id=$2 RETURNING id,name,price', [Number(new_price), product_id]);
+  const price = Math.max(10, Number(new_price)); // 10 SAR minimum floor
+  const r = await pool.query('UPDATE products SET price=$1 WHERE id=$2 RETURNING id,name,price', [price, product_id]);
   if (!r.rows.length) return { success: false, error: 'Product not found' };
-  await auditLog('agent_price', `Product ${product_id} → ${new_price} SAR`);
+  await auditLog('agent_price', `Product ${product_id} → ${price} SAR`);
   return { success: true, product_id: r.rows[0].id, name: r.rows[0].name, new_price: Number(r.rows[0].price) };
 }
 
@@ -2005,7 +2026,7 @@ async function toolGetSalesData({ days = 30 } = {}) {
 async function toolGetProducts({ category, low_stock_only } = {}) {
   let q = 'SELECT id,name,price,category,stock,cost_price FROM products WHERE 1=1'; const p = [];
   if (category) { q += ` AND LOWER(category)=LOWER($${p.length+1})`; p.push(category); }
-  if (low_stock_only) q += ' AND stock<10 AND stock>=0';
+  if (low_stock_only) q += ' AND stock<50 AND stock>=0';
   const { rows } = await pool.query(q+' ORDER BY id LIMIT 50', p);
   return { count: rows.length, products: rows };
 }
@@ -2020,18 +2041,59 @@ async function toolAnalyzeCompetitorPrice({ product_name }) {
   try {
     const puppeteer = require('puppeteer');
     browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'] });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-    await page.goto(`https://www.google.com/search?q=${encodeURIComponent(product_name+' price SAR')}&tbm=shop`, { waitUntil: 'networkidle0', timeout: 12000 });
-    const prices = await page.evaluate(() => Array.from(document.querySelectorAll('[aria-label*="SAR"],[data-price]')).slice(0,5).map(e=>e.textContent?.trim()).filter(Boolean));
-    return { product: product_name, market_prices: prices, source: 'web' };
-  } catch(e) { return { product: product_name, market_prices: [], note: 'Could not scrape: '+e.message.slice(0,60) }; }
+
+    const scrapePrice = async (url, selectors) => {
+      const page = await browser.newPage();
+      try {
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await new Promise(r => setTimeout(r, 2000));
+        for (const sel of selectors) {
+          try {
+            const text = await page.$eval(sel, el => el.textContent?.trim());
+            if (text) { const num = parseFloat(text.replace(/[^0-9.]/g, '')); if (num > 0) return num; }
+          } catch {}
+        }
+        return null;
+      } catch { return null; }
+      finally { await page.close().catch(() => {}); }
+    };
+
+    const q = encodeURIComponent(product_name);
+    const [amazonRaw, noonPrice] = await Promise.all([
+      scrapePrice(`https://www.amazon.com/s?k=${q}`, ['.a-price-whole', '.a-offscreen']),
+      scrapePrice(`https://www.noon.com/saudi-en/search/?q=${q}`, ['[class*="priceNow"]', '[class*="price--"]'])
+    ]);
+    const amazon_price_sar = amazonRaw ? Math.round(amazonRaw * 3.75) : null;
+    const noon_price_sar = noonPrice && noonPrice > 5 ? Math.round(noonPrice) : null;
+    const competitors = [amazon_price_sar, noon_price_sar].filter(v => v !== null && v > 5);
+    const min_competitor_sar = competitors.length ? Math.min(...competitors) : null;
+    return { product: product_name, amazon_price_sar, noon_price_sar, min_competitor_sar, source: 'web_scrape' };
+  } catch(e) {
+    return { product: product_name, amazon_price_sar: null, noon_price_sar: null, min_competitor_sar: null, note: e.message.slice(0,60) };
+  }
   finally { if (browser) await browser.close().catch(()=>{}); }
 }
 
 async function toolGenerateDescription({ product_name, category }) {
-  const text = await callClaude(`Write a compelling single-sentence product description for "${product_name}" (${category||'general'}) for BLEX Saudi e-commerce. Return ONLY the description text, no JSON, no quotes.`, 128);
-  return { description: text.trim().slice(0, 200) };
+  const text = await callClaude(
+    `Write marketing content for "${product_name}" (${category||'general'}) for BLEX Saudi e-commerce.\nReturn ONLY JSON: {"description":"<2-3 sentence compelling product description>","social_caption":"<Instagram caption with 3-5 relevant hashtags>","seo_keywords":["kw1","kw2","kw3","kw4","kw5"]}`,
+    300,
+    'claude-haiku-4-5-20251001'
+  );
+  const m = text.match(/\{[\s\S]*\}/);
+  if (m) {
+    try {
+      const parsed = safeParseJSON(m[0]);
+      return {
+        description: (parsed.description || '').trim().slice(0, 500),
+        social_caption: (parsed.social_caption || '').trim().slice(0, 300),
+        seo_keywords: Array.isArray(parsed.seo_keywords) ? parsed.seo_keywords.slice(0, 10) : [product_name]
+      };
+    } catch {}
+  }
+  return { description: `Premium ${product_name} available at BLEX Store.`, social_caption: `#BLEX #${(category||'store').replace(/\s+/g,'').toLowerCase()}`, seo_keywords: [product_name] };
 }
 
 async function toolApplyDiscount({ product_id, discount_pct }) {
@@ -2046,30 +2108,66 @@ async function toolApplyDiscount({ product_id, discount_pct }) {
 }
 
 async function toolProcessImage({ product_id }) {
-  const { rows } = await pool.query('SELECT id,name,image,image_gallery FROM products WHERE id=$1', [product_id]);
+  const { rows } = await pool.query('SELECT id,name,image,image_gallery,cj_product_id FROM products WHERE id=$1', [product_id]);
   if (!rows.length) return { success: false, error: 'Product not found' };
   const p = rows[0];
-  if (!p.image) return { success: false, error: 'No image URL on product' };
-  const apiKey = process.env.REMOVEBG_API_KEY;
-  if (!apiKey) return { success: false, error: 'REMOVEBG_API_KEY not configured' };
-  const r = await fetch('https://api.remove.bg/v1.0/removebg', {
-    method: 'POST',
-    headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ image_url: p.image, size: 'auto', bg_color: 'ffffff' })
-  });
-  if (!r.ok) {
-    const e = await r.json().catch(() => ({}));
-    return { success: false, error: e.errors?.[0]?.title || `Remove.bg error ${r.status}` };
+
+  // Collect up to 4 image slots from CJ product detail
+  let images = [];
+  if (p.cj_product_id) {
+    try {
+      const token = await getCJToken();
+      const r = await fetch(`${CJ_BASE}/product/query?pid=${encodeURIComponent(p.cj_product_id)}`, { headers: { 'CJ-Access-Token': token } });
+      const d = await cjParseJSON(r);
+      if (d.result && d.data) {
+        const imgSet = d.data.productImageSet;
+        if (Array.isArray(imgSet)) images = imgSet.slice(0, 4).map(String).filter(u => u.startsWith('http'));
+        else if (typeof imgSet === 'string' && imgSet) {
+          if (imgSet.startsWith('[')) { try { images = JSON.parse(imgSet).slice(0, 4).filter(Boolean); } catch {} }
+          else images = imgSet.split(';').slice(0, 4).map(u => u.trim()).filter(u => u.startsWith('http'));
+        }
+      }
+    } catch {}
   }
-  const buf = await r.arrayBuffer();
-  const cleaned = `data:image/png;base64,${Buffer.from(buf).toString('base64')}`;
-  const gallery = { ...(p.image_gallery && typeof p.image_gallery === 'object' ? p.image_gallery : {}), cleaned };
-  await pool.query('UPDATE products SET image_gallery=$1 WHERE id=$2', [JSON.stringify(gallery), product_id]);
-  await auditLog('agent_image', `Processed image for product ${product_id}: ${p.name}`);
-  return { success: true, product_id, name: p.name };
+  if (!images.length && p.image) images = [p.image];
+  if (!images.length) return { success: false, error: 'No images available for this product' };
+
+  const existingGallery = (p.image_gallery && typeof p.image_gallery === 'object') ? p.image_gallery : {};
+
+  // Try Remove.bg on each image slot
+  const rbKey = process.env.REMOVEBG_API_KEY;
+  if (rbKey) {
+    for (const imageUrl of images) {
+      try {
+        const r = await fetch('https://api.remove.bg/v1.0/removebg', {
+          method: 'POST',
+          headers: { 'X-Api-Key': rbKey, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ image_url: imageUrl, size: 'auto', bg_color: 'ffffff' })
+        });
+        if (r.ok) {
+          const buf = await r.arrayBuffer();
+          const cleaned = `data:image/png;base64,${Buffer.from(buf).toString('base64')}`;
+          const gallery = { ...existingGallery, cleaned, all_images: images };
+          await pool.query('UPDATE products SET image=$1,image_gallery=$2 WHERE id=$3', [imageUrl, JSON.stringify(gallery), product_id]);
+          await auditLog('agent_image', `Remove.bg processed product ${product_id}: ${p.name}`);
+          return { success: true, product_id, name: p.name, method: 'removebg', images_found: images.length };
+        }
+      } catch {}
+    }
+  }
+
+  // Fallback: store all CJ image slots directly (no background removal)
+  const gallery = { ...existingGallery, all_images: images };
+  images.forEach((u, i) => { gallery[`slot${i+1}`] = u; });
+  await pool.query(
+    'UPDATE products SET image=COALESCE($1,image),image_gallery=$2 WHERE id=$3',
+    [images[0], JSON.stringify(gallery), product_id]
+  );
+  await auditLog('agent_image', `CJ images stored product ${product_id}: ${p.name} (${images.length} slots)`);
+  return { success: true, product_id, name: p.name, method: 'cj_direct', images_found: images.length };
 }
 
-async function toolSetDescription({ product_id, description, category }) {
+async function toolSetDescription({ product_id, description, category, social_caption, seo_keywords }) {
   if (!product_id || !description) return { success: false, error: 'product_id and description required' };
   let q, params;
   if (category) {
@@ -2081,6 +2179,16 @@ async function toolSetDescription({ product_id, description, category }) {
   }
   const { rows } = await pool.query(q, params);
   if (!rows.length) return { success: false, error: 'Product not found' };
+  // Save social_caption and seo_keywords into ai_content JSONB
+  const extra = {};
+  if (social_caption) extra.social_caption = social_caption;
+  if (seo_keywords?.length) extra.seo_keywords = seo_keywords;
+  if (Object.keys(extra).length) {
+    await pool.query(
+      `UPDATE products SET ai_content = COALESCE(ai_content, '{}')::jsonb || $1::jsonb WHERE id=$2`,
+      [JSON.stringify(extra), product_id]
+    );
+  }
   return { success: true, product_id, name: rows[0].name };
 }
 
@@ -2195,13 +2303,21 @@ async function getProductImage(name) {
   return img || await getUnsplashImage(name);
 }
 
-// Shared 5-agent autopilot logic (returns summary, accepts optional progress callback)
-async function runAutopilotAgents(onProgress = null) {
+// Shared 5-agent autopilot logic — targets 1000 products, runs async in background
+async function runAutopilotAgents(onProgress = null, runId = null) {
   const results = { imported: 0, descriptions: 0, prices: 0, images: 0, inventory_alerts: 0, webhooks_sent: 0, errors: [] };
   const hasKey = !!process.env.ANTHROPIC_API_KEY;
 
   const send = (msg, extra = {}) => { if (onProgress) try { onProgress({ type: 'progress', message: msg, ...extra, ...results }); } catch {} };
   const sendPhase = (phase, msg) => { if (onProgress) try { onProgress({ type: 'phase', phase, message: msg }); } catch {} };
+
+  const saveProgress = async () => {
+    if (!runId) return;
+    await pool.query(
+      `UPDATE agent_progress SET processed=$1, success_count=$2, error_count=$3, errors=$4, updated_at=NOW() WHERE run_id=$5 AND agent_name='autopilot'`,
+      [results.imported + results.descriptions + results.prices + results.images, results.imported, results.errors.length, JSON.stringify(results.errors.slice(-20)), runId]
+    ).catch(() => {});
+  };
 
   const progressCb = (ev) => {
     if (ev.tool === 'import_product' && ev.result?.success) {
@@ -2222,41 +2338,64 @@ async function runAutopilotAgents(onProgress = null) {
     if (onProgress) try { onProgress({ type: 'tool', ...ev, ...results }); } catch {}
   };
 
-  // Phase A: Trends Agent — 4 categories × 20 products = target 80
+  // Phase A: Trends Agent — 10 categories × 100 products = target 1000
   if (hasKey) {
     const gTerms = await scrapeTrends().catch(() => []);
     const trendsCtx = gTerms.length ? `Current trending searches: ${gTerms.slice(0,6).join(', ')}. Use these as inspiration. ` : '';
     const CATEGORIES = [
-      { cat: 'electronics', label: 'Electronics', keywords: 'earbuds, cable, charger, LED light, ring light, keyboard, mouse, fan, lamp, case, stand, pad, lens, headphone, battery, purifier' },
-      { cat: 'jewelry', label: 'Jewelry', keywords: 'bracelet, necklace, ring, earring, pendant, chain, anklet, bangle, choker, brooch' },
-      { cat: 'clothing', label: 'Clothing', keywords: 'dress, top, blouse, skirt, leggings, jacket, shirt, coat, jeans, shorts' },
-      { cat: 'accessories', label: 'Accessories', keywords: 'bag, wallet, belt, cap, hat, scarf, sunglasses, watch, gloves, keychain' }
+      { cat: 'electronics',  label: 'Electronics',  keywords: 'earbuds, cable, charger, LED light, ring light, keyboard, mouse, fan, lamp, case, stand, pad, headphone, battery, purifier' },
+      { cat: 'jewelry',      label: 'Jewelry',      keywords: 'bracelet, necklace, ring, earring, pendant, chain, anklet, bangle, choker, brooch' },
+      { cat: 'clothing',     label: 'Clothing',     keywords: 'dress, top, blouse, skirt, leggings, jacket, shirt, coat, jeans, shorts' },
+      { cat: 'accessories',  label: 'Accessories',  keywords: 'bag, wallet, belt, cap, hat, scarf, sunglasses, watch, gloves, keychain' },
+      { cat: 'home',         label: 'Home',         keywords: 'candle, vase, frame, clock, mirror, cushion, rug, organizer, storage, planter' },
+      { cat: 'beauty',       label: 'Beauty',       keywords: 'cream, serum, mask, brush, lipstick, perfume, lotion, cleanser, toner, spray' },
+      { cat: 'sports',       label: 'Sports',       keywords: 'bottle, band, mat, gloves, bag, weights, rope, roller, towel, tracker' },
+      { cat: 'baby',         label: 'Baby',         keywords: 'toy, blanket, bib, rattle, pacifier, mobile, teether, monitor, bottle, wipe' },
+      { cat: 'kitchen',      label: 'Kitchen',      keywords: 'utensil, container, mug, board, pan, rack, strainer, thermometer, scale, peeler' },
+      { cat: 'stationery',   label: 'Stationery',   keywords: 'notebook, pen, planner, tape, sticky, ruler, eraser, binder, folder, stamp' },
     ];
+
     for (const { cat, label, keywords } of CATEGORIES) {
-      sendPhase('trends', `Searching ${label} — targeting 20 products…`);
-      try {
-        const { tool_log } = await callAgent(
-          'trends_agent',
-          `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have 20 successful imports.`,
-          `Import 20 "${label}" products. Search with short keywords (1-2 words). Suggested keywords: ${keywords}. Import each product with an image immediately after finding it.`,
-          ['search_cj_products', 'import_product', 'send_alert'],
-          18,
-          progressCb
-        );
-        const catImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
-        send(`${label} done — ${catImported} imported`, {});
-      } catch (e) { results.errors.push(`trends_${label.slice(0,10)}: ${e.message.slice(0,40)}`); }
+      let catImported = 0;
+      const catTarget = 100;
+      let round = 0;
+
+      while (catImported < catTarget && round < 6) {
+        round++;
+        const roundTarget = Math.min(20, catTarget - catImported);
+        sendPhase('trends', `${label} round ${round} — ${catImported}/${catTarget} imported…`);
+        try {
+          const { tool_log } = await callAgent(
+            'trends_agent',
+            `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have ${roundTarget} successful imports.`,
+            `Import ${roundTarget} "${label}" products (round ${round}). Search with short 1-2 word keywords. Suggested: ${keywords}. Import each product with an image immediately after finding it.`,
+            ['search_cj_products', 'import_product', 'send_alert'],
+            20,
+            progressCb
+          );
+          const roundImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
+          catImported += roundImported;
+          send(`${label} round ${round} — ${roundImported} imported (${catImported} total)`, {});
+          if (roundImported < 3) break;
+        } catch (e) {
+          results.errors.push(`trends_${label.slice(0,8)}_r${round}: ${e.message.slice(0,40)}`);
+          break;
+        }
+        await saveProgress();
+      }
+      send(`${label} complete — ${catImported} imported`, {});
     }
-    if (results.imported) await auditLog('autopilot', `Agentic import: ${results.imported} products across 4 categories`);
+    if (results.imported) await auditLog('autopilot', `Agentic import: ${results.imported} products across 10 categories`);
+    await saveProgress();
   }
 
-  // Phase B: Content Agent — generate + save descriptions for products without them
+  // Phase B: Content Agent — generate + save descriptions for up to 1000 products
   if (hasKey) {
     sendPhase('content', 'Generating descriptions for new products…');
     try {
-      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 80`);
+      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 1000`);
       if (nd.length) {
-        const batchSize = 20;
+        const batchSize = 8;
         for (let i = 0; i < nd.length; i += batchSize) {
           const batch = nd.slice(i, i + batchSize);
           send(`Writing descriptions ${i+1}–${Math.min(i+batchSize, nd.length)} of ${nd.length}…`);
@@ -2265,16 +2404,17 @@ async function runAutopilotAgents(onProgress = null) {
             `You are a product content AI for BLEX Saudi e-commerce. For each product: 1) call generate_description to create a compelling description, 2) immediately call set_product_description to save it. Work through every product in the list. Be thorough.`,
             `Write and save descriptions for these ${batch.length} products: ${JSON.stringify(batch.map(p => ({ id: p.id, name: p.name, category: p.category })))}`,
             ['generate_description', 'set_product_description', 'send_alert'],
-            batch.length * 2 + 5,
+            batch.length * 3,
             progressCb
           );
+          await saveProgress();
         }
         if (results.descriptions) await auditLog('content_agent', `Generated ${results.descriptions} descriptions`);
       }
     } catch (e) { results.errors.push('content: ' + e.message.slice(0, 50)); }
   }
 
-  // Phase C: Pricing Agent — demand-based price adjustments
+  // Phase C: Pricing Agent — demand-based price adjustments across all products
   if (hasKey) {
     sendPhase('pricing', 'Adjusting prices based on sales demand…');
     try {
@@ -2286,14 +2426,15 @@ async function runAutopilotAgents(onProgress = null) {
         12,
         progressCb
       );
+      await saveProgress();
     } catch (e) { results.errors.push('pricing: ' + e.message.slice(0, 50)); }
   }
 
-  // Phase D: Image Agent — remove.bg background removal
+  // Phase D: Image Agent — remove.bg background removal for up to 100 products
   if (process.env.REMOVEBG_API_KEY && hasKey) {
     sendPhase('images', 'Processing product images with Remove.bg…');
     try {
-      const { rows: ni } = await pool.query(`SELECT id,name FROM products WHERE image IS NOT NULL AND (image_gallery IS NULL OR image_gallery->>'cleaned' IS NULL) ORDER BY id DESC LIMIT 20`);
+      const { rows: ni } = await pool.query(`SELECT id,name FROM products WHERE image IS NOT NULL AND (image_gallery IS NULL OR image_gallery->>'cleaned' IS NULL) ORDER BY id DESC LIMIT 100`);
       if (ni.length) {
         send(`Processing ${ni.length} product images…`);
         await callAgent(
@@ -2305,6 +2446,7 @@ async function runAutopilotAgents(onProgress = null) {
           progressCb
         );
         if (results.images) await auditLog('image_agent', `Processed ${results.images} product images`);
+        await saveProgress();
       }
     } catch (e) { results.errors.push('images: ' + e.message.slice(0, 50)); }
   }
@@ -2324,39 +2466,65 @@ async function runAutopilotAgents(onProgress = null) {
         progressCb
       );
       if (results.webhooks_sent) await auditLog('autopilot', `Sent ${results.webhooks_sent} low-stock webhooks`);
+      await saveProgress();
     } catch (e) { results.errors.push('inventory: ' + e.message.slice(0, 50)); }
+  }
+
+  if (runId) {
+    await pool.query(`UPDATE agent_progress SET status='completed', completed_at=NOW(), updated_at=NOW() WHERE run_id=$1 AND agent_name='autopilot'`, [runId]).catch(() => {});
   }
 
   return results;
 }
 
+// Fire-and-forget: returns run_id immediately, runs all 5 agents in background targeting 1000 products
 app.post('/autopilot/run', async (req, res) => {
   try {
-    const results = await runAutopilotAgents();
-    const summary = { ...results, ran_at: new Date().toISOString() };
-    await apSet('last_run', JSON.stringify(summary));
-    res.json(summary);
+    const runId = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+    await pool.query(
+      `INSERT INTO agent_progress(run_id, agent_name, total, status) VALUES($1,'autopilot',1000,'running') ON CONFLICT(run_id, agent_name) DO NOTHING`,
+      [runId]
+    );
+    runAutopilotAgents(null, runId).then(async (summary) => {
+      await apSet('last_run', JSON.stringify({ ...summary, ran_at: new Date().toISOString() }));
+    }).catch(e => console.error('[autopilot]', e.message));
+    res.json({ run_id: runId, message: 'Autopilot started — targeting 1000 products across 10 categories', target: 1000 });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// SSE streaming version — frontend uses this for live progress
+// SSE streaming version — also fire-and-forget with run_id for reconnection
 app.post('/autopilot/run-stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
+  const runId = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
   const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
 
   try {
-    const results = await runAutopilotAgents((ev) => send(ev));
+    await pool.query(
+      `INSERT INTO agent_progress(run_id, agent_name, total, status) VALUES($1,'autopilot',1000,'running') ON CONFLICT(run_id, agent_name) DO NOTHING`,
+      [runId]
+    );
+    send({ type: 'started', run_id: runId, target: 1000 });
+    const results = await runAutopilotAgents((ev) => send(ev), runId);
     const summary = { ...results, ran_at: new Date().toISOString() };
     await apSet('last_run', JSON.stringify(summary));
-    send({ type: 'complete', ...summary });
+    send({ type: 'complete', run_id: runId, ...summary });
   } catch (err) {
     send({ type: 'error', message: err.message });
   }
   res.end();
+});
+
+// Poll progress for a background run
+app.get('/autopilot/progress/:runId', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`SELECT * FROM agent_progress WHERE run_id=$1 AND agent_name='autopilot'`, [req.params.runId]);
+    if (!rows[0]) return res.status(404).json({ error: 'Run not found' });
+    res.json(rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/autopilot/status', async (req, res) => {
