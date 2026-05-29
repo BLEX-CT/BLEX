@@ -1915,7 +1915,7 @@ function safeParseJSON(text) {
 // ─── Agentic AI Infrastructure ────────────────────────────────────────────────
 
 const BLEX_TOOLS = [
-  { name: 'search_cj_products', description: 'Search CJ Dropshipping catalog for products by keyword. Returns list with PIDs, names, prices. IMPORTANT: Use SHORT single-word or two-word keywords only — complex phrases return 0 results. Good keywords: "earbuds", "USB cable", "ring light", "LED light", "bracelet", "case", "lens", "fan", "pad", "stand", "watch", "bag". Bad keywords: "bluetooth speaker", "smart phone holder", "portable charger" (too long — return nothing).', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: 'Short 1-2 word keyword. Single English words work best.' }, limit: { type: 'integer', default: 10, description: 'Max results 1-20' } }, required: ['keyword'] } },
+  { name: 'search_cj_products', description: 'Search CJ Dropshipping catalog for products by keyword. Returns list with PIDs, names, prices. IMPORTANT: Use SHORT single-word or two-word keywords only — complex phrases return 0 results. Good keywords: "earbuds", "USB cable", "ring light", "LED light", "bracelet", "case", "lens", "fan", "pad", "stand", "watch", "bag". Bad keywords: "bluetooth speaker", "smart phone holder", "portable charger" (too long — return nothing). When import_product returns already_exists for most results, use page 2, 3, 4... to get completely different products from CJ.', input_schema: { type: 'object', properties: { keyword: { type: 'string', description: 'Short 1-2 word keyword. Single English words work best.' }, limit: { type: 'integer', default: 10, description: 'Max results 1-20' }, page: { type: 'integer', default: 1, description: 'Page number 1-10. Increment to get different products when page 1 is all duplicates already in the store.' } }, required: ['keyword'] } },
   { name: 'import_product', description: 'Import a CJ Dropshipping product into the BLEX store by its PID. Checks for duplicates automatically.', input_schema: { type: 'object', properties: { cj_product_id: { type: 'string' } }, required: ['cj_product_id'] } },
   { name: 'update_product_price', description: 'Update the price of a product already in the store.', input_schema: { type: 'object', properties: { product_id: { type: 'integer' }, new_price: { type: 'number', description: 'New price in SAR (must be > 0)' } }, required: ['product_id', 'new_price'] } },
   { name: 'get_sales_data', description: 'Retrieve order volume, revenue, and per-product sales totals from the database.', input_schema: { type: 'object', properties: { days: { type: 'integer', default: 30, description: 'Look-back window, max 90' } }, required: [] } },
@@ -1952,9 +1952,9 @@ function extractCJImage(productImageSet, productImage) {
   return null;
 }
 
-async function toolSearchCJ({ keyword, limit = 10 }) {
+async function toolSearchCJ({ keyword, limit = 10, page = 1 }) {
   const token = await getCJToken();
-  const r = await fetch(`${CJ_BASE}/product/list?productNameEn=${encodeURIComponent(keyword)}&pageNum=1&pageSize=${Math.min(Number(limit)||10, 20)}`, { headers: { 'CJ-Access-Token': token } });
+  const r = await fetch(`${CJ_BASE}/product/list?productNameEn=${encodeURIComponent(keyword)}&pageNum=${Math.max(1, Number(page)||1)}&pageSize=${Math.min(Number(limit)||10, 20)}`, { headers: { 'CJ-Access-Token': token } });
   const d = await cjParseJSON(r);
   const list = Array.isArray(d.data?.list) ? d.data.list : [];
   return { total: d.data?.total || 0, products: list.map(p => {
@@ -2337,10 +2337,10 @@ async function runAutopilotAgents(onProgress = null) {
     const gTerms = await scrapeTrends().catch(() => []);
     const trendsCtx = gTerms.length ? `Current trending searches: ${gTerms.slice(0,6).join(', ')}. Use these as inspiration. ` : '';
     const CATEGORIES = [
-      { cat: 'electronics', label: 'Electronics', keywords: 'earbuds, cable, charger, LED light, ring light, keyboard, mouse, fan, lamp, case, stand, pad, lens, headphone, battery, purifier' },
-      { cat: 'jewelry', label: 'Jewelry', keywords: 'bracelet, necklace, ring, earring, pendant, chain, anklet, bangle, choker, brooch' },
-      { cat: 'clothing', label: 'Clothing', keywords: 'dress, top, blouse, skirt, leggings, jacket, shirt, coat, jeans, shorts' },
-      { cat: 'accessories', label: 'Accessories', keywords: 'bag, wallet, belt, cap, hat, scarf, sunglasses, watch, gloves, keychain' }
+      { cat: 'electronics', label: 'Electronics', keywords: 'projector, router, webcam, microphone, speaker, powerbank, inverter, dashcam, doorbell, smartwatch, drone, gimbal, tripod, joystick, gamepad, hub, scanner, thermometer, oximeter, shaver, trimmer, massager, scale, recorder, amplifier, heater, cooler, humidifier, diffuser, steamer, blender, juicer, kettle, toaster, vacuum, iron, radar, tracker, barcode, multimeter, converter, antenna, repeater, modem, soldering, oscilloscope, regulator, walkie, GPS, RFID' },
+      { cat: 'jewelry', label: 'Jewelry', keywords: 'locket, tiara, cuff, signet, charm, bead, crystal, pearl, sapphire, topaz, amethyst, turquoise, jade, opal, moonstone, onyx, garnet, citrine, amber, coral, resin, shell, cameo, medallion, amulet, rosary, cross, star, moon, heart, butterfly, elephant, feather, infinity, anchor, compass, stud, hoop, cluster, statement, layered, choker set, tennis, riviere, cocktail ring, eternity, solitaire, birthstone, nameplate, initial, evil eye' },
+      { cat: 'clothing', label: 'Clothing', keywords: 'cardigan, sweater, hoodie, turtleneck, vest, blazer, jumpsuit, romper, overalls, parka, windbreaker, poncho, kimono, kaftan, tunic, bodysuit, corset, camisole, polo, henley, flannel, embroidered, sequin, lace, velvet, chiffon, satin, pajamas, loungewear, swimwear, bikini, coverup, scrubs, apron, abaya, hijab, thobe, jilbab, modest, burkini, kurta, prayer, wrap, maxi, midi, pinafore, dungarees, trench, anorak, bomber, puffer' },
+      { cat: 'accessories', label: 'Accessories', keywords: 'backpack, tote, clutch, pouch, satchel, duffel, briefcase, luggage, bandana, necktie, bowtie, suspenders, brooch, pin, lanyard, badge, patch, umbrella, visor, beanie, beret, fedora, bucket hat, headband, hairpin, clip, barrette, scrunchie, hair claw, sleep mask, travel pillow, passport holder, cable bag, gym bag, fanny pack, crossbody, shopper, wristlet, cosmetic bag, toiletry, packing cube, luggage tag, shoe bag, dust bag, drawstring, mesh bag, dry bag, waist bag, bum bag' }
     ];
     for (const { cat, label, keywords } of CATEGORIES) {
       let catImported = 0;
@@ -2353,16 +2353,16 @@ async function runAutopilotAgents(onProgress = null) {
         try {
           const { tool_log } = await callAgent(
             'trends_agent',
-            `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have ${roundTarget} successful imports.`,
-            `Import ${roundTarget} "${label}" products (round ${round}). Search with short 1-2 word keywords. Suggested: ${keywords}. Import each product with an image immediately after finding it.`,
+            `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. The store already has many products, so expect duplicates — work around them: 1) Try many different keywords from the list. 2) When import_product returns already_exists, immediately try a DIFFERENT keyword or increment the page parameter on search_cj_products (use page 2, 3, 4... up to 10 for the same keyword to get fresh results). 3) Never give up on a keyword after one page — try page 2 before moving on. Target keywords to try: ${keywords}. Keep working until you reach ${roundTarget} successful imports.`,
+            `Import ${roundTarget} new "${label}" products (round ${round}/${Math.ceil(catTarget/20)}). The store already has many ${cat} products so you WILL encounter already_exists errors — that is normal. Strategy: search a keyword → try to import results → if already_exists, try page 2 or 3 of same keyword, OR switch to a different keyword. Keep cycling through keywords and pages until you hit ${roundTarget} successful imports. Keywords to use: ${keywords}.`,
             ['search_cj_products', 'import_product', 'send_alert'],
-            20,
+            30,
             progressCb
           );
           const roundImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
           catImported += roundImported;
           send(`${label} round ${round} — ${roundImported} imported (${catImported} total)`, {});
-          if (roundImported < 3) break;
+          if (roundImported < 2) break;
         } catch (e) {
           results.errors.push(`trends_${label.slice(0,8)}_r${round}: ${e.message.slice(0,40)}`);
           break;
