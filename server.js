@@ -2305,21 +2305,13 @@ async function getProductImage(name) {
   return img || await getUnsplashImage(name);
 }
 
-// Shared 5-agent autopilot logic — targets 1000 products, runs async in background
-async function runAutopilotAgents(onProgress = null, runId = null) {
+// Shared 5-agent autopilot logic — targets 100 products across 4 categories
+async function runAutopilotAgents(onProgress = null) {
   const results = { imported: 0, descriptions: 0, prices: 0, images: 0, inventory_alerts: 0, webhooks_sent: 0, errors: [] };
   const hasKey = !!process.env.ANTHROPIC_API_KEY;
 
   const send = (msg, extra = {}) => { if (onProgress) try { onProgress({ type: 'progress', message: msg, ...extra, ...results }); } catch {} };
   const sendPhase = (phase, msg) => { if (onProgress) try { onProgress({ type: 'phase', phase, message: msg }); } catch {} };
-
-  const saveProgress = async () => {
-    if (!runId) return;
-    await pool.query(
-      `UPDATE agent_progress SET processed=$1, success_count=$2, error_count=$3, errors=$4, updated_at=NOW() WHERE run_id=$5 AND agent_name='autopilot'`,
-      [results.imported + results.descriptions + results.prices + results.images, results.imported, results.errors.length, JSON.stringify(results.errors.slice(-20)), runId]
-    ).catch(() => {});
-  };
 
   const progressCb = (ev) => {
     if (ev.tool === 'import_product' && ev.result?.success) {
@@ -2340,64 +2332,41 @@ async function runAutopilotAgents(onProgress = null, runId = null) {
     if (onProgress) try { onProgress({ type: 'tool', ...ev, ...results }); } catch {}
   };
 
-  // Phase A: Trends Agent — 10 categories × 100 products = target 1000
+  // Phase A: Trends Agent — 4 categories × 20 products = target 80
   if (hasKey) {
     const gTerms = await scrapeTrends().catch(() => []);
     const trendsCtx = gTerms.length ? `Current trending searches: ${gTerms.slice(0,6).join(', ')}. Use these as inspiration. ` : '';
     const CATEGORIES = [
-      { cat: 'electronics',  label: 'Electronics',  keywords: 'earbuds, cable, charger, LED light, ring light, keyboard, mouse, fan, lamp, case, stand, pad, headphone, battery, purifier' },
-      { cat: 'jewelry',      label: 'Jewelry',      keywords: 'bracelet, necklace, ring, earring, pendant, chain, anklet, bangle, choker, brooch' },
-      { cat: 'clothing',     label: 'Clothing',     keywords: 'dress, top, blouse, skirt, leggings, jacket, shirt, coat, jeans, shorts' },
-      { cat: 'accessories',  label: 'Accessories',  keywords: 'bag, wallet, belt, cap, hat, scarf, sunglasses, watch, gloves, keychain' },
-      { cat: 'home',         label: 'Home',         keywords: 'candle, vase, frame, clock, mirror, cushion, rug, organizer, storage, planter' },
-      { cat: 'beauty',       label: 'Beauty',       keywords: 'cream, serum, mask, brush, lipstick, perfume, lotion, cleanser, toner, spray' },
-      { cat: 'sports',       label: 'Sports',       keywords: 'bottle, band, mat, gloves, bag, weights, rope, roller, towel, tracker' },
-      { cat: 'baby',         label: 'Baby',         keywords: 'toy, blanket, bib, rattle, pacifier, mobile, teether, monitor, bottle, wipe' },
-      { cat: 'kitchen',      label: 'Kitchen',      keywords: 'utensil, container, mug, board, pan, rack, strainer, thermometer, scale, peeler' },
-      { cat: 'stationery',   label: 'Stationery',   keywords: 'notebook, pen, planner, tape, sticky, ruler, eraser, binder, folder, stamp' },
+      { cat: 'electronics', label: 'Electronics', keywords: 'earbuds, cable, charger, LED light, ring light, keyboard, mouse, fan, lamp, case, stand, pad, lens, headphone, battery, purifier' },
+      { cat: 'jewelry', label: 'Jewelry', keywords: 'bracelet, necklace, ring, earring, pendant, chain, anklet, bangle, choker, brooch' },
+      { cat: 'clothing', label: 'Clothing', keywords: 'dress, top, blouse, skirt, leggings, jacket, shirt, coat, jeans, shorts' },
+      { cat: 'accessories', label: 'Accessories', keywords: 'bag, wallet, belt, cap, hat, scarf, sunglasses, watch, gloves, keychain' }
     ];
-
     for (const { cat, label, keywords } of CATEGORIES) {
-      let catImported = 0;
-      const catTarget = 100;
-      let round = 0;
-
-      while (catImported < catTarget && round < 6) {
-        round++;
-        const roundTarget = Math.min(20, catTarget - catImported);
-        sendPhase('trends', `${label} round ${round} — ${catImported}/${catTarget} imported…`);
-        try {
-          const { tool_log } = await callAgent(
-            'trends_agent',
-            `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have ${roundTarget} successful imports.`,
-            `Import ${roundTarget} "${label}" products (round ${round}). Search with short 1-2 word keywords. Suggested: ${keywords}. Import each product with an image immediately after finding it.`,
-            ['search_cj_products', 'import_product', 'send_alert'],
-            20,
-            progressCb
-          );
-          const roundImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
-          catImported += roundImported;
-          send(`${label} round ${round} — ${roundImported} imported (${catImported} total)`, {});
-          if (roundImported < 3) break;
-        } catch (e) {
-          results.errors.push(`trends_${label.slice(0,8)}_r${round}: ${e.message.slice(0,40)}`);
-          break;
-        }
-        await saveProgress();
-      }
-      send(`${label} complete — ${catImported} imported`, {});
+      sendPhase('trends', `Searching ${label} — targeting 20 products…`);
+      try {
+        const { tool_log } = await callAgent(
+          'trends_agent',
+          `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have 20 successful imports.`,
+          `Import 20 "${label}" products. Search with short keywords (1-2 words). Suggested keywords: ${keywords}. Import each product with an image immediately after finding it.`,
+          ['search_cj_products', 'import_product', 'send_alert'],
+          18,
+          progressCb
+        );
+        const catImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
+        send(`${label} done — ${catImported} imported`, {});
+      } catch (e) { results.errors.push(`trends_${label.slice(0,10)}: ${e.message.slice(0,40)}`); }
     }
-    if (results.imported) await auditLog('autopilot', `Agentic import: ${results.imported} products across 10 categories`);
-    await saveProgress();
+    if (results.imported) await auditLog('autopilot', `Agentic import: ${results.imported} products across 4 categories`);
   }
 
-  // Phase B: Content Agent — generate + save descriptions for up to 1000 products
+  // Phase B: Content Agent — generate + save descriptions for products without them
   if (hasKey) {
     sendPhase('content', 'Generating descriptions for new products…');
     try {
-      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 1000`);
+      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 80`);
       if (nd.length) {
-        const batchSize = 8;
+        const batchSize = 20;
         for (let i = 0; i < nd.length; i += batchSize) {
           const batch = nd.slice(i, i + batchSize);
           send(`Writing descriptions ${i+1}–${Math.min(i+batchSize, nd.length)} of ${nd.length}…`);
@@ -2409,7 +2378,6 @@ async function runAutopilotAgents(onProgress = null, runId = null) {
             batch.length * 3,
             progressCb
           );
-          await saveProgress();
         }
         if (results.descriptions) await auditLog('content_agent', `Generated ${results.descriptions} descriptions`);
       }
@@ -2428,7 +2396,6 @@ async function runAutopilotAgents(onProgress = null, runId = null) {
         12,
         progressCb
       );
-      await saveProgress();
     } catch (e) { results.errors.push('pricing: ' + e.message.slice(0, 50)); }
   }
 
@@ -2448,7 +2415,6 @@ async function runAutopilotAgents(onProgress = null, runId = null) {
           progressCb
         );
         if (results.images) await auditLog('image_agent', `Processed ${results.images} product images`);
-        await saveProgress();
       }
     } catch (e) { results.errors.push('images: ' + e.message.slice(0, 50)); }
   }
@@ -2468,52 +2434,35 @@ async function runAutopilotAgents(onProgress = null, runId = null) {
         progressCb
       );
       if (results.webhooks_sent) await auditLog('autopilot', `Sent ${results.webhooks_sent} low-stock webhooks`);
-      await saveProgress();
     } catch (e) { results.errors.push('inventory: ' + e.message.slice(0, 50)); }
-  }
-
-  if (runId) {
-    await pool.query(`UPDATE agent_progress SET status='completed', completed_at=NOW(), updated_at=NOW() WHERE run_id=$1 AND agent_name='autopilot'`, [runId]).catch(() => {});
   }
 
   return results;
 }
 
-// Fire-and-forget: returns run_id immediately, runs all 5 agents in background targeting 1000 products
 app.post('/autopilot/run', async (req, res) => {
   try {
-    const runId = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-    await pool.query(
-      `INSERT INTO agent_progress(run_id, agent_name, total, status) VALUES($1,'autopilot',1000,'running') ON CONFLICT(run_id, agent_name) DO NOTHING`,
-      [runId]
-    );
-    runAutopilotAgents(null, runId).then(async (summary) => {
-      await apSet('last_run', JSON.stringify({ ...summary, ran_at: new Date().toISOString() }));
-    }).catch(e => console.error('[autopilot]', e.message));
-    res.json({ run_id: runId, message: 'Autopilot started — targeting 1000 products across 10 categories', target: 1000 });
+    const results = await runAutopilotAgents();
+    const summary = { ...results, ran_at: new Date().toISOString() };
+    await apSet('last_run', JSON.stringify(summary));
+    res.json(summary);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// SSE streaming version — also fire-and-forget with run_id for reconnection
+// SSE streaming version — frontend uses this for live progress
 app.post('/autopilot/run-stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const runId = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
   const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
 
   try {
-    await pool.query(
-      `INSERT INTO agent_progress(run_id, agent_name, total, status) VALUES($1,'autopilot',1000,'running') ON CONFLICT(run_id, agent_name) DO NOTHING`,
-      [runId]
-    );
-    send({ type: 'started', run_id: runId, target: 1000 });
-    const results = await runAutopilotAgents((ev) => send(ev), runId);
+    const results = await runAutopilotAgents((ev) => send(ev));
     const summary = { ...results, ran_at: new Date().toISOString() };
     await apSet('last_run', JSON.stringify(summary));
-    send({ type: 'complete', run_id: runId, ...summary });
+    send({ type: 'complete', ...summary });
   } catch (err) {
     send({ type: 'error', message: err.message });
   }
