@@ -2305,7 +2305,7 @@ async function getProductImage(name) {
   return img || await getUnsplashImage(name);
 }
 
-// Shared 5-agent autopilot logic — targets 100 products across 4 categories
+// Shared 5-agent autopilot logic — targets 300 products across 4 categories
 async function runAutopilotAgents(onProgress = null) {
   const results = { imported: 0, descriptions: 0, prices: 0, images: 0, inventory_alerts: 0, webhooks_sent: 0, errors: [] };
   const hasKey = !!process.env.ANTHROPIC_API_KEY;
@@ -2332,7 +2332,7 @@ async function runAutopilotAgents(onProgress = null) {
     if (onProgress) try { onProgress({ type: 'tool', ...ev, ...results }); } catch {}
   };
 
-  // Phase A: Trends Agent — 4 categories × 20 products = target 80
+  // Phase A: Trends Agent — 4 categories × 75 products = target 300
   if (hasKey) {
     const gTerms = await scrapeTrends().catch(() => []);
     const trendsCtx = gTerms.length ? `Current trending searches: ${gTerms.slice(0,6).join(', ')}. Use these as inspiration. ` : '';
@@ -2343,19 +2343,32 @@ async function runAutopilotAgents(onProgress = null) {
       { cat: 'accessories', label: 'Accessories', keywords: 'bag, wallet, belt, cap, hat, scarf, sunglasses, watch, gloves, keychain' }
     ];
     for (const { cat, label, keywords } of CATEGORIES) {
-      sendPhase('trends', `Searching ${label} — targeting 20 products…`);
-      try {
-        const { tool_log } = await callAgent(
-          'trends_agent',
-          `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have 20 successful imports.`,
-          `Import 20 "${label}" products. Search with short keywords (1-2 words). Suggested keywords: ${keywords}. Import each product with an image immediately after finding it.`,
-          ['search_cj_products', 'import_product', 'send_alert'],
-          18,
-          progressCb
-        );
-        const catImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
-        send(`${label} done — ${catImported} imported`, {});
-      } catch (e) { results.errors.push(`trends_${label.slice(0,10)}: ${e.message.slice(0,40)}`); }
+      let catImported = 0;
+      const catTarget = 75;
+      let round = 0;
+      while (catImported < catTarget && round < 6) {
+        round++;
+        const roundTarget = Math.min(20, catTarget - catImported);
+        sendPhase('trends', `${label} round ${round} — ${catImported}/${catTarget} imported…`);
+        try {
+          const { tool_log } = await callAgent(
+            'trends_agent',
+            `You are a product sourcing AI for BLEX Saudi e-commerce. ${trendsCtx}Search CJ Dropshipping for "${cat}" products. CRITICAL: Use short 1-2 word keywords only — multi-word phrases return 0 results. Effective keywords to try: ${keywords}. Import every product that has a valid image. Keep searching until you have ${roundTarget} successful imports.`,
+            `Import ${roundTarget} "${label}" products (round ${round}). Search with short 1-2 word keywords. Suggested: ${keywords}. Import each product with an image immediately after finding it.`,
+            ['search_cj_products', 'import_product', 'send_alert'],
+            20,
+            progressCb
+          );
+          const roundImported = tool_log.filter(l => l.tool === 'import_product' && l.result?.success).length;
+          catImported += roundImported;
+          send(`${label} round ${round} — ${roundImported} imported (${catImported} total)`, {});
+          if (roundImported < 3) break;
+        } catch (e) {
+          results.errors.push(`trends_${label.slice(0,8)}_r${round}: ${e.message.slice(0,40)}`);
+          break;
+        }
+      }
+      send(`${label} complete — ${catImported} imported`, {});
     }
     if (results.imported) await auditLog('autopilot', `Agentic import: ${results.imported} products across 4 categories`);
   }
@@ -2364,7 +2377,7 @@ async function runAutopilotAgents(onProgress = null) {
   if (hasKey) {
     sendPhase('content', 'Generating descriptions for new products…');
     try {
-      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 80`);
+      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 300`);
       if (nd.length) {
         const batchSize = 20;
         for (let i = 0; i < nd.length; i += batchSize) {
