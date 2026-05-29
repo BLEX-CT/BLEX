@@ -2305,7 +2305,7 @@ async function getProductImage(name) {
   return img || await getUnsplashImage(name);
 }
 
-// Shared 5-agent autopilot logic — targets 300 products across 4 categories
+// Shared 5-agent autopilot logic — targets 1000 products across 4 categories
 async function runAutopilotAgents(onProgress = null) {
   const results = { imported: 0, descriptions: 0, prices: 0, images: 0, inventory_alerts: 0, webhooks_sent: 0, errors: [] };
   const hasKey = !!process.env.ANTHROPIC_API_KEY;
@@ -2332,7 +2332,7 @@ async function runAutopilotAgents(onProgress = null) {
     if (onProgress) try { onProgress({ type: 'tool', ...ev, ...results }); } catch {}
   };
 
-  // Phase A: Trends Agent — 4 categories × 75 products = target 300
+  // Phase A: Trends Agent — 4 categories × 250 products = target 1000
   if (hasKey) {
     const gTerms = await scrapeTrends().catch(() => []);
     const trendsCtx = gTerms.length ? `Current trending searches: ${gTerms.slice(0,6).join(', ')}. Use these as inspiration. ` : '';
@@ -2344,9 +2344,9 @@ async function runAutopilotAgents(onProgress = null) {
     ];
     for (const { cat, label, keywords } of CATEGORIES) {
       let catImported = 0;
-      const catTarget = 75;
+      const catTarget = 250;
       let round = 0;
-      while (catImported < catTarget && round < 6) {
+      while (catImported < catTarget && round < 15) {
         round++;
         const roundTarget = Math.min(20, catTarget - catImported);
         sendPhase('trends', `${label} round ${round} — ${catImported}/${catTarget} imported…`);
@@ -2377,7 +2377,7 @@ async function runAutopilotAgents(onProgress = null) {
   if (hasKey) {
     sendPhase('content', 'Generating descriptions for new products…');
     try {
-      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 300`);
+      const { rows: nd } = await pool.query(`SELECT id,name,category FROM products WHERE (description IS NULL OR description='' OR description='Trending product — auto imported') ORDER BY id DESC LIMIT 1000`);
       if (nd.length) {
         const batchSize = 20;
         for (let i = 0; i < nd.length; i += batchSize) {
