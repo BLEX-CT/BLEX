@@ -68,6 +68,9 @@ const MEGA_MENU_DATA={
   accessories:{cols:[{title:"Bags",items:["Handbags","Backpacks","Wallets"]},{title:"Accessories",items:["Sunglasses","Belts","Hats","Scarves"]}]}
 };
 const BANNER_INTERVAL=12;
+const DFLT_HERO={active:true,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a2424 0%,#2a7d7b 55%,#0e3a38 100%)",tag:"New Season · 2026",title:"Discover Premium Collections",sub:"Handpicked pieces delivered to your door across Saudi Arabia — new arrivals every week.",ctaText:"Shop Now",ctaLink:"all",align:"left",overlayOpacity:0.48};
+const DFLT_PROMO_GRID=[{id:0,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#2a1000 0%,#6b3a1f 60%,#b5896a 100%)",tag:"Fashion",title:"Menswear & Womenswear",sub:"Contemporary cuts for every occasion",cta:"Explore →",cat:"clothing"},{id:1,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#0a1628 0%,#1e3a6b 60%,#3d6abf 100%)",tag:"Tech Drops",title:"Electronics",sub:"Latest devices at best prices",cta:"Shop Now →",cat:"electronics"},{id:2,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a0828 0%,#4a1a6b 55%,#8b5cf6 100%)",tag:"Fine Jewelry",title:"Gold & Precious Stones",sub:"Crafted by artisans, worn by you",cta:"Explore →",cat:"jewelry"}];
+const DFLT_PDP_BANNER={active:true,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a2424 0%,#2a7d7b 60%,#1e5f5d 100%)",title:"Complete Your Look",sub:"Explore matching accessories and complementary pieces from our curated collections.",ctaText:"Explore Related",ctaLink:"all"};
 const PROMO_BANNERS=[
   {id:0,layout:"fullwidth",align:"left",media:{type:"gradient",value:"linear-gradient(135deg,#1a2424 0%,#2a7d7b 60%,#1e5f5d 100%)"},tag:"New Arrivals",headline:"Curated Premium Collection",sub:"Handpicked pieces delivered to your door — new drops every week.",cta:"Shop Now →",cat:"all"},
   {id:1,layout:"split",media:{type:"gradient",value:"linear-gradient(135deg,#b5896a 0%,#c9a96e 50%,#1a2424 100%)"},tag:"Fine Jewelry",headline:"Gold & Precious Stones",sub:"Crafted by artisans, worn by you.",points:["Free shipping on orders over SAR 200","Authentic certificates included","30-day hassle-free returns"],cta:"Explore Jewelry →",cat:"jewelry"},
@@ -132,7 +135,10 @@ function injectCSS(){
     .hero-title-l{font-size:clamp(56px,12vw,128px);font-weight:900;letter-spacing:14px;background:linear-gradient(135deg,#111 0%,#0066cc 50%,#4400aa 80%,#111 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 5s linear infinite}
     .float-blob{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none}
     .mq-track{display:flex;animation:marquee 22s linear infinite}.mq-track:hover{animation-play-state:paused}
-    @media(max-width:700px){.hide-mob{display:none!important}.show-mob{display:flex!important}.g3{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}}
+    .ann-mq{display:flex;width:max-content;animation:marquee 32s linear infinite}.ann-mq:hover{animation-play-state:paused}
+    .pgrid-item{transition:transform .3s cubic-bezier(.23,1,.32,1),box-shadow .3s}.pgrid-item:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 16px 48px rgba(0,0,0,0.28)}
+    .hero-cta-btn:hover{transform:translateY(-2px)!important;box-shadow:0 8px 36px rgba(0,0,0,0.28)!important}
+    @media(max-width:700px){.hide-mob{display:none!important}.show-mob{display:flex!important}.g3{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}.pgrid-row{grid-template-columns:1fr!important}.hero-cta-btn{width:100%!important}}
     @media(max-width:440px){.g3{grid-template-columns:1fr 1fr!important}}
     @media(max-width:360px){.g3{grid-template-columns:1fr!important}}
     @keyframes cartSlideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -366,6 +372,9 @@ export default function App() {
   const [annPhrases,setAnnPhrases]=useState(()=>LS('bx_ann_p')||DFLT_ANN_PHRASES);
   const [annPhraseIdx,setAnnPhraseIdx]=useState(0);
   const [annPhraseFading,setAnnPhraseFading]=useState(false);
+  const [heroBanner,setHeroBanner]=useState(()=>LS('bx_hero')||DFLT_HERO);
+  const [promoGrid,setPromoGrid]=useState(()=>LS('bx_pgrid')||DFLT_PROMO_GRID);
+  const [pdpBanner,setPdpBanner]=useState(()=>LS('bx_pdpb')||DFLT_PDP_BANNER);
   const [promoSlide,setPromoSlide]=useState(0);
   const [promoHover,setPromoHover]=useState(false);
   const [promoCountdown,setPromoCountdown]=useState(9900);
@@ -810,11 +819,16 @@ export default function App() {
       </div>
     </>}
 
-    {/* ANNOUNCEMENT BAR */}
-    {annVisible&&<div style={{position:"sticky",top:0,zIndex:30,background:"#f5f0e8",borderBottom:"1px solid #d8d2c8",padding:"10px 20px",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",opacity:annHiding?0:1,maxHeight:annHiding?"0":"60px",overflow:"hidden",transition:"opacity 0.3s ease, max-height 0.3s ease",flexShrink:0}}>
-      <i className="ti ti-truck" style={{color:"#2a7d7b",fontSize:"15px",flexShrink:0}}/>
-      <span style={{fontSize:"12px",color:"#2a7d7b",fontWeight:500,textAlign:"center",opacity:annPhraseFading?0:1,transition:"opacity 0.3s ease",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{annPhrases[annPhraseIdx]||""}</span>
-      <button onClick={dismissAnn} style={{position:"absolute",right:"14px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"#2a7d7b",fontSize:"14px",lineHeight:1,padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"}}><i className="ti ti-x"/></button>
+    {/* ANNOUNCEMENT BAR — CSS infinite marquee */}
+    {annVisible&&<div style={{position:"sticky",top:0,zIndex:30,background:"#000",height:annHiding?"0":"38px",maxHeight:annHiding?"0":"38px",overflow:"hidden",display:"flex",alignItems:"center",opacity:annHiding?0:1,transition:"opacity 0.3s ease,max-height 0.35s ease,height 0.35s ease",flexShrink:0}}>
+      <div className="ann-mq">
+        {[...annPhrases,...annPhrases].map((ph,i)=>(
+          <span key={i} style={{display:"inline-flex",alignItems:"center",gap:"8px",padding:"0 32px",fontSize:"12px",color:"#fff",fontWeight:500,flexShrink:0,whiteSpace:"nowrap"}}>
+            <i className="ti ti-truck" style={{fontSize:"11px",opacity:0.75,flexShrink:0}}/>{ph}<span style={{opacity:0.3,marginLeft:"8px"}}>·</span>
+          </span>
+        ))}
+      </div>
+      <button onClick={dismissAnn} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,0.65)",fontSize:"13px",lineHeight:1,padding:"4px",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}><i className="ti ti-x"/></button>
     </div>}
 
     {/* NAVBAR */}
@@ -983,6 +997,26 @@ export default function App() {
     {view==="store"&&<div>
       {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
 
+      {/* HERO BANNER */}
+      {heroBanner.active&&flags.hero_banner!==false&&<section style={{position:"relative",height:"82vh",minHeight:"480px",width:"100%",overflow:"hidden",display:"flex",alignItems:"center",flexShrink:0}}>
+        {heroBanner.mediaType==="gradient"&&<div style={{position:"absolute",inset:0,background:heroBanner.gradient,zIndex:0}}/>}
+        {heroBanner.mediaType==="image"&&heroBanner.mediaUrl&&<img src={heroBanner.mediaUrl} alt="" loading="eager" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}
+        {heroBanner.mediaType==="video"&&heroBanner.mediaUrl&&<video autoPlay muted loop playsInline src={heroBanner.mediaUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
+        <div style={{position:"absolute",inset:0,background:`rgba(0,0,0,${heroBanner.overlayOpacity??0.48})`,zIndex:1}}/>
+        <div style={{position:"absolute",width:"700px",height:"700px",borderRadius:"50%",background:"rgba(42,125,123,0.16)",top:"-250px",left:"-200px",filter:"blur(120px)",pointerEvents:"none",zIndex:1}}/>
+        <div style={{position:"absolute",width:"450px",height:"450px",borderRadius:"50%",background:"rgba(180,137,106,0.12)",bottom:"-120px",right:"-80px",filter:"blur(90px)",pointerEvents:"none",zIndex:1}}/>
+        <div style={{position:"relative",zIndex:2,padding:"0 clamp(26px,6vw,80px)",width:"100%",maxWidth:"820px",display:"flex",flexDirection:"column",gap:"22px",alignItems:heroBanner.align==="center"?"center":"flex-start",textAlign:heroBanner.align==="center"?"center":"left"}}>
+          <span style={{background:"rgba(255,255,255,0.12)",backdropFilter:"blur(10px)",color:"#fff",fontSize:"10px",fontWeight:700,padding:"5px 16px",borderRadius:"50px",letterSpacing:"2.5px",textTransform:"uppercase",border:"1px solid rgba(255,255,255,0.22)",display:"inline-block",alignSelf:heroBanner.align==="center"?"center":"flex-start"}}>{heroBanner.tag}</span>
+          <h1 style={{color:"#fff",fontSize:"clamp(30px,6vw,66px)",fontWeight:900,lineHeight:1.08,margin:0,textShadow:"0 4px 28px rgba(0,0,0,0.45)",letterSpacing:"-0.5px"}}>{heroBanner.title}</h1>
+          <p style={{color:"rgba(255,255,255,0.76)",fontSize:"clamp(13px,1.8vw,16px)",lineHeight:1.72,margin:0,maxWidth:"500px"}}>{heroBanner.sub}</p>
+          <button className="btn-t hero-cta-btn" onClick={()=>{setCategory(heroBanner.ctaLink||"all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}} style={{background:"#fff",color:"#1a2424",border:"none",borderRadius:"50px",padding:"14px 36px",fontWeight:800,fontSize:"14px",cursor:"pointer",letterSpacing:"0.3px",boxShadow:"0 4px 28px rgba(0,0,0,0.22)",alignSelf:heroBanner.align==="center"?"center":"flex-start",transition:"transform .2s,box-shadow .2s"}}>{heroBanner.ctaText||"Shop Now"} →</button>
+        </div>
+        <div style={{position:"absolute",bottom:"26px",left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",zIndex:2,opacity:0.55}}>
+          <span style={{color:"#fff",fontSize:"8px",fontWeight:700,letterSpacing:"2.5px",textTransform:"uppercase"}}>Scroll</span>
+          <i className="ti ti-chevrons-down" style={{color:"#fff",fontSize:"14px",animation:"floatB 2s ease-in-out infinite"}}/>
+        </div>
+      </section>}
+
       {/* IN-APP STORIES */}
       <div style={{display:"flex",gap:"12px",padding:"14px 26px 6px",overflowX:"auto",scrollbarWidth:"none",msOverflowStyle:"none"}}>
         {STORIES_DATA.map((story,i)=>(
@@ -1010,6 +1044,26 @@ export default function App() {
           <button onClick={()=>setStoryOpen(null)} style={{position:"absolute",top:"14px",right:"14px",background:"none",border:"none",cursor:"pointer",color:"#8fa5a5",fontSize:"20px",lineHeight:1,display:"flex",alignItems:"center"}}><i className="ti ti-x"/></button>
         </div>
       </>}
+
+      {/* PROMO GRID — multi-column category banners */}
+      {promoGrid.length>0&&flags.promo_grid!==false&&<section style={{padding:"14px 26px 4px"}}>
+        <div className="pgrid-row" style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(promoGrid.length,3)},1fr)`,gap:"12px"}}>
+          {promoGrid.map((item)=>(
+            <article key={item.id} className="pgrid-item reveal-card" onClick={()=>{setCategory(item.cat);setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}} style={{position:"relative",height:"196px",borderRadius:"18px",overflow:"hidden",cursor:"pointer"}}>
+              {item.mediaType==="gradient"&&<div style={{position:"absolute",inset:0,background:item.gradient,zIndex:0}}/>}
+              {item.mediaType==="image"&&item.mediaUrl&&<img src={item.mediaUrl} alt={item.title} loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}
+              {item.mediaType==="video"&&item.mediaUrl&&<video autoPlay muted loop playsInline src={item.mediaUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
+              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.36)",zIndex:1}}/>
+              <div style={{position:"absolute",inset:0,zIndex:2,padding:"20px 22px",display:"flex",flexDirection:"column",justifyContent:"flex-end",gap:"5px"}}>
+                <span style={{color:"rgba(255,255,255,0.55)",fontSize:"8px",fontWeight:700,letterSpacing:"2.5px",textTransform:"uppercase"}}>{item.tag}</span>
+                <h3 style={{color:"#fff",fontSize:"17px",fontWeight:800,margin:0,lineHeight:1.2,textShadow:"0 2px 8px rgba(0,0,0,0.3)"}}>{item.title}</h3>
+                <p style={{color:"rgba(255,255,255,0.68)",fontSize:"11px",lineHeight:1.5,margin:0}}>{item.sub}</p>
+                <span style={{color:"#fff",fontSize:"11px",fontWeight:700,marginTop:"4px",display:"inline-flex",alignItems:"center",gap:"4px"}}>{item.cta}<i className="ti ti-arrow-right" style={{fontSize:"10px"}}/></span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>}
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(12,1fr)",gap:"10px",padding:"14px 26px 10px"}}>
       <div style={{gridColumn:"span 7",position:"relative",overflow:"hidden",borderRadius:"18px",minHeight:"380px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType==="video"?{}:{background:theme==="blex"?"linear-gradient(140deg,#d8ecec 0%,#ede9e1 55%,#dff0f0 100%)":favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
@@ -1492,6 +1546,23 @@ export default function App() {
             {p.stock===0&&!p.is_preorder&&geoSupplier&&!geoSupplier.available&&geoSupplier.similar?.length>0&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`}}><p style={{fontSize:"11px",fontWeight:"700",color:c.error,marginBottom:"8px"}}>Not available from nearby supplier</p><div style={{display:"flex",flexDirection:"column",gap:"5px"}}>{geoSupplier.similar.map(s=><div key={s.id} className="btn-t" onClick={()=>{setSelectedProduct(s);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 8px",background:c.card,borderRadius:"7px",border:`1px solid ${c.border}`}}><span style={{flex:1,fontSize:"11px",fontWeight:"600"}}>{s.name}</span><span style={{fontSize:"11px",fontWeight:"700"}}>{fmt(s.price)}</span></div>)}</div></div>}
           </div>
         </div>
+        {/* PDP PROMOTIONAL BANNER */}
+        {pdpBanner.active&&flags.pdp_banner!==false&&<section style={{position:"relative",borderRadius:"18px",overflow:"hidden",marginBottom:"28px",cursor:"pointer"}} onClick={()=>{setCategory(pdpBanner.ctaLink||p.category);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),80);}}>
+          <div style={{position:"relative",height:"130px",display:"flex",alignItems:"center"}}>
+            {pdpBanner.mediaType==="gradient"&&<div style={{position:"absolute",inset:0,background:pdpBanner.gradient,zIndex:0}}/>}
+            {pdpBanner.mediaType==="image"&&pdpBanner.mediaUrl&&<img src={pdpBanner.mediaUrl} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}
+            {pdpBanner.mediaType==="video"&&pdpBanner.mediaUrl&&<video autoPlay muted loop playsInline src={pdpBanner.mediaUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
+            <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.42)",zIndex:1}}/>
+            <div style={{position:"absolute",width:"400px",height:"400px",borderRadius:"50%",background:"rgba(255,255,255,0.05)",top:"-150px",right:"-80px",filter:"blur(70px)",pointerEvents:"none",zIndex:1}}/>
+            <div style={{position:"relative",zIndex:2,padding:"0 28px",display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",gap:"16px",flexWrap:"wrap"}}>
+              <div style={{minWidth:0}}>
+                <h3 style={{color:"#fff",fontSize:"clamp(14px,3vw,20px)",fontWeight:800,margin:"0 0 5px",textShadow:"0 2px 10px rgba(0,0,0,0.3)"}}>{pdpBanner.title||"Complete Your Look"}</h3>
+                <p style={{color:"rgba(255,255,255,0.72)",fontSize:"12px",lineHeight:1.6,margin:0,maxWidth:"420px"}}>{pdpBanner.sub}</p>
+              </div>
+              <button className="btn-t" onClick={e=>{e.stopPropagation();setCategory(pdpBanner.ctaLink||p.category);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),80);}} style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(10px)",color:"#fff",border:"1px solid rgba(255,255,255,0.3)",borderRadius:"50px",padding:"10px 22px",fontWeight:700,fontSize:"12px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"background .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.24)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.14)"}>{pdpBanner.ctaText||"Explore Related"} →</button>
+            </div>
+          </div>
+        </section>}
         {p.image_gallery&&(()=>{const g=typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery;const imgs=[{url:g.original,label:"Original",bg:c.chip},{url:g.cleaned,label:"Cleaned",bg:"#fff",text:""},{url:g.cleaned,label:g.promo1?.angle||"Benefit",bg:"#fff",text:g.promo1?.text},{url:g.cleaned,label:g.promo2?.angle||"Lifestyle",bg:"#fff",text:g.promo2?.text}].filter(x=>x.url);return imgs.length?<div style={{marginBottom:"28px"}}><h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"13px"}}>🎨 Image Gallery</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"11px"}}>{imgs.map((im,i)=><div key={i} style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"hidden"}}><div onClick={()=>setPdZoom(im.url)} style={{height:"140px",background:im.bg,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-in"}}><img src={im.url} alt={im.label} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} onError={e=>e.target.parentNode.style.display="none"}/></div><div style={{padding:"10px"}}><p style={{fontWeight:"800",fontSize:"10px",color:c.muted,textTransform:"uppercase",letterSpacing:".5px",marginBottom:im.text?"5px":"0"}}>{im.label}</p>{im.text&&<p style={{fontSize:"11px",color:c.text,lineHeight:1.5}}>{im.text}</p>}</div></div>)}</div></div>:null;})()}
         {(bundleSugg?.products?.length>0||bundleLoading)&&<div style={{marginBottom:"28px"}}>
           <h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"3px"}}>✨ Complete the Look</h2>
@@ -2318,7 +2389,7 @@ export default function App() {
               <h3 style={{fontWeight:"800",fontSize:"15px",marginBottom:"4px"}}>🏪 Store Features</h3>
               <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Toggle storefront capabilities in real time.</p>
               <div style={{display:"flex",flexDirection:"column",gap:"7px",marginBottom:"24px"}}>
-                {[{k:"promo_banners",i:"🖼",d:"Dynamic in-feed promotional banners between product cards"},{k:"loyalty_points",i:"⭐",d:"Points rewards for every purchase"},{k:"wallet",i:"💳",d:"Digital wallet for quick payments"},{k:"b2b",i:"🏢",d:"Wholesale pricing & business accounts"},{k:"trade_in",i:"🔄",d:"Accept device trade-ins for store credit"},{k:"group_cart",i:"👥",d:"Collaborative shared shopping carts"},{k:"back_in_stock",i:"🔔",d:"Notify customers when items restock"},{k:"smart_bundles",i:"🎁",d:"Curated product bundles & deals"},{k:"digital_warranty",i:"🛡",d:"Digital warranty registration & tracking"},{k:"coupons",i:"🏷",d:"Discount codes and promotional offers"},{k:"vat",i:"🧾",d:"Apply 15% VAT to all transactions"},{k:"cod",i:"💵",d:"Cash on delivery payment option"}].map(({k,i,d})=>(
+                {[{k:"hero_banner",i:"🌅",d:"Full-bleed hero banner at top of store"},{k:"promo_grid",i:"◫",d:"Multi-column promo banners below hero"},{k:"pdp_banner",i:"🏷",d:"Contextual promo block on product pages"},{k:"promo_banners",i:"🖼",d:"Dynamic in-feed promotional banners between product cards"},{k:"loyalty_points",i:"⭐",d:"Points rewards for every purchase"},{k:"wallet",i:"💳",d:"Digital wallet for quick payments"},{k:"b2b",i:"🏢",d:"Wholesale pricing & business accounts"},{k:"trade_in",i:"🔄",d:"Accept device trade-ins for store credit"},{k:"group_cart",i:"👥",d:"Collaborative shared shopping carts"},{k:"back_in_stock",i:"🔔",d:"Notify customers when items restock"},{k:"smart_bundles",i:"🎁",d:"Curated product bundles & deals"},{k:"digital_warranty",i:"🛡",d:"Digital warranty registration & tracking"},{k:"coupons",i:"🏷",d:"Discount codes and promotional offers"},{k:"vat",i:"🧾",d:"Apply 15% VAT to all transactions"},{k:"cod",i:"💵",d:"Cash on delivery payment option"}].map(({k,i,d})=>(
                   <div key={k} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:"10px"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"10px",minWidth:0}}><span style={{fontSize:"20px",flexShrink:0}}>{i}</span><div style={{minWidth:0}}><p style={{fontWeight:"700",fontSize:"13px"}}>{k.replace(/_/g," ").replace(/\b\w/g,l=>l.toUpperCase())}</p><p style={{color:c.muted,fontSize:"11px",marginTop:"1px"}}>{d}</p></div></div>
                     <button className="btn-t" onClick={()=>toggleFlag(k,!flags[k])} style={{background:flags[k]?c.success+"22":"transparent",border:`1.5px solid ${flags[k]?c.success:c.border}`,color:flags[k]?c.success:c.muted,padding:"6px 18px",borderRadius:"20px",cursor:"pointer",fontWeight:"800",fontSize:"12px",flexShrink:0,transition:"all .2s"}}>{flags[k]?"ON":"OFF"}</button>
@@ -2394,6 +2465,85 @@ export default function App() {
                 ))}
               </div>
               <button className="btn-t" onClick={()=>{const n=[...annPhrases,"New announcement phrase"];setAnnPhrases(n);LSS('bx_ann_p',n);}} style={btnP({width:"auto",padding:"8px 16px",fontSize:"12px"})}>+ Add Phrase</button>
+
+              {/* ── Hero Banner ── */}
+              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"26px"}}>🌅 Hero Banner</h4>
+              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Full-bleed banner at the top of the store. Toggle via Feature Flags → hero_banner.</p>
+              <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+                {[["Tag / Eyebrow","tag"],["Headline","title"],["Subtitle","sub"],["CTA Button Text","ctaText"],["CTA Category (all / clothing / electronics / jewelry…)","ctaLink"],["Gradient CSS (or leave blank for image/video)","gradient"]].map(([label,field])=>(
+                  <div key={field}>
+                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>{label}</p>
+                    <input value={heroBanner[field]||""} onChange={e=>{const n={...heroBanner,[field]:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}/>
+                  </div>
+                ))}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+                  <div>
+                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media Type</p>
+                    <select value={heroBanner.mediaType} onChange={e=>{const n={...heroBanner,mediaType:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}>
+                      <option value="gradient">Gradient</option><option value="image">Image URL</option><option value="video">Video URL</option>
+                    </select>
+                  </div>
+                  <div>
+                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Alignment</p>
+                    <select value={heroBanner.align||"left"} onChange={e=>{const n={...heroBanner,align:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}>
+                      <option value="left">Left</option><option value="center">Center</option>
+                    </select>
+                  </div>
+                </div>
+                {(heroBanner.mediaType==="image"||heroBanner.mediaType==="video")&&<div>
+                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media URL</p>
+                  <input value={heroBanner.mediaUrl||""} onChange={e=>{const n={...heroBanner,mediaUrl:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}} placeholder="https://..."/>
+                </div>}
+                <div>
+                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Dark Overlay ({Math.round((heroBanner.overlayOpacity??0.48)*100)}%)</p>
+                  <input type="range" min="0" max="0.85" step="0.05" value={heroBanner.overlayOpacity??0.48} onChange={e=>{const n={...heroBanner,overlayOpacity:Number(e.target.value)};setHeroBanner(n);LSS('bx_hero',n);}} style={{width:"100%",accentColor:"#2a7d7b"}}/>
+                </div>
+              </div>
+
+              {/* ── Promo Grid ── */}
+              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"26px"}}>◫ Promo Grid</h4>
+              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>2–3 column category banners below the stories row. Toggle via promo_grid flag.</p>
+              <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"10px"}}>
+                {promoGrid.map((item,gi)=>(
+                  <div key={item.id} style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"12px 14px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+                      <span style={{fontWeight:700,fontSize:"12px"}}>{item.title||`Banner ${gi+1}`}</span>
+                      <button onClick={()=>{const n=promoGrid.filter((_,j)=>j!==gi);const upd=n.length?n:DFLT_PROMO_GRID;setPromoGrid(upd);LSS('bx_pgrid',upd);}} style={{background:"none",border:`1px solid ${c.error}`,color:c.error,borderRadius:"7px",padding:"4px 8px",cursor:"pointer",fontSize:"11px",fontWeight:700,display:"flex",alignItems:"center"}}><i className="ti ti-trash"/></button>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}}>
+                      {[["Tag","tag"],["Title","title"],["Subtitle","sub"],["CTA","cta"],["Gradient CSS","gradient"],["Category","cat"]].map(([l,f])=>(
+                        <div key={f}>
+                          <p style={{fontSize:"9px",fontWeight:700,color:c.muted,marginBottom:"2px",textTransform:"uppercase",letterSpacing:".5px"}}>{l}</p>
+                          <input value={item[f]||""} onChange={e=>{const n=promoGrid.map((x,j)=>j===gi?{...x,[f]:e.target.value}:x);setPromoGrid(n);LSS('bx_pgrid',n);}} style={{...inp(false),fontSize:"11px",padding:"6px 10px"}}/>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {promoGrid.length<3&&<button className="btn-t" onClick={()=>{const n=[...promoGrid,{id:Date.now(),mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a2424,#2a7d7b)",tag:"New",title:"New Banner",sub:"Description",cta:"Shop →",cat:"all"}];setPromoGrid(n);LSS('bx_pgrid',n);}} style={btnP({width:"auto",padding:"8px 16px",fontSize:"12px"})}>+ Add Banner</button>}
+
+              {/* ── PDP Banner ── */}
+              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"26px"}}>🏷 PDP Promotional Banner</h4>
+              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Contextual upsell block shown mid-page on every product detail page. Toggle via pdp_banner flag.</p>
+              <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+                {[["Headline","title"],["Subtitle","sub"],["CTA Button Text","ctaText"],["CTA Category","ctaLink"],["Gradient CSS","gradient"]].map(([label,field])=>(
+                  <div key={field}>
+                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>{label}</p>
+                    <input value={pdpBanner[field]||""} onChange={e=>{const n={...pdpBanner,[field]:e.target.value};setPdpBanner(n);LSS('bx_pdpb',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}/>
+                  </div>
+                ))}
+                <div>
+                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media Type</p>
+                  <select value={pdpBanner.mediaType} onChange={e=>{const n={...pdpBanner,mediaType:e.target.value};setPdpBanner(n);LSS('bx_pdpb',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}>
+                    <option value="gradient">Gradient</option><option value="image">Image URL</option><option value="video">Video URL</option>
+                  </select>
+                </div>
+                {(pdpBanner.mediaType==="image"||pdpBanner.mediaType==="video")&&<div>
+                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media URL</p>
+                  <input value={pdpBanner.mediaUrl||""} onChange={e=>{const n={...pdpBanner,mediaUrl:e.target.value};setPdpBanner(n);LSS('bx_pdpb',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}} placeholder="https://..."/>
+                </div>}
+              </div>
             </div>}
             {adminTab==="trends"&&<div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}}>
