@@ -8,6 +8,7 @@ const LSS = (k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const getToken = ()=>localStorage.getItem('bx_jwt')||'';
 const authH = ()=>({'Content-Type':'application/json',Authorization:`Bearer ${getToken()}`});
 const DFLT_CP=[{code:'BLEX10',type:'pct',val:10,active:true},{code:'SAVE50',type:'fix',val:50,active:true}];
+const DFLT_ANN_PHRASES=["🎉 Welcome to BLEX — Fast delivery across Saudi Arabia within 3-5 business days","🚚 Free shipping on orders over SAR 200","💳 Use code BLEX10 for 10% off your first order"];
 const getCoupons    = ()=>LS('bx_cp')||DFLT_CP;
 const getCustomers  = ()=>LS('bx_c')||[];
 const getLocalOrders= ()=>LS('bx_o')||[];
@@ -276,6 +277,7 @@ export default function App() {
   const [chatTyping,setChatTyping]=useState(false);
   const [selectedProduct,setSelectedProduct]=useState(null);
   const [pdQty,setPdQty]=useState(1);
+  const [pdCountdown,setPdCountdown]=useState(null);
   const [promoData,setPromoData]=useState(null);
   const [promoLoading,setPromoLoading]=useState(false);
   const [promoList,setPromoList]=useState([]);
@@ -328,6 +330,9 @@ export default function App() {
   const [megaMenuCat,setMegaMenuCat]=useState(null);
   const [storyOpen,setStoryOpen]=useState(null);
   const [quickViewProd,setQuickViewProd]=useState(null);
+  const [quickAddProd,setQuickAddProd]=useState(null);
+  const [qaColor,setQaColor]=useState(0);
+  const [qaSize,setQaSize]=useState(null);
   const [qvColor,setQvColor]=useState(0);
   const [qvSize,setQvSize]=useState(null);
   const [qvQty,setQvQty]=useState(1);
@@ -350,6 +355,9 @@ export default function App() {
   const [filterSort,setFilterSort]=useState("newest");
   const [annVisible,setAnnVisible]=useState(()=>!localStorage.getItem('blex_ann_dismissed'));
   const [annHiding,setAnnHiding]=useState(false);
+  const [annPhrases,setAnnPhrases]=useState(()=>LS('bx_ann_p')||DFLT_ANN_PHRASES);
+  const [annPhraseIdx,setAnnPhraseIdx]=useState(0);
+  const [annPhraseFading,setAnnPhraseFading]=useState(false);
   const [promoSlide,setPromoSlide]=useState(0);
   const [promoHover,setPromoHover]=useState(false);
   const [promoCountdown,setPromoCountdown]=useState(9900);
@@ -366,6 +374,11 @@ export default function App() {
   const [filterDelivery,setFilterDelivery]=useState([]);
 
   const c=THEMES[theme]||THEMES.dark, t=T[lang], isRtl=t.dir==="rtl";
+  const navTransparent=view==="store"&&scrollY<=50;
+  const navTxtC=navTransparent?"#fff":c.text;
+  const navMutedC=navTransparent?"rgba(255,255,255,0.75)":c.muted;
+  const navCardBg=navTransparent?"rgba(255,255,255,0.12)":c.card;
+  const navBorderC=navTransparent?"rgba(255,255,255,0.18)":c.border;
   useScrollReveal(); useRipple();
   const CATS=["all","electronics","clothing","accessories","jewelry","home","beauty","sports","baby","kitchen","stationery"];
   const MQ=[...CATS.slice(1),...CATS.slice(1),...CATS.slice(1),...CATS.slice(1)];
@@ -409,6 +422,8 @@ export default function App() {
   useEffect(()=>{if(!sp.length)return;const NS=["Ahmed","Sara","Mohammed","Fatima","Omar","Layla","Khalid","Nora"],CS=["Riyadh","Jeddah","Dammam","Mecca","Khobar"];let tid;const show=()=>{const prod=sp[Math.floor(Math.random()*sp.length)];setRecentPurchaseMsg({name:NS[~~(Math.random()*NS.length)],city:CS[~~(Math.random()*CS.length)],product:prod.name.substring(0,28)});tid=setTimeout(()=>{setRecentPurchaseMsg(null);tid=setTimeout(show,30000+Math.random()*15000);},5000);};tid=setTimeout(show,30000+Math.random()*15000);return()=>clearTimeout(tid);},[sp.length]); // eslint-disable-line
   useEffect(()=>{if(!selectedProduct)return;const iv=setInterval(()=>setPdViewers(Math.floor(8+Math.random()*17)),6000);return()=>clearInterval(iv);},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{const h=()=>setScrollY(window.scrollY);window.addEventListener('scroll',h,{passive:true});return()=>window.removeEventListener('scroll',h);},[]);
+  useEffect(()=>{if(!annVisible||annPhrases.length<=1)return;const iv=setInterval(()=>{setAnnPhraseFading(true);setTimeout(()=>{setAnnPhraseIdx(i=>(i+1)%annPhrases.length);setAnnPhraseFading(false);},320);},4000);return()=>clearInterval(iv);},[annVisible,annPhrases.length]); // eslint-disable-line
+  useEffect(()=>{if(!selectedProduct||view!=="product")return;const init=2*3600+(selectedProduct.id%6)*20*60;let secs=init;setPdCountdown(secs);const iv=setInterval(()=>{secs=secs<=0?init:secs-1;setPdCountdown(secs);},1000);return()=>{clearInterval(iv);setPdCountdown(null);};},[selectedProduct?.id,view]); // eslint-disable-line
   useEffect(()=>{if(!cart.length||sessionStorage.getItem('blex_exit_shown'))return;let idle;const reset=()=>{clearTimeout(idle);idle=setTimeout(()=>{if(!sessionStorage.getItem('blex_exit_shown')){setExitModal(true);sessionStorage.setItem('blex_exit_shown','1');}},180000);};const exitH=e=>{if(e.clientY<10&&!sessionStorage.getItem('blex_exit_shown')){setExitModal(true);sessionStorage.setItem('blex_exit_shown','1');}};document.addEventListener('mouseleave',exitH);['mousemove','keydown','click','scroll'].forEach(ev=>document.addEventListener(ev,reset));reset();return()=>{document.removeEventListener('mouseleave',exitH);clearTimeout(idle);['mousemove','keydown','click','scroll'].forEach(ev=>document.removeEventListener(ev,reset));};},[cart.length]); // eslint-disable-line
   useEffect(()=>{if(!megaMenuCat)return;const h=e=>{if(megaMenuRef.current&&!megaMenuRef.current.contains(e.target))setMegaMenuCat(null);};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h);},[megaMenuCat]);
   const dismissAnn=()=>{setAnnHiding(true);setTimeout(()=>{setAnnVisible(false);localStorage.setItem('blex_ann_dismissed','1');},300);};
@@ -790,28 +805,27 @@ export default function App() {
     {/* ANNOUNCEMENT BAR */}
     {annVisible&&<div style={{position:"sticky",top:0,zIndex:30,background:"#f5f0e8",borderBottom:"1px solid #d8d2c8",padding:"10px 20px",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",opacity:annHiding?0:1,maxHeight:annHiding?"0":"60px",overflow:"hidden",transition:"opacity 0.3s ease, max-height 0.3s ease",flexShrink:0}}>
       <i className="ti ti-truck" style={{color:"#2a7d7b",fontSize:"15px",flexShrink:0}}/>
-      <span className="ann-full" style={{fontSize:"12px",color:"#2a7d7b",fontWeight:500,textAlign:"center",direction:"rtl"}}>🎉 مرحباً بك في BLEX — شحن سريع لجميع مناطق المملكة خلال 3-5 أيام عمل</span>
-      <span className="ann-short" style={{fontSize:"11px",color:"#2a7d7b",fontWeight:500,direction:"rtl"}}>🚚 شحن مجاني فوق 200 ريال</span>
+      <span style={{fontSize:"12px",color:"#2a7d7b",fontWeight:500,textAlign:"center",opacity:annPhraseFading?0:1,transition:"opacity 0.3s ease",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{annPhrases[annPhraseIdx]||""}</span>
       <button onClick={dismissAnn} style={{position:"absolute",right:"14px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"#2a7d7b",fontSize:"14px",lineHeight:1,padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"}}><i className="ti ti-x"/></button>
     </div>}
 
     {/* NAVBAR */}
     <div ref={megaMenuRef} style={{position:"sticky",top:annVisible?40:0,zIndex:100,transition:"top 0.3s ease"}}>
-    <nav style={{background:c.nav,borderBottom:`1px solid ${c.navBorder}`,padding:"0 22px",height:"58px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"8px",backdropFilter:"blur(12px)",boxShadow:theme==="dark"?"0 1px 0 rgba(0,212,255,0.1),0 4px 24px rgba(0,0,0,0.5)":undefined}}>
+    <nav style={{background:navTransparent?"transparent":c.nav,borderBottom:`1px solid ${navTransparent?"transparent":c.navBorder}`,padding:"0 22px",height:"58px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"8px",backdropFilter:navTransparent?"none":"blur(12px)",boxShadow:navTransparent?undefined:(theme==="dark"?"0 1px 0 rgba(0,212,255,0.1),0 4px 24px rgba(0,0,0,0.5)":undefined),transition:"background 0.3s ease,border-color 0.3s ease"}}>
       <button onClick={handleLogoClick} style={{background:"none",border:"none",cursor:"pointer",flexShrink:0,position:"relative"}}>
-        <span style={{color:c.text,fontSize:"17px",fontWeight:"900",letterSpacing:"5px",display:"inline-block",animation:easterEgg?"eggPop .6s ease both":undefined}}>BLEX</span>
+        <span style={{color:navTxtC,fontSize:"17px",fontWeight:"900",letterSpacing:"5px",display:"inline-block",animation:easterEgg?"eggPop .6s ease both":undefined,transition:"color 0.3s ease",textShadow:navTransparent?"0 1px 6px rgba(0,0,0,0.4)":undefined}}>BLEX</span>
         {easterEgg&&<span style={{position:"absolute",top:"-20px",left:"50%",transform:"translateX(-50%)",fontSize:"16px",animation:"eggPop .6s ease both",pointerEvents:"none"}}>✨</span>}
       </button>
       <div style={{flex:1,maxWidth:"380px",position:"relative",display:"flex",alignItems:"center",gap:"4px"}}>
         <div style={{flex:1,position:"relative"}}>
-          <span style={{position:"absolute",[isRtl?"right":"left"]:"11px",top:"50%",transform:"translateY(-50%)",color:c.muted,fontSize:"13px",pointerEvents:"none"}}>⌕</span>
+          <span style={{position:"absolute",[isRtl?"right":"left"]:"11px",top:"50%",transform:"translateY(-50%)",color:navMutedC,fontSize:"13px",pointerEvents:"none",transition:"color 0.3s ease"}}>⌕</span>
           <input value={searchRaw}
             onChange={e=>{setSearchRaw(e.target.value);setView("store");}}
             onFocus={()=>setSearchFocused(true)}
             onBlur={()=>setTimeout(()=>setSearchFocused(false),150)}
             onKeyDown={e=>{if(e.key==="Enter"&&searchRaw.trim()){saveSearch(searchRaw.trim());setSearchFocused(false);}}}
-            placeholder={t.search} style={{...inp(false),borderRadius:"20px",[isRtl?"paddingRight":"paddingLeft"]:"33px",[isRtl?"paddingLeft":"paddingRight"]:"33px",paddingTop:"7px",paddingBottom:"7px",fontSize:"13px"}}/>
-          <button onClick={startVoice} title="Voice search" style={{position:"absolute",[isRtl?"left":"right"]:"9px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:"13px",color:voiceActive?c.error:c.muted,padding:0,lineHeight:1,animation:voiceActive?"pulse 1s infinite":undefined}}>🎤</button>
+            placeholder={t.search} style={{...inp(false),borderRadius:"20px",[isRtl?"paddingRight":"paddingLeft"]:"33px",[isRtl?"paddingLeft":"paddingRight"]:"33px",paddingTop:"7px",paddingBottom:"7px",fontSize:"13px",...(navTransparent?{background:"rgba(255,255,255,0.12)",color:"#fff",borderColor:"rgba(255,255,255,0.2)"}:{}),transition:"background 0.3s ease,border-color 0.3s ease,color 0.3s ease"}}/>
+          <button onClick={startVoice} title="Voice search" style={{position:"absolute",[isRtl?"left":"right"]:"9px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:"13px",color:voiceActive?c.error:navMutedC,padding:0,lineHeight:1,animation:voiceActive?"pulse 1s infinite":undefined,transition:"color 0.3s ease"}}>🎤</button>
           {searchFocused&&(recentSearches.length>0||searchRaw.trim()||true)&&<div className="srch-drop" style={{position:"absolute",top:"calc(100% + 6px)",left:0,width:"100%",background:"#ffffff",border:"1px solid #d8d2c8",borderRadius:"12px",boxShadow:"0 8px 20px rgba(26,36,36,0.08)",zIndex:200,maxHeight:"320px",overflowY:"auto",padding:"8px 0"}}>
             {recentSearches.length>0&&<div style={{padding:"0 12px 6px"}}>
               <p style={{fontSize:"9px",fontWeight:"700",color:"#8fa5a5",letterSpacing:"1.5px",textTransform:"uppercase",padding:"6px 0 4px"}}>Recent Searches</p>
@@ -844,41 +858,41 @@ export default function App() {
           </div>}
         </div>
         <input ref={visRef} type="file" accept="image/*" onChange={handleVisualSearch} style={{display:"none"}}/>
-        <button onClick={()=>visRef.current?.click()} title="Visual search" style={{background:c.chip,border:`1px solid ${c.border}`,borderRadius:"50%",width:"30px",height:"30px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",color:vsLoading?"#3b82f6":c.muted,flexShrink:0,animation:vsLoading?"pulse 1s infinite":undefined}}>📷</button>
+        <button onClick={()=>visRef.current?.click()} title="Visual search" style={{background:navCardBg,border:`1px solid ${navBorderC}`,borderRadius:"50%",width:"30px",height:"30px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",color:vsLoading?"#3b82f6":navMutedC,flexShrink:0,animation:vsLoading?"pulse 1s infinite":undefined,transition:"background 0.3s ease,border-color 0.3s ease,color 0.3s ease"}}>📷</button>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:"5px",flexShrink:0}}>
         <div ref={langRef} style={{position:"relative"}}>
-          {detectedCountry&&<span style={{position:"absolute",top:"-17px",[isRtl?"left":"right"]:0,fontSize:"8px",color:c.muted,whiteSpace:"nowrap",pointerEvents:"none",background:c.chip,padding:"2px 5px",borderRadius:"4px",border:`1px solid ${c.border}`,letterSpacing:"0.2px"}}>📍 {detectedCountry}</span>}
-          <button onClick={()=>setLangOpen(o=>!o)} className="btn-t" style={{background:c.card,border:`1px solid ${c.border}`,color:c.text,padding:"5px 12px",borderRadius:"50px",cursor:"pointer",fontSize:"11px",fontWeight:"600",display:"flex",alignItems:"center",gap:"3px"}}>
-            {LANGS.find(l=>l.code===lang)?.label}<span style={{fontSize:"8px",color:c.muted}}>▾</span>
+          {detectedCountry&&<span style={{position:"absolute",top:"-17px",[isRtl?"left":"right"]:0,fontSize:"8px",color:navMutedC,whiteSpace:"nowrap",pointerEvents:"none",background:navCardBg,padding:"2px 5px",borderRadius:"4px",border:`1px solid ${navBorderC}`,letterSpacing:"0.2px",transition:"color 0.3s ease,background 0.3s ease"}}>📍 {detectedCountry}</span>}
+          <button onClick={()=>setLangOpen(o=>!o)} className="btn-t" style={{background:navCardBg,border:`1px solid ${navBorderC}`,color:navTxtC,padding:"5px 12px",borderRadius:"50px",cursor:"pointer",fontSize:"11px",fontWeight:"600",display:"flex",alignItems:"center",gap:"3px",transition:"background 0.3s ease,color 0.3s ease,border-color 0.3s ease"}}>
+            {LANGS.find(l=>l.code===lang)?.label}<span style={{fontSize:"8px",color:navMutedC,transition:"color 0.3s ease"}}>▾</span>
           </button>
           {langOpen&&<div className="si" style={{position:"absolute",top:"calc(100%+6px)",[isRtl?"left":"right"]:0,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"5px",zIndex:200,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px",width:"175px",boxShadow:"0 8px 32px rgba(0,0,0,.35)"}}>
             {LANGS.map(l=><button key={l.code} onClick={()=>{userManualLang.current=true;setLang(l.code);setLangOpen(false);}} className="btn-t" style={{background:lang===l.code?c.accent:"transparent",color:lang===l.code?c.accentTxt:c.text,border:"none",padding:"6px 9px",borderRadius:"6px",cursor:"pointer",fontSize:"11px",fontWeight:"600",textAlign:"left"}}>{l.label}</button>)}
           </div>}
         </div>
-        <button onClick={()=>setTheme(th=>{const n=th==="blex"?"dark":th==="dark"?"light":"blex";LSS('bx_th',n);return n;})} className="btn-t" style={{background:c.card,border:`1px solid ${c.border}`,color:c.text,borderRadius:"10px",width:"34px",height:"34px",cursor:"pointer",fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center"}}>{theme==="dark"?"☀":theme==="blex"?"☾":"◐"}</button>
-        <button onClick={()=>{setView("store");setCartOpen(false);}} className="hide-mob btn-t" style={{background:view==="store"?c.accent:"transparent",color:view==="store"?c.accentTxt:c.muted,border:"none",borderRadius:"50px",padding:"6px 16px",cursor:"pointer",fontSize:"12px",fontWeight:"600"}}>{t.store}</button>
+        <button onClick={()=>setTheme(th=>{const n=th==="blex"?"dark":th==="dark"?"light":"blex";LSS('bx_th',n);return n;})} className="btn-t" style={{background:navCardBg,border:`1px solid ${navBorderC}`,color:navTxtC,borderRadius:"10px",width:"34px",height:"34px",cursor:"pointer",fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.3s ease,color 0.3s ease,border-color 0.3s ease"}}>{theme==="dark"?"☀":theme==="blex"?"☾":"◐"}</button>
+        <button onClick={()=>{setView("store");setCartOpen(false);}} className="hide-mob btn-t" style={{background:view==="store"?c.accent:"transparent",color:view==="store"?c.accentTxt:navMutedC,border:"none",borderRadius:"50px",padding:"6px 16px",cursor:"pointer",fontSize:"12px",fontWeight:"600",transition:"color 0.3s ease"}}>{t.store}</button>
         {user
           ?<>
-            {flags.wallet&&<button onClick={()=>setView("wallet")} className="hide-mob btn-t" style={{background:"none",border:"none",color:view==="wallet"?c.text:c.muted,cursor:"pointer",fontSize:"12px",fontWeight:"700",padding:"5px 7px"}}>💳</button>}
-            <button onClick={()=>setView("profile")} className="btn-t" style={{background:c.chip,border:`1px solid ${c.border}`,color:c.text,padding:"5px 10px",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:"700",display:"flex",alignItems:"center",gap:"5px"}}>
+            {flags.wallet&&<button onClick={()=>setView("wallet")} className="hide-mob btn-t" style={{background:"none",border:"none",color:view==="wallet"?navTxtC:navMutedC,cursor:"pointer",fontSize:"12px",fontWeight:"700",padding:"5px 7px",transition:"color 0.3s ease"}}>💳</button>}
+            <button onClick={()=>setView("profile")} className="btn-t" style={{background:navCardBg,border:`1px solid ${navBorderC}`,color:navTxtC,padding:"5px 10px",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:"700",display:"flex",alignItems:"center",gap:"5px",transition:"background 0.3s ease,color 0.3s ease,border-color 0.3s ease"}}>
               <span style={{color:TIER[getTier(userPts)].color,fontSize:"13px"}}>◆</span>{user.name.split(" ")[0]}
               <span style={{background:TIER[getTier(userPts)].color+"33",color:TIER[getTier(userPts)].color,borderRadius:"5px",padding:"1px 5px",fontSize:"9px",fontWeight:"800"}}>{TIER[getTier(userPts)].label}</span>
             </button>
           </>
-          :<button onClick={()=>{setAuthOpen(true);setAuthMode("login");}} className="btn-t" style={{...btnS({width:"auto",padding:"5px 12px",fontSize:"12px"})}}>{t.signIn}</button>
+          :<button onClick={()=>{setAuthOpen(true);setAuthMode("login");}} className="btn-t" style={{...btnS({width:"auto",padding:"5px 12px",fontSize:"12px"}),color:navTxtC,border:`1px solid ${navBorderC}`,transition:"color 0.3s ease,border-color 0.3s ease"}}>{t.signIn}</button>
         }
         <button onClick={()=>setCartOpen(o=>!o)} data-cart className="btn-t" style={{background:c.accent,color:c.accentTxt,border:"none",borderRadius:"10px",width:"34px",height:"34px",cursor:"pointer",fontSize:"14px",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           🛒{cartCount>0&&<span style={{position:"absolute",top:"-5px",right:"-5px",background:"#ef4444",color:"#fff",borderRadius:"50%",width:"15px",height:"15px",fontSize:"9px",fontWeight:"900",display:"flex",alignItems:"center",justifyContent:"center"}}>{cartCount}</span>}
         </button>
-        <button onClick={()=>setMobileMenuOpen(o=>!o)} className="show-mob btn-t" style={{display:"none",background:c.chip,border:`1px solid ${c.border}`,color:c.text,borderRadius:"7px",padding:"5px 8px",cursor:"pointer",fontSize:"16px",lineHeight:1,flexShrink:0}}>{mobileMenuOpen?"×":"☰"}</button>
+        <button onClick={()=>setMobileMenuOpen(o=>!o)} className="show-mob btn-t" style={{display:"none",background:navCardBg,border:`1px solid ${navBorderC}`,color:navTxtC,borderRadius:"7px",padding:"5px 8px",cursor:"pointer",fontSize:"16px",lineHeight:1,flexShrink:0,transition:"background 0.3s ease,color 0.3s ease,border-color 0.3s ease"}}>{mobileMenuOpen?"×":"☰"}</button>
       </div>
     </nav>
     {/* CATEGORY NAV BAR */}
-    <div className="hide-mob" style={{background:c.nav,borderBottom:`1px solid ${c.navBorder}`,padding:"0 26px",height:"32px",display:"flex",alignItems:"center",gap:"2px",backdropFilter:"blur(12px)"}}>
+    <div className="hide-mob" style={{background:navTransparent?"transparent":c.nav,borderBottom:`1px solid ${navTransparent?"transparent":c.navBorder}`,padding:"0 26px",height:"32px",display:"flex",alignItems:"center",gap:"2px",backdropFilter:navTransparent?"none":"blur(12px)",transition:"background 0.3s ease,border-color 0.3s ease"}}>
       {["electronics","jewelry","clothing","accessories"].map(cat=>(
         <button key={cat} onMouseEnter={()=>setMegaMenuCat(cat)} onMouseLeave={()=>setMegaMenuCat(null)} onClick={()=>{setCategory(cat);setView("store");setMegaMenuCat(null);}}
-          style={{background:"none",border:"none",color:megaMenuCat===cat?c.accent:c.muted,cursor:"pointer",fontSize:"11px",fontWeight:"700",padding:"0 10px",height:"100%",display:"flex",alignItems:"center",gap:"4px",letterSpacing:".3px",transition:"color .15s",borderBottom:megaMenuCat===cat?`2px solid ${c.accent}`:"2px solid transparent"}}>
+          style={{background:"none",border:"none",color:megaMenuCat===cat?c.accent:navMutedC,cursor:"pointer",fontSize:"11px",fontWeight:"700",padding:"0 10px",height:"100%",display:"flex",alignItems:"center",gap:"4px",letterSpacing:".3px",transition:"color .15s",borderBottom:megaMenuCat===cat?`2px solid ${c.accent}`:"2px solid transparent"}}>
           {t[cat]}
         </button>
       ))}
@@ -1292,10 +1306,19 @@ export default function App() {
                     {(()=>{const spIdx=sp.findIndex(x=>x.id===p.id);const badges=[];if(spIdx>=0&&spIdx<Math.ceil(sp.length*0.2))badges.push({label:"NEW",bg:"#2a7d7b"});if(Number(p.price)<200)badges.push({label:"SALE",bg:"#e05555"});if(p.rating>=4.5||p.id%5===0)badges.push({label:"HOT",bg:"#b5896a"});if(p.stock>0&&p.stock<10)badges.push({label:"LIMITED",bg:"#1a2424"});return badges.slice(0,2).map((b,i)=><span key={i} style={{display:"block",background:b.bg,color:"#fff",fontSize:"9px",fontWeight:700,padding:"3px 8px",borderRadius:"50px",letterSpacing:"1px",whiteSpace:"nowrap"}}>{b.label}</span>);})()}
                   </div>
                   {hovered===p.id&&p.stock>0&&<div style={{position:"absolute",bottom:"42px",left:"50%",transform:"translateX(-50%)",background:"rgba(0,0,0,.7)",color:"#fff",fontSize:"9px",fontWeight:"700",padding:"2px 8px",borderRadius:"5px",whiteSpace:"nowrap",zIndex:4}}>👁 {(p.id%13)+3} viewing</div>}
-                  {/* QUICK VIEW */}
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,transform:hovered===p.id?"translateY(0)":"translateY(100%)",transition:"transform .25s ease",zIndex:6,overflow:"hidden"}}>
-                    <button onClick={e=>{e.stopPropagation();setQuickViewProd(p);setQvColor(0);setQvSize(null);setQvQty(1);}} style={{width:"100%",background:"rgba(42,125,123,0.9)",color:"#fff",border:"none",fontSize:"11px",fontWeight:600,padding:"10px",cursor:"pointer",letterSpacing:"0.5px",display:"flex",alignItems:"center",justifyContent:"center",gap:"5px"}}><i className="ti ti-eye" style={{fontSize:"13px"}}/>QUICK VIEW</button>
+                  {/* QUICK ADD + QUICK VIEW */}
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,transform:hovered===p.id?"translateY(0)":"translateY(100%)",transition:"transform .25s ease",zIndex:6}}>
+                    <button onClick={e=>{e.stopPropagation();setQuickAddProd(p.id);setQaColor(0);setQaSize(null);}} style={{width:"100%",background:"rgba(26,36,36,0.88)",color:"#fff",border:"none",fontSize:"11px",fontWeight:600,padding:"8px",cursor:"pointer",letterSpacing:"0.5px",display:"flex",alignItems:"center",justifyContent:"center",gap:"4px"}}><i className="ti ti-plus" style={{fontSize:"12px"}}/>Quick Add</button>
+                    <button onClick={e=>{e.stopPropagation();setQuickViewProd(p);setQvColor(0);setQvSize(null);setQvQty(1);}} style={{width:"100%",background:"rgba(42,125,123,0.9)",color:"#fff",border:"none",fontSize:"11px",fontWeight:600,padding:"8px",cursor:"pointer",letterSpacing:"0.5px",display:"flex",alignItems:"center",justifyContent:"center",gap:"5px"}}><i className="ti ti-eye" style={{fontSize:"13px"}}/>QUICK VIEW</button>
                   </div>
+                  {/* QUICK ADD INLINE PANEL */}
+                  {quickAddProd===p.id&&<div className="si" style={{position:"absolute",inset:0,background:"rgba(245,242,236,0.97)",backdropFilter:"blur(8px)",zIndex:7,display:"flex",flexDirection:"column",padding:"12px 10px",gap:"7px"}} onClick={e=>e.stopPropagation()}>
+                    <button onClick={e=>{e.stopPropagation();setQuickAddProd(null);}} style={{position:"absolute",top:"8px",right:"8px",background:"none",border:"none",cursor:"pointer",color:"#5a6e6e",fontSize:"16px",lineHeight:1,display:"flex",alignItems:"center",zIndex:1}}><i className="ti ti-x"/></button>
+                    <p style={{fontWeight:700,fontSize:"11px",color:"#1a2424",paddingRight:"20px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+                    <div><p style={{fontSize:"9px",fontWeight:700,color:"#8fa5a5",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>Color</p><div style={{display:"flex",gap:"5px",flexWrap:"wrap"}}>{["#2a7d7b","#1a2424","#f5f0e8","#b5896a","#c4a7f0"].map((clr,i)=><button key={i} onClick={e=>{e.stopPropagation();setQaColor(i);}} style={{width:"18px",height:"18px",borderRadius:"50%",background:clr,border:`1.5px solid ${clr==="#f5f0e8"?"#d8d2c8":clr}`,cursor:"pointer",padding:0,outline:qaColor===i?"2px solid #2a7d7b":"none",outlineOffset:"2px",transform:qaColor===i?"scale(1.15)":"scale(1)",transition:"outline .1s,transform .1s"}}/>)}</div></div>
+                    <div><p style={{fontSize:"9px",fontWeight:700,color:"#8fa5a5",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>Size</p><div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>{["XS","S","M","L","XL"].map(sz=><button key={sz} onClick={e=>{e.stopPropagation();setQaSize(sz);}} style={{width:"30px",height:"30px",borderRadius:"6px",background:qaSize===sz?"#2a7d7b":"#ede9e1",color:qaSize===sz?"#fff":"#1a2424",border:`1px solid ${qaSize===sz?"#2a7d7b":"#d8d2c8"}`,cursor:"pointer",fontWeight:600,fontSize:"10px",transition:"all .1s"}}>{sz}</button>)}</div></div>
+                    <button className="btn-t" onClick={e=>{e.stopPropagation();addToCart(p);flyToCart(e);setQuickAddProd(null);}} style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"9px",cursor:"pointer",fontWeight:700,fontSize:"12px",width:"100%",marginTop:"auto"}}>{p.is_preorder?"Pre-Order":t.addToCart}</button>
+                  </div>}
                 </div>
                 <div style={{padding:"13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
@@ -1413,6 +1436,7 @@ export default function App() {
             <div>{onSale?<div style={{display:"flex",alignItems:"baseline",gap:"8px",flexWrap:"wrap"}}><span style={{fontWeight:"900",fontSize:"30px",color:c.error}}>{fmt(p.sale_price)}</span><span style={{textDecoration:"line-through",color:c.muted,fontSize:"15px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"10px",fontWeight:"800",padding:"2px 7px",borderRadius:"5px"}}>{countdown(p.sale_ends_at)}</span></div>:<div style={{display:"flex",alignItems:"baseline",gap:"6px"}}><span style={{fontWeight:"900",fontSize:"30px"}}>{fmt(p.price)}</span></div>}
               {flags.vat!==false&&<p style={{fontSize:"11px",color:c.muted,marginTop:"4px"}}>{t.tax}: {fmt(dp*0.15)}</p>}
             </div>
+            {pdCountdown!==null&&(()=>{const h=Math.floor(pdCountdown/3600),m=Math.floor((pdCountdown%3600)/60),s=pdCountdown%60;return(<div style={{background:"#fdf5ec",border:"1px solid #e8d4bc",borderRadius:"10px",padding:"10px 14px",display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}><i className="ti ti-clock" style={{color:"#b5896a",fontSize:"16px",flexShrink:0}}/><span style={{fontSize:"11px",color:"#5a6e6e",whiteSpace:"nowrap"}}>Your personalized offer expires in:</span><div style={{display:"flex",alignItems:"center",gap:"3px"}}>{[[h,"h"],[m,"m"],[s,"s"]].map(([v,u],i)=><React.Fragment key={u}>{i>0&&<span style={{color:"#b5896a",fontWeight:700,fontSize:"13px"}}>:</span>}<span style={{background:"#fff",borderRadius:"4px",padding:"2px 6px",fontWeight:700,fontSize:"13px",color:"#b5896a"}}>{String(v).padStart(2,"0")}</span></React.Fragment>)}</div></div>);})()}
             {p.description&&<p style={{color:c.muted,fontSize:"13px",lineHeight:1.7,margin:0}}>{p.description.replace(/<[^>]*>/g,"")}</p>}
             {(p.stock>0||p.is_preorder)&&<div>
               <p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginBottom:"8px",textTransform:"uppercase",letterSpacing:".5px"}}>Quantity</p>
@@ -2350,6 +2374,18 @@ export default function App() {
                   </div>
                 ))}
               </div>}
+              {/* ── Announcement Bar ── */}
+              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"22px"}}>📢 Announcement Bar</h4>
+              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Phrases rotate every 4 seconds in the top bar. Supports emoji.</p>
+              <div style={{display:"flex",flexDirection:"column",gap:"7px",marginBottom:"10px"}}>
+                {annPhrases.map((ph,i)=>(
+                  <div key={i} style={{display:"flex",gap:"6px",alignItems:"center"}}>
+                    <input value={ph} onChange={e=>{const n=[...annPhrases];n[i]=e.target.value;setAnnPhrases(n);LSS('bx_ann_p',n);}} style={{...inp(false),flex:1,fontSize:"12px",padding:"8px 12px"}}/>
+                    <button className="btn-t" onClick={()=>{const n=annPhrases.filter((_,j)=>j!==i);const upd=n.length?n:DFLT_ANN_PHRASES;setAnnPhrases(upd);setAnnPhraseIdx(0);LSS('bx_ann_p',upd);}} style={{background:"none",border:`1px solid ${c.error}`,color:c.error,borderRadius:"7px",padding:"7px 10px",cursor:"pointer",fontSize:"12px",fontWeight:"700",flexShrink:0,display:"flex",alignItems:"center"}}><i className="ti ti-trash"/></button>
+                  </div>
+                ))}
+              </div>
+              <button className="btn-t" onClick={()=>{const n=[...annPhrases,"New announcement phrase"];setAnnPhrases(n);LSS('bx_ann_p',n);}} style={btnP({width:"auto",padding:"8px 16px",fontSize:"12px"})}>+ Add Phrase</button>
             </div>}
             {adminTab==="trends"&&<div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}}>
