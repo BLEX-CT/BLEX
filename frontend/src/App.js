@@ -68,14 +68,11 @@ const MEGA_MENU_DATA={
   accessories:{cols:[{title:"Bags",items:["Handbags","Backpacks","Wallets"]},{title:"Accessories",items:["Sunglasses","Belts","Hats","Scarves"]}]}
 };
 const BANNER_INTERVAL=12;
-const DFLT_HERO={active:true,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a2424 0%,#2a7d7b 55%,#0e3a38 100%)",tag:"New Season · 2026",title:"Discover Premium Collections",sub:"Handpicked pieces delivered to your door across Saudi Arabia — new arrivals every week.",ctaText:"Shop Now",ctaLink:"all",align:"left",overlayOpacity:0.48};
-const DFLT_PROMO_GRID=[{id:0,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#2a1000 0%,#6b3a1f 60%,#b5896a 100%)",tag:"Fashion",title:"Menswear & Womenswear",sub:"Contemporary cuts for every occasion",cta:"Explore →",cat:"clothing"},{id:1,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#0a1628 0%,#1e3a6b 60%,#3d6abf 100%)",tag:"Tech Drops",title:"Electronics",sub:"Latest devices at best prices",cta:"Shop Now →",cat:"electronics"},{id:2,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a0828 0%,#4a1a6b 55%,#8b5cf6 100%)",tag:"Fine Jewelry",title:"Gold & Precious Stones",sub:"Crafted by artisans, worn by you",cta:"Explore →",cat:"jewelry"}];
-const DFLT_PDP_BANNER={active:true,mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a2424 0%,#2a7d7b 60%,#1e5f5d 100%)",title:"Complete Your Look",sub:"Explore matching accessories and complementary pieces from our curated collections.",ctaText:"Explore Related",ctaLink:"all"};
-const DFLT_INFEED_BANNERS=[
-  {id:0,layout_template:"tall",media:{type:"gradient",value:"linear-gradient(135deg,#1a2424 0%,#2a7d7b 60%,#0e3a38 100%)"},tag:"New Arrivals",headline:"Curated Premium Collection",sub:"Handpicked pieces delivered to your door — new drops every week.",cta:"Shop Now →",cat:"all"},
-  {id:1,layout_template:"split",media:{type:"gradient",value:"linear-gradient(135deg,#b5896a 0%,#c9a96e 50%,#1a2424 100%)"},tag:"Fine Jewelry",headline:"Gold & Precious Stones",sub:"Crafted by artisans, worn by you.",points:["Free shipping on orders over SAR 200","Authentic certificates included","30-day hassle-free returns"],cta:"Explore Jewelry →",cat:"jewelry"},
-  {id:2,layout_template:"panorama",media:{type:"gradient",value:"linear-gradient(135deg,#0a1628 0%,#1e3a6b 50%,#3d6abf 100%)"},tag:"Tech & Electronics",headline:"The Future, Today.",sub:"Latest devices, best prices, fastest delivery in Saudi Arabia.",cta:"View Electronics →",cat:"electronics"},
-  {id:3,layout_template:"oversized",media:{type:"gradient",value:"linear-gradient(135deg,#2a1000 0%,#6b3a1f 50%,#b5896a 100%)"},tag:"Fashion",headline:"Style That Moves With You",sub:"Contemporary cuts, timeless appeal.",cta:"Shop Fashion →",cat:"clothing"},
+const PROMO_BANNERS=[
+  {id:0,layout:"fullwidth",align:"left",media:{type:"gradient",value:"linear-gradient(135deg,#1a2424 0%,#2a7d7b 60%,#1e5f5d 100%)"},tag:"New Arrivals",headline:"Curated Premium Collection",sub:"Handpicked pieces delivered to your door — new drops every week.",cta:"Shop Now →",cat:"all"},
+  {id:1,layout:"split",media:{type:"gradient",value:"linear-gradient(135deg,#b5896a 0%,#c9a96e 50%,#1a2424 100%)"},tag:"Fine Jewelry",headline:"Gold & Precious Stones",sub:"Crafted by artisans, worn by you.",points:["Free shipping on orders over SAR 200","Authentic certificates included","30-day hassle-free returns"],cta:"Explore Jewelry →",cat:"jewelry"},
+  {id:2,layout:"fullwidth",align:"center",media:{type:"gradient",value:"linear-gradient(135deg,#0a1628 0%,#3d4a6b 50%,#5a6e8f 100%)"},tag:"Tech & Electronics",headline:"The Future, Today.",sub:"Latest devices, best prices, fastest delivery in Saudi Arabia.",cta:"View Electronics →",cat:"electronics"},
+  {id:3,layout:"split",media:{type:"gradient",value:"linear-gradient(135deg,#2a1000 0%,#6b3a1f 50%,#b5896a 100%)"},tag:"Fashion",headline:"Style That Moves With You",sub:"Contemporary cuts, timeless appeal.",points:["New styles added weekly","Free returns on all clothing","Size guide included"],cta:"Shop Fashion →",cat:"clothing"},
 ];
 const STORIES_DATA=[
   {label:"New",icon:"ti-sparkles",gradient:"linear-gradient(135deg,#2a7d7b,#7ec8c7)",cat:"all"},
@@ -135,17 +132,7 @@ function injectCSS(){
     .hero-title-l{font-size:clamp(56px,12vw,128px);font-weight:900;letter-spacing:14px;background:linear-gradient(135deg,#111 0%,#0066cc 50%,#4400aa 80%,#111 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 5s linear infinite}
     .float-blob{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none}
     .mq-track{display:flex;animation:marquee 22s linear infinite}.mq-track:hover{animation-play-state:paused}
-    .ann-mq{display:flex;width:max-content;animation:marquee 32s linear infinite}.ann-mq:hover{animation-play-state:paused}
-    .pgrid-item{transition:transform .3s cubic-bezier(.23,1,.32,1),box-shadow .3s}.pgrid-item:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 16px 48px rgba(0,0,0,0.28)}
-    .hero-cta-btn:hover{transform:translateY(-2px)!important;box-shadow:0 8px 36px rgba(0,0,0,0.28)!important}
-    .banner-split-inner{display:flex;flex-direction:row}.banner-split-inner>div{flex:1 1 50%}
-    .agent-log{background:#060c0c;border-radius:12px;padding:12px 14px;height:260px;overflow-y:auto;font-family:'Courier New',monospace}
-    .agent-log-row{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px;align-items:baseline;font-size:11px;line-height:1.5}
-    .alg-success{color:#4ade80}.alg-error{color:#f87171}.alg-warn{color:#fbbf24}.alg-info{color:rgba(255,255,255,0.62)}
-    .ctr-track{height:5px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;margin:4px 0}
-    .ctr-fill{height:5px;border-radius:3px;transition:width 0.9s cubic-bezier(.23,1,.32,1)}
-    .hotspot-ring{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.95);box-shadow:0 0 0 5px rgba(255,255,255,0.25),0 0 0 10px rgba(255,255,255,0.1);cursor:pointer}
-    @media(max-width:700px){.hide-mob{display:none!important}.show-mob{display:flex!important}.g3{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}.pgrid-row{grid-template-columns:1fr!important}.hero-cta-btn{width:100%!important}.banner-tall,.banner-oversized{grid-column:1/-1!important;height:360px!important}.banner-split-inner{flex-direction:column!important}.banner-split-inner>div:first-child{min-height:200px!important}}
+    @media(max-width:700px){.hide-mob{display:none!important}.show-mob{display:flex!important}.g3{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}}
     @media(max-width:440px){.g3{grid-template-columns:1fr 1fr!important}}
     @media(max-width:360px){.g3{grid-template-columns:1fr!important}}
     @keyframes cartSlideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -379,20 +366,7 @@ export default function App() {
   const [annPhrases,setAnnPhrases]=useState(()=>LS('bx_ann_p')||DFLT_ANN_PHRASES);
   const [annPhraseIdx,setAnnPhraseIdx]=useState(0);
   const [annPhraseFading,setAnnPhraseFading]=useState(false);
-  const [promoBanners,setPromoBanners]=useState(()=>LS('bx_infeed')||DFLT_INFEED_BANNERS);
-  const [heroBanner,setHeroBanner]=useState(()=>LS('bx_hero')||DFLT_HERO);
-  const [promoGrid,setPromoGrid]=useState(()=>LS('bx_pgrid')||DFLT_PROMO_GRID);
-  const [pdpBanner,setPdpBanner]=useState(()=>LS('bx_pdpb')||DFLT_PDP_BANNER);
-  const [agentCfg,setAgentCfg]=useState(()=>LS('bx_agc')||{enabled:false,interval:30,minImp:20,confThresh:0.15,useLlm:true,useImgGen:false});
-  const [agentLog,setAgentLog]=useState([]);
-  const [agentRunning,setAgentRunning]=useState(false);
-  const [agentLastRun,setAgentLastRun]=useState(()=>LS('bx_agr')||null);
-  const [abVariantCfg,setAbVariantCfg]=useState(()=>LS('bx_abv2')||{});
-  const [lastBannerClick,setLastBannerClick]=useState(null);
-  const [anaKey,setAnaKey]=useState(0);
-  const seenBannersRef=useRef(new Set());
-  const agentTimerRef=useRef(null);
-const [promoSlide,setPromoSlide]=useState(0);
+  const [promoSlide,setPromoSlide]=useState(0);
   const [promoHover,setPromoHover]=useState(false);
   const [promoCountdown,setPromoCountdown]=useState(9900);
   const [chatUnread,setChatUnread]=useState(false);
@@ -460,12 +434,6 @@ const [promoSlide,setPromoSlide]=useState(0);
   useEffect(()=>{if(!selectedProduct||view!=="product")return;const init=2*3600+(selectedProduct.id%6)*20*60;let secs=init;setPdCountdown(secs);const iv=setInterval(()=>{secs=secs<=0?init:secs-1;setPdCountdown(secs);},1000);return()=>{clearInterval(iv);setPdCountdown(null);};},[selectedProduct?.id,view]); // eslint-disable-line
   useEffect(()=>{if(!cart.length||sessionStorage.getItem('blex_exit_shown'))return;let idle;const reset=()=>{clearTimeout(idle);idle=setTimeout(()=>{if(!sessionStorage.getItem('blex_exit_shown')){setExitModal(true);sessionStorage.setItem('blex_exit_shown','1');}},180000);};const exitH=e=>{if(e.clientY<10&&!sessionStorage.getItem('blex_exit_shown')){setExitModal(true);sessionStorage.setItem('blex_exit_shown','1');}};document.addEventListener('mouseleave',exitH);['mousemove','keydown','click','scroll'].forEach(ev=>document.addEventListener(ev,reset));reset();return()=>{document.removeEventListener('mouseleave',exitH);clearTimeout(idle);['mousemove','keydown','click','scroll'].forEach(ev=>document.removeEventListener(ev,reset));};},[cart.length]); // eslint-disable-line
   useEffect(()=>{if(!megaMenuCat)return;const h=e=>{if(megaMenuRef.current&&!megaMenuRef.current.contains(e.target))setMegaMenuCat(null);};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h);},[megaMenuCat]);
-  // Agent scheduler
-  useEffect(()=>{if(agentTimerRef.current)clearInterval(agentTimerRef.current);if(!agentCfg.enabled)return;agentTimerRef.current=setInterval(runAgentCycle,agentCfg.interval*60*1000);return()=>clearInterval(agentTimerRef.current);},[agentCfg.enabled,agentCfg.interval]); // eslint-disable-line
-  // Banner impression tracker
-  useEffect(()=>{if(view!=="store"||flags.promo_banners===false)return;const count=Math.floor(filteredFinal.length/BANNER_INTERVAL);for(let bi=0;bi<count;bi++){const bRaw=(LS('bx_infeed')||DFLT_INFEED_BANNERS)[bi%(LS('bx_infeed')||DFLT_INFEED_BANNERS).length];if(!bRaw)continue;const vt=getBannerVariant(bRaw.id);trackBannerImp(bRaw.id,vt);}},[view,filteredFinal.length]); // eslint-disable-line
-  // Hero impression tracker
-  useEffect(()=>{if(view==="store"&&heroBanner.active&&flags.hero_banner!==false)trackBannerImp('hero','A');},[view]); // eslint-disable-line
   const dismissAnn=()=>{setAnnHiding(true);setTimeout(()=>{setAnnVisible(false);localStorage.setItem('blex_ann_dismissed','1');},300);};
   const saveSearch=term=>{if(!term.trim())return;const prev=LS('blex_searches')||[];const next=[term,...prev.filter(s=>s!==term)].slice(0,5);LSS('blex_searches',next);setRecentSearches(next);};
   const removeRecentSearch=term=>{const next=recentSearches.filter(s=>s!==term);LSS('blex_searches',next);setRecentSearches(next);};
@@ -483,81 +451,7 @@ const [promoSlide,setPromoSlide]=useState(0);
   const cartTotal=cartAfter+cartTax;
   const addToast=(msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3000);};
   const trackBeh=(cat)=>{if(!cat)return;const b={...userBehavior,[cat]:(userBehavior[cat]||0)+1};setUserBehavior(b);LSS('bx_beh',b);};
-  const addToCart=p=>{setCart(prev=>{const ex=prev.find(i=>i.id===p.id);return ex?prev.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i):[...prev,{...p,qty:1}];});setCartOpen(true);addToast(`${p.name.substring(0,24)} added`,"success");trackBeh(p.category);if(lastBannerClick&&Date.now()-lastBannerClick.ts<600000){const a=LS('bx_bana')||{};const k=`${lastBannerClick.bid}_${lastBannerClick.vt}`;a[k]={...a[k],conversions:((a[k]||{}).conversions||0)+1,revenue:((a[k]||{}).revenue||0)+Number(p.price||0)};LSS('bx_bana',a);}};
-  // ── Banner Analytics ──────────────────────────────────────────────
-  const trackBannerImp=(bid,vt)=>{const k=`${bid}_${vt}`;if(seenBannersRef.current.has(k))return;seenBannersRef.current.add(k);const a=LS('bx_bana')||{};a[k]={...a[k],impressions:((a[k]||{}).impressions||0)+1,lastSeen:Date.now()};LSS('bx_bana',a);};
-  const trackBannerClk=(bid,vt)=>{const a=LS('bx_bana')||{};const k=`${bid}_${vt}`;a[k]={...a[k],clicks:((a[k]||{}).clicks||0)+1,lastClick:Date.now()};LSS('bx_bana',a);setLastBannerClick({bid,vt,ts:Date.now()});};
-  const getBannerVariant=bid=>{const s=LS('bx_uab')||{};if(s[bid])return s[bid];const v=Math.random()<0.5?'A':'B';LSS('bx_uab',{...s,[bid]:v});return v;};
-  const getActiveBanner=b=>{const vt=getBannerVariant(b.id);const cfg=LS('bx_abv2')||{};return(vt==='B'&&cfg[b.id]?.B)?{...b,...cfg[b.id].B,_variant:'B'}:{...b,_variant:'A'};};
-  // ── Autonomous Agent Cycle ────────────────────────────────────────
-  const runAgentCycle=async()=>{
-    if(agentRunning)return;
-    setAgentRunning(true);
-    const push=(msg,tp='info')=>setAgentLog(p=>[...p.slice(-49),{id:Date.now()+Math.random(),ts:Date.now(),msg,tp}]);
-    try{
-      push('🔍 Analyzing banner performance data...');
-      const cfg=LS('bx_agc')||agentCfg;
-      const banners=LS('bx_infeed')||DFLT_INFEED_BANNERS;
-      const heroConf=LS('bx_hero')||heroBanner;
-      const ana=LS('bx_bana')||{};
-      const abCfg=LS('bx_abv2')||{};
-      const updated=[...banners];
-      let changed=false;
-      for(let bi=0;bi<banners.length;bi++){
-        const bn=banners[bi];
-        const kA=`${bn.id}_A`,kB=`${bn.id}_B`;
-        const dA=ana[kA]||{};const dB=ana[kB]||{};
-        const impA=dA.impressions||0,impB=dB.impressions||0;
-        const ctrA=impA>0?(dA.clicks||0)/impA:0;
-        const ctrB=impB>0?(dB.clicks||0)/impB:0;
-        push(`📊 "${bn.headline?.substring(0,26)}": A=${(ctrA*100).toFixed(1)}%(${impA}imp) B=${(ctrB*100).toFixed(1)}%(${impB}imp)`);
-        // Promote B if significantly better
-        if(impB>=cfg.minImp&&ctrB>ctrA*(1+cfg.confThresh)&&abCfg[bn.id]?.B){
-          updated[bi]={...bn,...abCfg[bn.id].B};
-          changed=true;
-          push(`✅ Promoted variant B for "${bn.headline?.substring(0,22)}" (+${((ctrB/Math.max(ctrA,0.001)-1)*100).toFixed(0)}% CTR)`,'success');
-          const nana={...ana};delete nana[kA];delete nana[kB];LSS('bx_bana',nana);
-          const nab={...abCfg};delete nab[bn.id];setAbVariantCfg(nab);LSS('bx_abv2',nab);
-        }
-        // Generate LLM copy challenger when A has enough data but no B variant yet
-        if(impA>=cfg.minImp&&cfg.useLlm&&!abCfg[bn.id]?.B){
-          try{
-            push(`🤖 Generating copy challenger for "${bn.headline?.substring(0,22)}"...`);
-            const r=await fetch(`${API}/ai/banner-copy`,{method:'POST',headers:authH(),body:JSON.stringify({headline:bn.headline,sub:bn.sub,cta:bn.cta,tag:bn.tag,category:bn.cat,current_ctr:ctrA,goal:'maximize_ctr'})});
-            if(r.ok){const d=await r.json();const nab={...abCfg,[bn.id]:{...(abCfg[bn.id]||{}),B:{headline:d.headline||bn.headline,sub:d.sub||bn.sub,cta:d.cta||bn.cta,tag:d.tag||bn.tag}}};setAbVariantCfg(nab);LSS('bx_abv2',nab);push(`✍️ Challenger ready: "${d.headline?.substring(0,32)}"`,'success');}
-            else push(`⚠️ Copy API returned ${r.status} — using existing copy`,'warn');
-          }catch(e){push(`⚠️ Copy API unreachable (${e.message}) — A/B test queued`,'warn');}
-        }
-        // Image generation when B has proven itself + config allows it
-        if(impA>=cfg.minImp*3&&cfg.useImgGen&&bn.media?.type!=='video'&&!abCfg[bn.id]?.B?.media){
-          try{
-            push(`🎨 Requesting generated image for "${bn.tag}"...`);
-            const r=await fetch(`${API}/ai/banner-image`,{method:'POST',headers:authH(),body:JSON.stringify({prompt:`Luxury editorial e-commerce banner, ${bn.tag}, ${bn.cat}, minimalist photography, high-end`,aspect_ratio:'16:9',style:'photorealistic'})});
-            if(r.ok){const d=await r.json();if(d.url){const nab={...abCfg,[bn.id]:{...(abCfg[bn.id]||{}),B:{...(abCfg[bn.id]?.B||{}),media:{type:'image',url:d.url}}}};setAbVariantCfg(nab);LSS('bx_abv2',nab);push(`🖼 Image variant generated for "${bn.tag}"`,'success');}}
-            else push(`⚠️ Image API returned ${r.status}`,'warn');
-          }catch(e){push(`⚠️ Image API unreachable (${e.message})`,'warn');}
-        }
-      }
-      // Hero banner: low CTR detection + autonomous copy refresh
-      const hAna=ana['hero_A']||{};
-      const hImp=hAna.impressions||0;const hCtr=hImp>0?(hAna.clicks||0)/hImp:0;
-      if(hImp>=cfg.minImp*5&&cfg.useLlm){
-        push(`🌅 Hero: ${hImp} views, ${(hCtr*100).toFixed(1)}% CTR`);
-        if(hCtr<0.04){
-          try{
-            push('🤖 Hero CTR below 4% — generating improved copy...');
-            const r=await fetch(`${API}/ai/banner-copy`,{method:'POST',headers:authH(),body:JSON.stringify({headline:heroConf.title,sub:heroConf.sub,cta:heroConf.ctaText,tag:heroConf.tag,category:heroConf.ctaLink||'all',current_ctr:hCtr,goal:'maximize_ctr'})});
-            if(r.ok){const d=await r.json();const nb={...heroConf,title:d.headline||heroConf.title,sub:d.sub||heroConf.sub,ctaText:d.cta||heroConf.ctaText};setHeroBanner(nb);LSS('bx_hero',nb);const na={...ana};delete na['hero_A'];LSS('bx_bana',na);push('✅ Hero banner copy updated autonomously','success');}
-          }catch(e){push(`⚠️ Hero optimization failed: ${e.message}`,'warn');}
-        }
-      }
-      if(changed){setPromoBanners(updated);LSS('bx_infeed',updated);}
-      const now=Date.now();setAgentLastRun(now);LSS('bx_agr',now);
-      setAnaKey(k=>k+1);
-      push(`✅ Cycle complete. Next in ${cfg.interval}min.`,'success');
-    }catch(e){push(`❌ Agent error: ${e.message}`,'error');}
-    finally{setAgentRunning(false);}
-  };
+  const addToCart=p=>{setCart(prev=>{const ex=prev.find(i=>i.id===p.id);return ex?prev.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i):[...prev,{...p,qty:1}];});setCartOpen(true);addToast(`${p.name.substring(0,24)} added`,"success");trackBeh(p.category);};
   const updQty=(id,d)=>setCart(prev=>prev.map(i=>i.id===id?{...i,qty:Math.max(1,i.qty+d)}:i));
   const remItem=id=>setCart(prev=>prev.filter(i=>i.id!==id));
   const applyCP=()=>{const cp=getCoupons().find(c=>c.code===couponInput.trim().toUpperCase()&&c.active);if(cp){setAppliedCoupon(cp);}else{setAErr(t.invalidCoupon);setTimeout(()=>setAErr(""),2000);}};
@@ -916,16 +810,11 @@ const [promoSlide,setPromoSlide]=useState(0);
       </div>
     </>}
 
-    {/* ANNOUNCEMENT BAR — CSS infinite marquee */}
-    {annVisible&&<div style={{position:"sticky",top:0,zIndex:30,background:"#000",height:annHiding?"0":"38px",maxHeight:annHiding?"0":"38px",overflow:"hidden",display:"flex",alignItems:"center",opacity:annHiding?0:1,transition:"opacity 0.3s ease,max-height 0.35s ease,height 0.35s ease",flexShrink:0}}>
-      <div className="ann-mq">
-        {[...annPhrases,...annPhrases].map((ph,i)=>(
-          <span key={i} style={{display:"inline-flex",alignItems:"center",gap:"8px",padding:"0 32px",fontSize:"12px",color:"#fff",fontWeight:500,flexShrink:0,whiteSpace:"nowrap"}}>
-            <i className="ti ti-truck" style={{fontSize:"11px",opacity:0.75,flexShrink:0}}/>{ph}<span style={{opacity:0.3,marginLeft:"8px"}}>·</span>
-          </span>
-        ))}
-      </div>
-      <button onClick={dismissAnn} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,0.65)",fontSize:"13px",lineHeight:1,padding:"4px",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}><i className="ti ti-x"/></button>
+    {/* ANNOUNCEMENT BAR */}
+    {annVisible&&<div style={{position:"sticky",top:0,zIndex:30,background:"#f5f0e8",borderBottom:"1px solid #d8d2c8",padding:"10px 20px",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",opacity:annHiding?0:1,maxHeight:annHiding?"0":"60px",overflow:"hidden",transition:"opacity 0.3s ease, max-height 0.3s ease",flexShrink:0}}>
+      <i className="ti ti-truck" style={{color:"#2a7d7b",fontSize:"15px",flexShrink:0}}/>
+      <span style={{fontSize:"12px",color:"#2a7d7b",fontWeight:500,textAlign:"center",opacity:annPhraseFading?0:1,transition:"opacity 0.3s ease",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{annPhrases[annPhraseIdx]||""}</span>
+      <button onClick={dismissAnn} style={{position:"absolute",right:"14px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"#2a7d7b",fontSize:"14px",lineHeight:1,padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"}}><i className="ti ti-x"/></button>
     </div>}
 
     {/* NAVBAR */}
@@ -1094,26 +983,6 @@ const [promoSlide,setPromoSlide]=useState(0);
     {view==="store"&&<div>
       {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
 
-      {/* HERO BANNER */}
-      {heroBanner.active&&flags.hero_banner!==false&&<section style={{position:"relative",height:"82vh",minHeight:"480px",width:"100%",overflow:"hidden",display:"flex",alignItems:"center",flexShrink:0}}>
-        {heroBanner.mediaType==="gradient"&&<div style={{position:"absolute",inset:0,background:heroBanner.gradient,zIndex:0}}/>}
-        {heroBanner.mediaType==="image"&&heroBanner.mediaUrl&&<img src={heroBanner.mediaUrl} alt="" loading="eager" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}
-        {heroBanner.mediaType==="video"&&heroBanner.mediaUrl&&<video autoPlay muted loop playsInline src={heroBanner.mediaUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
-        <div style={{position:"absolute",inset:0,background:`rgba(0,0,0,${heroBanner.overlayOpacity??0.48})`,zIndex:1}}/>
-        <div style={{position:"absolute",width:"700px",height:"700px",borderRadius:"50%",background:"rgba(42,125,123,0.16)",top:"-250px",left:"-200px",filter:"blur(120px)",pointerEvents:"none",zIndex:1}}/>
-        <div style={{position:"absolute",width:"450px",height:"450px",borderRadius:"50%",background:"rgba(180,137,106,0.12)",bottom:"-120px",right:"-80px",filter:"blur(90px)",pointerEvents:"none",zIndex:1}}/>
-        <div style={{position:"relative",zIndex:2,padding:"0 clamp(26px,6vw,80px)",width:"100%",maxWidth:"820px",display:"flex",flexDirection:"column",gap:"22px",alignItems:heroBanner.align==="center"?"center":"flex-start",textAlign:heroBanner.align==="center"?"center":"left"}}>
-          <span style={{background:"rgba(255,255,255,0.12)",backdropFilter:"blur(10px)",color:"#fff",fontSize:"10px",fontWeight:700,padding:"5px 16px",borderRadius:"50px",letterSpacing:"2.5px",textTransform:"uppercase",border:"1px solid rgba(255,255,255,0.22)",display:"inline-block",alignSelf:heroBanner.align==="center"?"center":"flex-start"}}>{heroBanner.tag}</span>
-          <h1 style={{color:"#fff",fontSize:"clamp(30px,6vw,66px)",fontWeight:900,lineHeight:1.08,margin:0,textShadow:"0 4px 28px rgba(0,0,0,0.45)",letterSpacing:"-0.5px"}}>{heroBanner.title}</h1>
-          <p style={{color:"rgba(255,255,255,0.76)",fontSize:"clamp(13px,1.8vw,16px)",lineHeight:1.72,margin:0,maxWidth:"500px"}}>{heroBanner.sub}</p>
-          <button className="btn-t hero-cta-btn" onClick={()=>{setCategory(heroBanner.ctaLink||"all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}} style={{background:"#fff",color:"#1a2424",border:"none",borderRadius:"50px",padding:"14px 36px",fontWeight:800,fontSize:"14px",cursor:"pointer",letterSpacing:"0.3px",boxShadow:"0 4px 28px rgba(0,0,0,0.22)",alignSelf:heroBanner.align==="center"?"center":"flex-start",transition:"transform .2s,box-shadow .2s"}}>{heroBanner.ctaText||"Shop Now"} →</button>
-        </div>
-        <div style={{position:"absolute",bottom:"26px",left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",zIndex:2,opacity:0.55}}>
-          <span style={{color:"#fff",fontSize:"8px",fontWeight:700,letterSpacing:"2.5px",textTransform:"uppercase"}}>Scroll</span>
-          <i className="ti ti-chevrons-down" style={{color:"#fff",fontSize:"14px",animation:"floatB 2s ease-in-out infinite"}}/>
-        </div>
-      </section>}
-
       {/* IN-APP STORIES */}
       <div style={{display:"flex",gap:"12px",padding:"14px 26px 6px",overflowX:"auto",scrollbarWidth:"none",msOverflowStyle:"none"}}>
         {STORIES_DATA.map((story,i)=>(
@@ -1141,26 +1010,6 @@ const [promoSlide,setPromoSlide]=useState(0);
           <button onClick={()=>setStoryOpen(null)} style={{position:"absolute",top:"14px",right:"14px",background:"none",border:"none",cursor:"pointer",color:"#8fa5a5",fontSize:"20px",lineHeight:1,display:"flex",alignItems:"center"}}><i className="ti ti-x"/></button>
         </div>
       </>}
-
-      {/* PROMO GRID — multi-column category banners */}
-      {promoGrid.length>0&&flags.promo_grid!==false&&<section style={{padding:"14px 26px 4px"}}>
-        <div className="pgrid-row" style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(promoGrid.length,3)},1fr)`,gap:"12px"}}>
-          {promoGrid.map((item)=>(
-            <article key={item.id} className="pgrid-item reveal-card" onClick={()=>{setCategory(item.cat);setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}} style={{position:"relative",height:"196px",borderRadius:"18px",overflow:"hidden",cursor:"pointer"}}>
-              {item.mediaType==="gradient"&&<div style={{position:"absolute",inset:0,background:item.gradient,zIndex:0}}/>}
-              {item.mediaType==="image"&&item.mediaUrl&&<img src={item.mediaUrl} alt={item.title} loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}
-              {item.mediaType==="video"&&item.mediaUrl&&<video autoPlay muted loop playsInline src={item.mediaUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
-              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.36)",zIndex:1}}/>
-              <div style={{position:"absolute",inset:0,zIndex:2,padding:"20px 22px",display:"flex",flexDirection:"column",justifyContent:"flex-end",gap:"5px"}}>
-                <span style={{color:"rgba(255,255,255,0.55)",fontSize:"8px",fontWeight:700,letterSpacing:"2.5px",textTransform:"uppercase"}}>{item.tag}</span>
-                <h3 style={{color:"#fff",fontSize:"17px",fontWeight:800,margin:0,lineHeight:1.2,textShadow:"0 2px 8px rgba(0,0,0,0.3)"}}>{item.title}</h3>
-                <p style={{color:"rgba(255,255,255,0.68)",fontSize:"11px",lineHeight:1.5,margin:0}}>{item.sub}</p>
-                <span style={{color:"#fff",fontSize:"11px",fontWeight:700,marginTop:"4px",display:"inline-flex",alignItems:"center",gap:"4px"}}>{item.cta}<i className="ti ti-arrow-right" style={{fontSize:"10px"}}/></span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>}
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(12,1fr)",gap:"10px",padding:"14px 26px 10px"}}>
       <div style={{gridColumn:"span 7",position:"relative",overflow:"hidden",borderRadius:"18px",minHeight:"380px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType==="video"?{}:{background:theme==="blex"?"linear-gradient(140deg,#d8ecec 0%,#ede9e1 55%,#dff0f0 100%)":favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
@@ -1444,15 +1293,7 @@ const [promoSlide,setPromoSlide]=useState(0);
                 <div style={{width:"36px",height:"36px",borderRadius:"50%",border:"1.5px solid #2a7d7b",display:"flex",alignItems:"center",justifyContent:"center",color:"#2a7d7b",fontSize:"16px",fontWeight:700,transition:"all .2s"}} onMouseEnter={e=>{e.currentTarget.style.background="#2a7d7b";e.currentTarget.style.color="#fff";}} onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color="#2a7d7b";}}>→</div>
               </div>
             </div>
-            {filteredFinal.map((p,idx)=>{const _bi=Math.floor(idx/BANNER_INTERVAL)-1;const _bRaw=idx>0&&idx%BANNER_INTERVAL===0&&flags.promo_banners!==false?promoBanners[_bi%promoBanners.length]:null;const _b=_bRaw?getActiveBanner(_bRaw):null;const _LC=['tall','split','panorama','oversized'];const _tpl=_b?(_b.layout_template&&_b.layout_template!=='auto'?_b.layout_template:_LC[_bi%4]):null;const _nav=()=>{if(_b){trackBannerClk(_b.id,_b._variant||'A');}setCategory(_b?.cat||'all');document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});};const _med=(st={})=>(<>{_b.media.type==="gradient"&&<div style={{position:"absolute",inset:0,background:_b.media.value,zIndex:0,...st}}/>}{_b.media.type==="image"&&_b.media.url&&<img src={_b.media.url} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0,...st}} onError={e=>e.target.style.display="none"}/>}{_b.media.type==="video"&&_b.media.url&&<video autoPlay muted loop playsInline src={_b.media.url} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0,...st}}/>}</>);return(<React.Fragment key={p.id}>
-              {/* ── Template A: Tall Portrait ── */}
-              {_b&&_tpl==='tall'&&<div className="reveal-card fu banner-tall" style={{gridColumn:"span 2",position:"relative",height:"480px",borderRadius:"18px",overflow:"hidden",margin:"6px 0",cursor:"pointer"}} onClick={_nav}>{_med()}<div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.18) 50%,transparent 100%)",zIndex:1}}/><div style={{position:"absolute",bottom:0,left:0,right:0,zIndex:2,padding:"22px 20px"}}><div style={{background:"rgba(0,0,0,0.36)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderRadius:"14px",padding:"16px 20px",border:"1px solid rgba(255,255,255,0.1)",maxWidth:"280px",display:"inline-block"}}><span style={{color:"rgba(255,255,255,0.55)",fontSize:"8px",fontWeight:700,letterSpacing:"2.5px",textTransform:"uppercase",display:"block",marginBottom:"8px"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(16px,2.5vw,22px)",fontWeight:900,lineHeight:1.15,margin:"0 0 13px",textShadow:"0 2px 8px rgba(0,0,0,0.4)",letterSpacing:"-0.2px"}}>{_b.headline}</h2><button className="btn-t" onClick={e=>{e.stopPropagation();_nav();}} style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(8px)",color:"#fff",border:"1px solid rgba(255,255,255,0.28)",borderRadius:"50px",padding:"8px 18px",fontWeight:700,fontSize:"11px",cursor:"pointer"}}>{_b.cta}</button></div></div></div>}
-              {/* ── Template B: Split Feature Screen ── */}
-              {_b&&_tpl==='split'&&<div className="reveal-card fu" style={{gridColumn:"1/-1",borderRadius:"18px",overflow:"hidden",margin:"6px 0",cursor:"pointer"}} onClick={_nav}><div className="banner-split-inner"><div style={{position:"relative",minHeight:"264px",flex:"1 1 50%"}}>{_med()}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:"88px",opacity:0.09,color:"#fff",userSelect:"none"}}>{CAT_ICONS[_b.cat]||"◈"}</span></div></div><div style={{flex:"1 1 50%",background:"#1a2424",padding:"clamp(22px,4vw,44px) clamp(20px,3vw,38px)",display:"flex",flexDirection:"column",justifyContent:"center",gap:"16px"}}><span style={{color:"rgba(255,255,255,0.38)",fontSize:"8px",fontWeight:700,letterSpacing:"3px",textTransform:"uppercase"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(18px,2.8vw,34px)",fontWeight:900,lineHeight:1.12,margin:0,letterSpacing:"-0.3px"}}>{_b.headline}</h2><p style={{color:"rgba(255,255,255,0.56)",fontSize:"12px",lineHeight:1.78,margin:0}}>{_b.sub}</p>{_b.points&&<ul style={{listStyle:"none",padding:0,margin:0,display:"flex",flexDirection:"column",gap:"8px"}}>{_b.points.map((pt,pi)=><li key={pi} style={{color:"rgba(255,255,255,0.62)",fontSize:"11px",display:"flex",alignItems:"center",gap:"9px"}}><span style={{color:"#2a7d7b",fontSize:"13px",fontWeight:800,flexShrink:0}}>✓</span>{pt}</li>)}</ul>}<button className="btn-t" onClick={e=>{e.stopPropagation();_nav();}} style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"12px 26px",fontWeight:700,fontSize:"13px",cursor:"pointer",alignSelf:"flex-start"}}>{_b.cta}</button></div></div></div>}
-              {/* ── Template C: Full-Bleed Panorama ── */}
-              {_b&&_tpl==='panorama'&&<div className="reveal-card fu" style={{gridColumn:"1/-1",position:"relative",height:"320px",borderRadius:"18px",overflow:"hidden",margin:"6px 0",cursor:"pointer"}} onClick={_nav}>{_med()}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.42)",zIndex:1}}/><div style={{position:"absolute",width:"600px",height:"600px",borderRadius:"50%",background:"rgba(255,255,255,0.04)",top:"-200px",right:"-80px",filter:"blur(100px)",pointerEvents:"none",zIndex:1}}/><div style={{position:"absolute",inset:0,zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"28px 44px",gap:"13px",textAlign:"center"}}><span style={{background:"rgba(255,255,255,0.13)",backdropFilter:"blur(8px)",color:"#fff",fontSize:"9px",fontWeight:700,padding:"4px 14px",borderRadius:"50px",letterSpacing:"2px",textTransform:"uppercase",border:"1px solid rgba(255,255,255,0.2)"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(24px,4.5vw,50px)",fontWeight:900,lineHeight:1.08,margin:0,textShadow:"0 4px 22px rgba(0,0,0,0.45)",letterSpacing:"-0.5px"}}>{_b.headline}</h2><p style={{color:"rgba(255,255,255,0.74)",fontSize:"clamp(12px,1.5vw,15px)",lineHeight:1.68,margin:0,maxWidth:"520px"}}>{_b.sub}</p><button className="btn-t" onClick={e=>{e.stopPropagation();_nav();}} style={{background:"#fff",color:"#1a2424",border:"none",borderRadius:"50px",padding:"11px 30px",fontWeight:800,fontSize:"13px",cursor:"pointer",marginTop:"2px"}}>{_b.cta}</button></div></div>}
-              {/* ── Template D: Oversized Focus Card w/ Hotspots ── */}
-              {_b&&_tpl==='oversized'&&<div className="reveal-card fu banner-oversized" style={{gridColumn:"span 2",position:"relative",height:"460px",borderRadius:"18px",overflow:"hidden",margin:"6px 0",cursor:"pointer"}} onClick={_nav}>{_med({transform:"scale(1.03)"})}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.34)",zIndex:1}}/><div style={{position:"absolute",width:"500px",height:"500px",borderRadius:"50%",background:"rgba(42,125,123,0.14)",bottom:"-150px",left:"-100px",filter:"blur(90px)",pointerEvents:"none",zIndex:1}}/>{[[22,36],[61,50],[40,72]].map(([x,y],hi)=><div key={hi} style={{position:"absolute",left:`${x}%`,top:`${y}%`,zIndex:3,transform:"translate(-50%,-50%)"}}><div className="hotspot-ring" style={{animation:"pulse 2.4s ease-in-out infinite",animationDelay:`${hi*0.8}s`}} title={`Collection detail ${hi+1}`}/></div>)}<div style={{position:"absolute",inset:0,zIndex:2,display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:"26px 28px"}}><div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:"16px",flexWrap:"wrap"}}><div><span style={{color:"rgba(255,255,255,0.48)",fontSize:"8px",fontWeight:700,letterSpacing:"3px",textTransform:"uppercase",display:"block",marginBottom:"9px"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(20px,3.5vw,42px)",fontWeight:900,lineHeight:1.08,margin:0,textShadow:"0 2px 16px rgba(0,0,0,0.55)",letterSpacing:"-0.4px",maxWidth:"380px"}}>{_b.headline}</h2></div><button className="btn-t" onClick={e=>{e.stopPropagation();_nav();}} style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(10px)",color:"#fff",border:"1px solid rgba(255,255,255,0.28)",borderRadius:"50px",padding:"11px 26px",fontWeight:700,fontSize:"12px",cursor:"pointer",flexShrink:0}}>{_b.cta}</button></div></div></div>}
+            {filteredFinal.map((p,idx)=>{const _b=idx>0&&idx%BANNER_INTERVAL===0&&flags.promo_banners!==false?PROMO_BANNERS[(Math.floor(idx/BANNER_INTERVAL)-1)%PROMO_BANNERS.length]:null;return(<React.Fragment key={p.id}>{_b&&_b.layout==="fullwidth"&&<div className="reveal-card fu" style={{gridColumn:"1/-1",position:"relative",height:"280px",borderRadius:"18px",overflow:"hidden",margin:"6px 0",cursor:"pointer"}} onClick={()=>{setCategory(_b.cat);document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});}}>{_b.media.type==="gradient"&&<div style={{position:"absolute",inset:0,background:_b.media.value,zIndex:0}}/>}{_b.media.type==="image"&&_b.media.url&&<img src={_b.media.url} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}{_b.media.type==="video"&&_b.media.url&&<video autoPlay muted loop playsInline src={_b.media.url} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.38)",zIndex:1}}/><div style={{position:"absolute",width:"500px",height:"500px",borderRadius:"50%",background:"rgba(255,255,255,0.04)",top:"-150px",right:"-100px",filter:"blur(80px)",pointerEvents:"none",zIndex:1}}/><div style={{position:"absolute",inset:0,zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:_b.align==="center"?"center":"flex-start",padding:"36px 44px",gap:"12px",textAlign:_b.align==="center"?"center":"left"}}><span style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(8px)",color:"#fff",fontSize:"9px",fontWeight:700,padding:"4px 13px",borderRadius:"50px",letterSpacing:"2px",textTransform:"uppercase",border:"1px solid rgba(255,255,255,0.2)",display:"inline-block",alignSelf:_b.align==="center"?"center":"flex-start"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(22px,4vw,40px)",fontWeight:800,lineHeight:1.15,margin:0,textShadow:"0 2px 16px rgba(0,0,0,0.3)"}}>{_b.headline}</h2><p style={{color:"rgba(255,255,255,0.8)",fontSize:"13px",lineHeight:1.65,margin:0,maxWidth:"480px"}}>{_b.sub}</p><button className="btn-t" onClick={e=>{e.stopPropagation();setCategory(_b.cat);document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});}} style={{background:"#fff",color:"#1a2424",border:"none",borderRadius:"50px",padding:"10px 26px",fontWeight:700,fontSize:"13px",cursor:"pointer",alignSelf:_b.align==="center"?"center":"flex-start",marginTop:"4px"}}>{_b.cta}</button></div></div>}{_b&&_b.layout!=="fullwidth"&&<div className="reveal-card fu promo-split" style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",borderRadius:"18px",overflow:"hidden",margin:"6px 0",minHeight:"240px",cursor:"pointer"}} onClick={()=>{setCategory(_b.cat);document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});}}><div style={{position:"relative",background:_b.media.type==="gradient"?_b.media.value:"#1a2424",minHeight:"240px"}}>{_b.media.type==="image"&&_b.media.url&&<img src={_b.media.url} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>}{_b.media.type==="video"&&_b.media.url&&<video autoPlay muted loop playsInline src={_b.media.url} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.22)"}}/><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:"72px",opacity:0.12,color:"#fff"}}>{CAT_ICONS[_b.cat]||"◈"}</span></div></div><div style={{background:"#1a2424",padding:"36px 32px",display:"flex",flexDirection:"column",justifyContent:"center",gap:"14px"}}><span style={{color:"rgba(255,255,255,0.45)",fontSize:"9px",fontWeight:700,letterSpacing:"3px",textTransform:"uppercase"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(19px,3vw,30px)",fontWeight:800,lineHeight:1.2,margin:0}}>{_b.headline}</h2><p style={{color:"rgba(255,255,255,0.62)",fontSize:"12px",lineHeight:1.7,margin:0}}>{_b.sub}</p>{_b.points&&<ul style={{listStyle:"none",padding:0,margin:0,display:"flex",flexDirection:"column",gap:"6px"}}>{_b.points.map((pt,pi)=><li key={pi} style={{color:"rgba(255,255,255,0.68)",fontSize:"11px",display:"flex",alignItems:"center",gap:"8px"}}><span style={{color:"#2a7d7b",fontSize:"14px",fontWeight:700,flexShrink:0}}>✓</span>{pt}</li>)}</ul>}<button className="btn-t" onClick={e=>{e.stopPropagation();setCategory(_b.cat);document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});}} style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"10px 22px",fontWeight:700,fontSize:"13px",cursor:"pointer",alignSelf:"flex-start"}}>{_b.cta}</button></div></div>}
               <div className="card-wrap holo-card reveal-card" data-delay={(idx*100).toString()} onMouseEnter={e=>{setHovered(p.id);e.currentTarget.style.borderColor="#3d9e9b";}} onMouseLeave={e=>{setHovered(null);e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';e.currentTarget.style.borderColor=c.border;}} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
                 style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"18px",border:`1px solid ${c.border}`,overflow:"hidden",boxShadow:"0 2px 8px rgba(42,125,123,.04)",transition:"all .3s cubic-bezier(.23,1,.32,1)"}}>
                 <div style={{height:"188px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
@@ -1651,23 +1492,6 @@ const [promoSlide,setPromoSlide]=useState(0);
             {p.stock===0&&!p.is_preorder&&geoSupplier&&!geoSupplier.available&&geoSupplier.similar?.length>0&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`}}><p style={{fontSize:"11px",fontWeight:"700",color:c.error,marginBottom:"8px"}}>Not available from nearby supplier</p><div style={{display:"flex",flexDirection:"column",gap:"5px"}}>{geoSupplier.similar.map(s=><div key={s.id} className="btn-t" onClick={()=>{setSelectedProduct(s);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 8px",background:c.card,borderRadius:"7px",border:`1px solid ${c.border}`}}><span style={{flex:1,fontSize:"11px",fontWeight:"600"}}>{s.name}</span><span style={{fontSize:"11px",fontWeight:"700"}}>{fmt(s.price)}</span></div>)}</div></div>}
           </div>
         </div>
-        {/* PDP PROMOTIONAL BANNER */}
-        {pdpBanner.active&&flags.pdp_banner!==false&&<section style={{position:"relative",borderRadius:"18px",overflow:"hidden",marginBottom:"28px",cursor:"pointer"}} onClick={()=>{setCategory(pdpBanner.ctaLink||p.category);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),80);}}>
-          <div style={{position:"relative",height:"130px",display:"flex",alignItems:"center"}}>
-            {pdpBanner.mediaType==="gradient"&&<div style={{position:"absolute",inset:0,background:pdpBanner.gradient,zIndex:0}}/>}
-            {pdpBanner.mediaType==="image"&&pdpBanner.mediaUrl&&<img src={pdpBanner.mediaUrl} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}
-            {pdpBanner.mediaType==="video"&&pdpBanner.mediaUrl&&<video autoPlay muted loop playsInline src={pdpBanner.mediaUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
-            <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.42)",zIndex:1}}/>
-            <div style={{position:"absolute",width:"400px",height:"400px",borderRadius:"50%",background:"rgba(255,255,255,0.05)",top:"-150px",right:"-80px",filter:"blur(70px)",pointerEvents:"none",zIndex:1}}/>
-            <div style={{position:"relative",zIndex:2,padding:"0 28px",display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",gap:"16px",flexWrap:"wrap"}}>
-              <div style={{minWidth:0}}>
-                <h3 style={{color:"#fff",fontSize:"clamp(14px,3vw,20px)",fontWeight:800,margin:"0 0 5px",textShadow:"0 2px 10px rgba(0,0,0,0.3)"}}>{pdpBanner.title||"Complete Your Look"}</h3>
-                <p style={{color:"rgba(255,255,255,0.72)",fontSize:"12px",lineHeight:1.6,margin:0,maxWidth:"420px"}}>{pdpBanner.sub}</p>
-              </div>
-              <button className="btn-t" onClick={e=>{e.stopPropagation();setCategory(pdpBanner.ctaLink||p.category);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),80);}} style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(10px)",color:"#fff",border:"1px solid rgba(255,255,255,0.3)",borderRadius:"50px",padding:"10px 22px",fontWeight:700,fontSize:"12px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"background .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.24)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.14)"}>{pdpBanner.ctaText||"Explore Related"} →</button>
-            </div>
-          </div>
-        </section>}
         {p.image_gallery&&(()=>{const g=typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery;const imgs=[{url:g.original,label:"Original",bg:c.chip},{url:g.cleaned,label:"Cleaned",bg:"#fff",text:""},{url:g.cleaned,label:g.promo1?.angle||"Benefit",bg:"#fff",text:g.promo1?.text},{url:g.cleaned,label:g.promo2?.angle||"Lifestyle",bg:"#fff",text:g.promo2?.text}].filter(x=>x.url);return imgs.length?<div style={{marginBottom:"28px"}}><h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"13px"}}>🎨 Image Gallery</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"11px"}}>{imgs.map((im,i)=><div key={i} style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"hidden"}}><div onClick={()=>setPdZoom(im.url)} style={{height:"140px",background:im.bg,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-in"}}><img src={im.url} alt={im.label} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} onError={e=>e.target.parentNode.style.display="none"}/></div><div style={{padding:"10px"}}><p style={{fontWeight:"800",fontSize:"10px",color:c.muted,textTransform:"uppercase",letterSpacing:".5px",marginBottom:im.text?"5px":"0"}}>{im.label}</p>{im.text&&<p style={{fontSize:"11px",color:c.text,lineHeight:1.5}}>{im.text}</p>}</div></div>)}</div></div>:null;})()}
         {(bundleSugg?.products?.length>0||bundleLoading)&&<div style={{marginBottom:"28px"}}>
           <h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"3px"}}>✨ Complete the Look</h2>
@@ -2091,7 +1915,7 @@ const [promoSlide,setPromoSlide]=useState(0);
               </div>
             )}
             <div style={{display:"flex",gap:"3px",marginBottom:"20px",background:c.chip,padding:"3px",borderRadius:"9px",maxWidth:"100%",overflowX:"auto"}}>
-              {["products","orders","customers","coupons","b2b","returns","rfq","audit","analytics","promotions","suppliers","supplier-analytics","dropshipping","settings","trends","ai-agents","banner-ai"].map(tab=>(
+              {["products","orders","customers","coupons","b2b","returns","rfq","audit","analytics","promotions","suppliers","supplier-analytics","dropshipping","settings","trends","ai-agents"].map(tab=>(
                 <button key={tab} onClick={()=>{setAdminTab(tab);if(tab==="orders")fetchOrders();if(tab==="b2b")fetchB2BApps();if(tab==="returns")fetchRMA();if(tab==="rfq")fetchRFQ();if(tab==="audit")fetchAuditLogs();if(tab==="promotions")fetchPromos();if(tab==="suppliers")fetchSuppliers();if(tab==="supplier-analytics")fetchSupplierAnalytics();if(tab==="settings"){fetchApiKeys();fetchApStatus();}if(tab==="dropshipping")cjCheckStatus();if(tab==="ai-agents"){fetchAgentStatus();fetchAgentLogs();}}}
                   style={{background:adminTab===tab?c.accent:"transparent",color:adminTab===tab?c.accentTxt:c.muted,border:"none",padding:"6px 14px",borderRadius:"6px",cursor:"pointer",fontWeight:"700",fontSize:"12px",transition:"all .2s",flexShrink:0,whiteSpace:"nowrap"}}>
                   {t[tab]||tab.charAt(0).toUpperCase()+tab.slice(1)}
@@ -2494,7 +2318,7 @@ const [promoSlide,setPromoSlide]=useState(0);
               <h3 style={{fontWeight:"800",fontSize:"15px",marginBottom:"4px"}}>🏪 Store Features</h3>
               <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Toggle storefront capabilities in real time.</p>
               <div style={{display:"flex",flexDirection:"column",gap:"7px",marginBottom:"24px"}}>
-                {[{k:"hero_banner",i:"🌅",d:"Full-bleed hero banner at top of store"},{k:"promo_grid",i:"◫",d:"Multi-column promo banners below hero"},{k:"pdp_banner",i:"🏷",d:"Contextual promo block on product pages"},{k:"promo_banners",i:"🖼",d:"Dynamic in-feed promotional banners between product cards"},{k:"loyalty_points",i:"⭐",d:"Points rewards for every purchase"},{k:"wallet",i:"💳",d:"Digital wallet for quick payments"},{k:"b2b",i:"🏢",d:"Wholesale pricing & business accounts"},{k:"trade_in",i:"🔄",d:"Accept device trade-ins for store credit"},{k:"group_cart",i:"👥",d:"Collaborative shared shopping carts"},{k:"back_in_stock",i:"🔔",d:"Notify customers when items restock"},{k:"smart_bundles",i:"🎁",d:"Curated product bundles & deals"},{k:"digital_warranty",i:"🛡",d:"Digital warranty registration & tracking"},{k:"coupons",i:"🏷",d:"Discount codes and promotional offers"},{k:"vat",i:"🧾",d:"Apply 15% VAT to all transactions"},{k:"cod",i:"💵",d:"Cash on delivery payment option"}].map(({k,i,d})=>(
+                {[{k:"promo_banners",i:"🖼",d:"Dynamic in-feed promotional banners between product cards"},{k:"loyalty_points",i:"⭐",d:"Points rewards for every purchase"},{k:"wallet",i:"💳",d:"Digital wallet for quick payments"},{k:"b2b",i:"🏢",d:"Wholesale pricing & business accounts"},{k:"trade_in",i:"🔄",d:"Accept device trade-ins for store credit"},{k:"group_cart",i:"👥",d:"Collaborative shared shopping carts"},{k:"back_in_stock",i:"🔔",d:"Notify customers when items restock"},{k:"smart_bundles",i:"🎁",d:"Curated product bundles & deals"},{k:"digital_warranty",i:"🛡",d:"Digital warranty registration & tracking"},{k:"coupons",i:"🏷",d:"Discount codes and promotional offers"},{k:"vat",i:"🧾",d:"Apply 15% VAT to all transactions"},{k:"cod",i:"💵",d:"Cash on delivery payment option"}].map(({k,i,d})=>(
                   <div key={k} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:"10px"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"10px",minWidth:0}}><span style={{fontSize:"20px",flexShrink:0}}>{i}</span><div style={{minWidth:0}}><p style={{fontWeight:"700",fontSize:"13px"}}>{k.replace(/_/g," ").replace(/\b\w/g,l=>l.toUpperCase())}</p><p style={{color:c.muted,fontSize:"11px",marginTop:"1px"}}>{d}</p></div></div>
                     <button className="btn-t" onClick={()=>toggleFlag(k,!flags[k])} style={{background:flags[k]?c.success+"22":"transparent",border:`1.5px solid ${flags[k]?c.success:c.border}`,color:flags[k]?c.success:c.muted,padding:"6px 18px",borderRadius:"20px",cursor:"pointer",fontWeight:"800",fontSize:"12px",flexShrink:0,transition:"all .2s"}}>{flags[k]?"ON":"OFF"}</button>
@@ -2570,126 +2394,6 @@ const [promoSlide,setPromoSlide]=useState(0);
                 ))}
               </div>
               <button className="btn-t" onClick={()=>{const n=[...annPhrases,"New announcement phrase"];setAnnPhrases(n);LSS('bx_ann_p',n);}} style={btnP({width:"auto",padding:"8px 16px",fontSize:"12px"})}>+ Add Phrase</button>
-
-              {/* ── In-Feed Banners ── */}
-              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"26px"}}>🎨 In-Feed Banners</h4>
-              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Injected every {BANNER_INTERVAL} products. Each banner cycles through 4 templates (tall → split → panorama → oversized) unless a manual override is set.</p>
-              <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"10px"}}>
-                {promoBanners.map((bn,bi)=>(
-                  <div key={bn.id} style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"12px 14px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                        <span style={{background:c.chip,borderRadius:"6px",padding:"2px 8px",fontSize:"10px",fontWeight:700,color:c.accent,textTransform:"uppercase"}}>{bn.layout_template||"auto"}</span>
-                        <span style={{fontWeight:700,fontSize:"12px"}}>{bn.headline||`Banner ${bi+1}`}</span>
-                      </div>
-                      <button onClick={()=>{const n=promoBanners.filter((_,j)=>j!==bi);const upd=n.length?n:DFLT_INFEED_BANNERS;setPromoBanners(upd);LSS('bx_infeed',upd);}} style={{background:"none",border:`1px solid ${c.error}`,color:c.error,borderRadius:"7px",padding:"4px 8px",cursor:"pointer",fontSize:"11px",fontWeight:700,display:"flex",alignItems:"center"}}><i className="ti ti-trash"/></button>
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}}>
-                      <div style={{gridColumn:"1/-1"}}>
-                        <p style={{fontSize:"9px",fontWeight:700,color:c.muted,marginBottom:"2px",textTransform:"uppercase",letterSpacing:".5px"}}>Layout Template</p>
-                        <select value={bn.layout_template||"auto"} onChange={e=>{const n=promoBanners.map((x,j)=>j===bi?{...x,layout_template:e.target.value}:x);setPromoBanners(n);LSS('bx_infeed',n);}} style={{...inp(false),fontSize:"11px",padding:"6px 10px"}}>
-                          <option value="auto">Auto (index-based cycle)</option>
-                          <option value="tall">Tall Portrait</option>
-                          <option value="split">Split Feature Screen</option>
-                          <option value="panorama">Full-Bleed Panorama</option>
-                          <option value="oversized">Oversized Focus Card</option>
-                        </select>
-                      </div>
-                      {[["Tag","tag"],["Headline","headline"],["Subtitle","sub"],["CTA Text","cta"],["Gradient CSS","media.value"],["Category","cat"]].map(([l,f])=>{const isNested=f.includes(".");const val=isNested?bn.media?.value||"":bn[f]||"";const onCh=e=>{const n=promoBanners.map((x,j)=>{if(j!==bi)return x;if(isNested)return{...x,media:{...x.media,value:e.target.value}};return{...x,[f]:e.target.value};});setPromoBanners(n);LSS('bx_infeed',n);};return(<div key={f}><p style={{fontSize:"9px",fontWeight:700,color:c.muted,marginBottom:"2px",textTransform:"uppercase",letterSpacing:".5px"}}>{l}</p><input value={val} onChange={onCh} style={{...inp(false),fontSize:"11px",padding:"6px 10px"}}/></div>);})}
-                      <div>
-                        <p style={{fontSize:"9px",fontWeight:700,color:c.muted,marginBottom:"2px",textTransform:"uppercase",letterSpacing:".5px"}}>Media Type</p>
-                        <select value={bn.media?.type||"gradient"} onChange={e=>{const n=promoBanners.map((x,j)=>j===bi?{...x,media:{...x.media,type:e.target.value}}:x);setPromoBanners(n);LSS('bx_infeed',n);}} style={{...inp(false),fontSize:"11px",padding:"6px 10px"}}>
-                          <option value="gradient">Gradient</option><option value="image">Image URL</option><option value="video">Video URL</option>
-                        </select>
-                      </div>
-                      {(bn.media?.type==="image"||bn.media?.type==="video")&&<div>
-                        <p style={{fontSize:"9px",fontWeight:700,color:c.muted,marginBottom:"2px",textTransform:"uppercase",letterSpacing:".5px"}}>Media URL</p>
-                        <input value={bn.media?.url||""} onChange={e=>{const n=promoBanners.map((x,j)=>j===bi?{...x,media:{...x.media,url:e.target.value}}:x);setPromoBanners(n);LSS('bx_infeed',n);}} style={{...inp(false),fontSize:"11px",padding:"6px 10px"}} placeholder="https://..."/>
-                      </div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button className="btn-t" onClick={()=>{const n=[...promoBanners,{id:Date.now(),layout_template:"auto",media:{type:"gradient",value:"linear-gradient(135deg,#1a2424,#2a7d7b)"},tag:"New",headline:"New In-Feed Banner",sub:"Description text",cta:"Shop →",cat:"all"}];setPromoBanners(n);LSS('bx_infeed',n);}} style={btnP({width:"auto",padding:"8px 16px",fontSize:"12px"})}>+ Add In-Feed Banner</button>
-
-              {/* ── Hero Banner ── */}
-              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"26px"}}>🌅 Hero Banner</h4>
-              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Full-bleed banner at the top of the store. Toggle via Feature Flags → hero_banner.</p>
-              <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
-                {[["Tag / Eyebrow","tag"],["Headline","title"],["Subtitle","sub"],["CTA Button Text","ctaText"],["CTA Category (all / clothing / electronics / jewelry…)","ctaLink"],["Gradient CSS (or leave blank for image/video)","gradient"]].map(([label,field])=>(
-                  <div key={field}>
-                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>{label}</p>
-                    <input value={heroBanner[field]||""} onChange={e=>{const n={...heroBanner,[field]:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}/>
-                  </div>
-                ))}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
-                  <div>
-                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media Type</p>
-                    <select value={heroBanner.mediaType} onChange={e=>{const n={...heroBanner,mediaType:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}>
-                      <option value="gradient">Gradient</option><option value="image">Image URL</option><option value="video">Video URL</option>
-                    </select>
-                  </div>
-                  <div>
-                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Alignment</p>
-                    <select value={heroBanner.align||"left"} onChange={e=>{const n={...heroBanner,align:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}>
-                      <option value="left">Left</option><option value="center">Center</option>
-                    </select>
-                  </div>
-                </div>
-                {(heroBanner.mediaType==="image"||heroBanner.mediaType==="video")&&<div>
-                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media URL</p>
-                  <input value={heroBanner.mediaUrl||""} onChange={e=>{const n={...heroBanner,mediaUrl:e.target.value};setHeroBanner(n);LSS('bx_hero',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}} placeholder="https://..."/>
-                </div>}
-                <div>
-                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Dark Overlay ({Math.round((heroBanner.overlayOpacity??0.48)*100)}%)</p>
-                  <input type="range" min="0" max="0.85" step="0.05" value={heroBanner.overlayOpacity??0.48} onChange={e=>{const n={...heroBanner,overlayOpacity:Number(e.target.value)};setHeroBanner(n);LSS('bx_hero',n);}} style={{width:"100%",accentColor:"#2a7d7b"}}/>
-                </div>
-              </div>
-
-              {/* ── Promo Grid ── */}
-              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"26px"}}>◫ Promo Grid</h4>
-              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>2–3 column category banners below the stories row. Toggle via promo_grid flag.</p>
-              <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"10px"}}>
-                {promoGrid.map((item,gi)=>(
-                  <div key={item.id} style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"12px 14px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
-                      <span style={{fontWeight:700,fontSize:"12px"}}>{item.title||`Banner ${gi+1}`}</span>
-                      <button onClick={()=>{const n=promoGrid.filter((_,j)=>j!==gi);const upd=n.length?n:DFLT_PROMO_GRID;setPromoGrid(upd);LSS('bx_pgrid',upd);}} style={{background:"none",border:`1px solid ${c.error}`,color:c.error,borderRadius:"7px",padding:"4px 8px",cursor:"pointer",fontSize:"11px",fontWeight:700,display:"flex",alignItems:"center"}}><i className="ti ti-trash"/></button>
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}}>
-                      {[["Tag","tag"],["Title","title"],["Subtitle","sub"],["CTA","cta"],["Gradient CSS","gradient"],["Category","cat"]].map(([l,f])=>(
-                        <div key={f}>
-                          <p style={{fontSize:"9px",fontWeight:700,color:c.muted,marginBottom:"2px",textTransform:"uppercase",letterSpacing:".5px"}}>{l}</p>
-                          <input value={item[f]||""} onChange={e=>{const n=promoGrid.map((x,j)=>j===gi?{...x,[f]:e.target.value}:x);setPromoGrid(n);LSS('bx_pgrid',n);}} style={{...inp(false),fontSize:"11px",padding:"6px 10px"}}/>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {promoGrid.length<3&&<button className="btn-t" onClick={()=>{const n=[...promoGrid,{id:Date.now(),mediaType:"gradient",mediaUrl:"",gradient:"linear-gradient(135deg,#1a2424,#2a7d7b)",tag:"New",title:"New Banner",sub:"Description",cta:"Shop →",cat:"all"}];setPromoGrid(n);LSS('bx_pgrid',n);}} style={btnP({width:"auto",padding:"8px 16px",fontSize:"12px"})}>+ Add Banner</button>}
-
-              {/* ── PDP Banner ── */}
-              <h4 style={{fontWeight:"700",fontSize:"14px",marginBottom:"4px",marginTop:"26px"}}>🏷 PDP Promotional Banner</h4>
-              <p style={{color:c.muted,fontSize:"12px",marginBottom:"12px"}}>Contextual upsell block shown mid-page on every product detail page. Toggle via pdp_banner flag.</p>
-              <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
-                {[["Headline","title"],["Subtitle","sub"],["CTA Button Text","ctaText"],["CTA Category","ctaLink"],["Gradient CSS","gradient"]].map(([label,field])=>(
-                  <div key={field}>
-                    <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>{label}</p>
-                    <input value={pdpBanner[field]||""} onChange={e=>{const n={...pdpBanner,[field]:e.target.value};setPdpBanner(n);LSS('bx_pdpb',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}/>
-                  </div>
-                ))}
-                <div>
-                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media Type</p>
-                  <select value={pdpBanner.mediaType} onChange={e=>{const n={...pdpBanner,mediaType:e.target.value};setPdpBanner(n);LSS('bx_pdpb',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}}>
-                    <option value="gradient">Gradient</option><option value="image">Image URL</option><option value="video">Video URL</option>
-                  </select>
-                </div>
-                {(pdpBanner.mediaType==="image"||pdpBanner.mediaType==="video")&&<div>
-                  <p style={{fontSize:"10px",fontWeight:700,color:c.muted,marginBottom:"3px",textTransform:"uppercase",letterSpacing:".5px"}}>Media URL</p>
-                  <input value={pdpBanner.mediaUrl||""} onChange={e=>{const n={...pdpBanner,mediaUrl:e.target.value};setPdpBanner(n);LSS('bx_pdpb',n);}} style={{...inp(false),fontSize:"12px",padding:"8px 12px"}} placeholder="https://..."/>
-                </div>}
-              </div>
             </div>}
             {adminTab==="trends"&&<div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}}>
@@ -2789,155 +2493,6 @@ const [promoSlide,setPromoSlide]=useState(0);
                 </div>)}
               </div>
             </div>}
-            {adminTab==="banner-ai"&&(()=>{
-              const ana=LS('bx_bana')||{};
-              const abCfg=LS('bx_abv2')||{};
-              const allBanners=LS('bx_infeed')||DFLT_INFEED_BANNERS;
-              const fmtCtr=n=>n>0?(n*100).toFixed(1)+'%':'—';
-              const fmtNum=n=>n||0;
-              return<div key={anaKey}>
-                {/* Agent Control Card */}
-                <div style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"14px",padding:"16px 18px",marginBottom:"14px"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px",flexWrap:"wrap",gap:"8px"}}>
-                    <div>
-                      <h3 style={{fontWeight:"800",fontSize:"15px",margin:0}}>🤖 Banner AI Agent</h3>
-                      <p style={{fontSize:"11px",color:c.muted,marginTop:"3px"}}>Autonomous A/B testing & LLM copy optimization</p>
-                    </div>
-                    <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
-                      {agentLastRun&&<span style={{fontSize:"10px",color:c.muted}}>Last run: {new Date(agentLastRun).toLocaleTimeString()}</span>}
-                      <button className="btn-t" onClick={runAgentCycle} disabled={agentRunning} style={{background:agentRunning?"#888":c.accent,color:c.accentTxt,border:"none",borderRadius:"8px",padding:"7px 16px",cursor:agentRunning?"not-allowed":"pointer",fontSize:"12px",fontWeight:"700"}}>
-                        {agentRunning?"⏳ Running…":"▶ Run Now"}
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:"10px"}}>
-                    {/* Enable toggle */}
-                    <div style={{background:c.chip,borderRadius:"10px",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div><p style={{fontWeight:"700",fontSize:"12px"}}>Auto-Scheduler</p><p style={{fontSize:"10px",color:c.muted}}>Run agent on interval</p></div>
-                      <button onClick={()=>{const n={...agentCfg,enabled:!agentCfg.enabled};setAgentCfg(n);LSS('bx_agc',n);}} style={{background:agentCfg.enabled?c.accent:"#444",border:"none",borderRadius:"20px",padding:"4px 12px",color:agentCfg.enabled?c.accentTxt:"#aaa",cursor:"pointer",fontWeight:"700",fontSize:"11px"}}>{agentCfg.enabled?"ON":"OFF"}</button>
-                    </div>
-                    {/* LLM Copywriting toggle */}
-                    <div style={{background:c.chip,borderRadius:"10px",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div><p style={{fontWeight:"700",fontSize:"12px"}}>LLM Copywriting</p><p style={{fontSize:"10px",color:c.muted}}>Generate challengers via AI</p></div>
-                      <button onClick={()=>{const n={...agentCfg,useLlm:!agentCfg.useLlm};setAgentCfg(n);LSS('bx_agc',n);}} style={{background:agentCfg.useLlm?c.accent:"#444",border:"none",borderRadius:"20px",padding:"4px 12px",color:agentCfg.useLlm?c.accentTxt:"#aaa",cursor:"pointer",fontWeight:"700",fontSize:"11px"}}>{agentCfg.useLlm?"ON":"OFF"}</button>
-                    </div>
-                    {/* Image Generation toggle */}
-                    <div style={{background:c.chip,borderRadius:"10px",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div><p style={{fontWeight:"700",fontSize:"12px"}}>Image Generation</p><p style={{fontSize:"10px",color:c.muted}}>AI-generated banner images</p></div>
-                      <button onClick={()=>{const n={...agentCfg,useImgGen:!agentCfg.useImgGen};setAgentCfg(n);LSS('bx_agc',n);}} style={{background:agentCfg.useImgGen?c.accent:"#444",border:"none",borderRadius:"20px",padding:"4px 12px",color:agentCfg.useImgGen?c.accentTxt:"#aaa",cursor:"pointer",fontWeight:"700",fontSize:"11px"}}>{agentCfg.useImgGen?"ON":"OFF"}</button>
-                    </div>
-                    {/* Interval */}
-                    <div style={{background:c.chip,borderRadius:"10px",padding:"10px 12px"}}>
-                      <p style={{fontWeight:"700",fontSize:"12px",marginBottom:"4px"}}>Interval (min)</p>
-                      <input type="number" min="5" max="1440" value={agentCfg.interval} onChange={e=>{const n={...agentCfg,interval:Math.max(5,Number(e.target.value))};setAgentCfg(n);LSS('bx_agc',n);}} style={{...inp(false),padding:"5px 8px",fontSize:"12px",width:"100%"}}/>
-                    </div>
-                    {/* Min impressions */}
-                    <div style={{background:c.chip,borderRadius:"10px",padding:"10px 12px"}}>
-                      <p style={{fontWeight:"700",fontSize:"12px",marginBottom:"4px"}}>Min Impressions</p>
-                      <input type="number" min="5" max="1000" value={agentCfg.minImp} onChange={e=>{const n={...agentCfg,minImp:Math.max(5,Number(e.target.value))};setAgentCfg(n);LSS('bx_agc',n);}} style={{...inp(false),padding:"5px 8px",fontSize:"12px",width:"100%"}}/>
-                    </div>
-                    {/* Confidence threshold */}
-                    <div style={{background:c.chip,borderRadius:"10px",padding:"10px 12px"}}>
-                      <p style={{fontWeight:"700",fontSize:"12px",marginBottom:"4px"}}>Lift Threshold (%)</p>
-                      <input type="number" min="1" max="100" value={Math.round(agentCfg.confThresh*100)} onChange={e=>{const n={...agentCfg,confThresh:Math.max(0.01,Number(e.target.value)/100)};setAgentCfg(n);LSS('bx_agc',n);}} style={{...inp(false),padding:"5px 8px",fontSize:"12px",width:"100%"}}/>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CTR Analytics Table */}
-                <div style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"14px",padding:"16px 18px",marginBottom:"14px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
-                    <h3 style={{fontWeight:"700",fontSize:"13px",margin:0}}>📊 Banner Performance</h3>
-                    <div style={{display:"flex",gap:"8px"}}>
-                      <button onClick={()=>setAnaKey(k=>k+1)} style={{background:c.chip,border:`1px solid ${c.border}`,borderRadius:"7px",padding:"4px 10px",cursor:"pointer",fontSize:"11px",color:c.text}}>↻ Refresh</button>
-                      <button onClick={()=>{if(window.confirm("Reset all banner analytics?")){LSS('bx_bana',{});setAnaKey(k=>k+1);}}} style={{background:"#f8717122",border:"1px solid #f87171",borderRadius:"7px",padding:"4px 10px",cursor:"pointer",fontSize:"11px",color:"#f87171"}}>Reset Analytics</button>
-                      <button onClick={()=>{if(window.confirm("Reset A/B assignments? All users will be re-assigned.")){LSS('bx_uab',{});LSS('bx_abv2',{});setAbVariantCfg({});setAnaKey(k=>k+1);}}} style={{background:"#fbbf2422",border:"1px solid #fbbf24",borderRadius:"7px",padding:"4px 10px",cursor:"pointer",fontSize:"11px",color:"#fbbf24"}}>Reset A/B</button>
-                    </div>
-                  </div>
-                  {/* Hero row */}
-                  {(()=>{
-                    const hA=ana['hero_A']||{};
-                    const hImp=hA.impressions||0;
-                    const hClk=hA.clicks||0;
-                    const hCtr=hImp>0?hClk/hImp:0;
-                    return<div style={{background:c.chip,borderRadius:"10px",padding:"10px 13px",marginBottom:"8px"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
-                        <div><p style={{fontWeight:"700",fontSize:"12px"}}>🦸 Hero Banner</p><p style={{fontSize:"10px",color:c.muted,marginTop:"2px"}}>{heroBanner.title?.substring(0,40)}</p></div>
-                        <span style={{fontWeight:"800",fontSize:"13px",color:hCtr>0.04?"#4ade80":hCtr>0.02?"#fbbf24":"#f87171"}}>{fmtCtr(hCtr)}</span>
-                      </div>
-                      <div className="ctr-track"><div className="ctr-fill" style={{width:`${Math.min(hCtr*1000,100)}%`,background:hCtr>0.04?"#4ade80":hCtr>0.02?"#fbbf24":"#f87171"}}/></div>
-                      <div style={{display:"flex",gap:"14px",marginTop:"5px",fontSize:"10px",color:c.muted}}>
-                        <span>{fmtNum(hImp)} imp</span><span>{fmtNum(hClk)} clk</span><span>{fmtNum(hA.conversions)} conv</span>
-                        {hA.revenue>0&&<span style={{color:"#4ade80"}}>+{fmt(hA.revenue)}</span>}
-                      </div>
-                    </div>;
-                  })()}
-                  {/* In-feed banners */}
-                  {allBanners.map(bn=>{
-                    const dA=ana[`${bn.id}_A`]||{};
-                    const dB=ana[`${bn.id}_B`]||{};
-                    const impA=dA.impressions||0,impB=dB.impressions||0;
-                    const ctrA=impA>0?(dA.clicks||0)/impA:0;
-                    const ctrB=impB>0?(dB.clicks||0)/impB:0;
-                    const hasB=!!abCfg[bn.id]?.B;
-                    const bWin=hasB&&impB>=agentCfg.minImp&&ctrB>ctrA*(1+agentCfg.confThresh);
-                    return<div key={bn.id} style={{background:c.chip,borderRadius:"10px",padding:"10px 13px",marginBottom:"8px"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"6px",gap:"8px"}}>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
-                            <p style={{fontWeight:"700",fontSize:"12px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bn.headline||bn.tag}</p>
-                            {bWin&&<span style={{background:"#4ade8022",color:"#4ade80",borderRadius:"4px",padding:"1px 5px",fontSize:"9px",fontWeight:"700",flexShrink:0}}>B WINNING</span>}
-                            {hasB&&!bWin&&<span style={{background:"#fbbf2422",color:"#fbbf24",borderRadius:"4px",padding:"1px 5px",fontSize:"9px",fontWeight:"700",flexShrink:0}}>TESTING B</span>}
-                          </div>
-                          <p style={{fontSize:"10px",color:c.muted,marginTop:"2px"}}>{bn.layout_template?.toUpperCase()} · {bn.cat}</p>
-                        </div>
-                        <div style={{textAlign:"right",flexShrink:0}}>
-                          <span style={{fontWeight:"800",fontSize:"13px",color:ctrA>0.05?"#4ade80":ctrA>0.02?"#fbbf24":"#f87171"}}>A: {fmtCtr(ctrA)}</span>
-                          {hasB&&<span style={{display:"block",fontWeight:"800",fontSize:"13px",color:ctrB>0.05?"#4ade80":ctrB>0.02?"#fbbf24":"#f87171"}}>B: {fmtCtr(ctrB)}</span>}
-                        </div>
-                      </div>
-                      {/* Variant A bar */}
-                      <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"3px"}}>
-                        <span style={{fontSize:"9px",fontWeight:"700",color:c.muted,width:"10px"}}>A</span>
-                        <div className="ctr-track" style={{flex:1}}><div className="ctr-fill" style={{width:`${Math.min(ctrA*1000,100)}%`,background:ctrA>0.05?"#4ade80":ctrA>0.02?"#fbbf24":"#f87171"}}/></div>
-                        <span style={{fontSize:"9px",color:c.muted,width:"50px",textAlign:"right"}}>{fmtNum(impA)}imp {fmtNum(dA.clicks||0)}clk</span>
-                      </div>
-                      {/* Variant B bar */}
-                      {hasB&&<div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"3px"}}>
-                        <span style={{fontSize:"9px",fontWeight:"700",color:"#a78bfa",width:"10px"}}>B</span>
-                        <div className="ctr-track" style={{flex:1}}><div className="ctr-fill" style={{width:`${Math.min(ctrB*1000,100)}%`,background:"#a78bfa"}}/></div>
-                        <span style={{fontSize:"9px",color:c.muted,width:"50px",textAlign:"right"}}>{fmtNum(impB)}imp {fmtNum(dB.clicks||0)}clk</span>
-                      </div>}
-                      {/* Conversions / revenue */}
-                      {(dA.conversions>0||dB.conversions>0)&&<div style={{display:"flex",gap:"10px",marginTop:"4px",fontSize:"10px",color:c.muted}}>
-                        <span>Conv A: <b style={{color:"#4ade80"}}>{fmtNum(dA.conversions)}</b></span>
-                        {hasB&&<span>Conv B: <b style={{color:"#a78bfa"}}>{fmtNum(dB.conversions)}</b></span>}
-                        {(dA.revenue||dB.revenue)&&<span style={{color:"#4ade80"}}>Rev: {fmt((dA.revenue||0)+(dB.revenue||0))}</span>}
-                      </div>}
-                      {/* B challenger copy preview */}
-                      {abCfg[bn.id]?.B?.headline&&<div style={{marginTop:"6px",background:"rgba(167,139,250,0.07)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:"7px",padding:"7px 9px",fontSize:"10px",color:"#c4b5fd"}}>
-                        <span style={{fontWeight:"700"}}>B Challenger: </span>"{abCfg[bn.id].B.headline}"
-                        {abCfg[bn.id].B.cta&&<span style={{color:c.muted}}> · CTA: {abCfg[bn.id].B.cta}</span>}
-                      </div>}
-                    </div>;
-                  })}
-                </div>
-
-                {/* Live Agent Log */}
-                <div style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"14px",padding:"16px 18px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
-                    <h3 style={{fontWeight:"700",fontSize:"13px",margin:0}}>📋 Agent Log</h3>
-                    <button onClick={()=>setAgentLog([])} style={{background:c.chip,border:`1px solid ${c.border}`,borderRadius:"7px",padding:"4px 10px",cursor:"pointer",fontSize:"11px",color:c.muted}}>Clear</button>
-                  </div>
-                  <div className="agent-log">
-                    {agentLog.length===0&&<p style={{color:"rgba(255,255,255,0.3)",fontSize:"11px",padding:"4px 0"}}>No activity yet. Run the agent to see live decisions here.</p>}
-                    {[...agentLog].reverse().map(row=><div key={row.id} className={`agent-log-row alg-${row.tp||'info'}`}>
-                      <span style={{opacity:.5,fontSize:"10px",marginRight:"8px"}}>{new Date(row.ts).toLocaleTimeString()}</span>{row.msg}
-                    </div>)}
-                  </div>
-                </div>
-              </div>;
-            })()}
           </>
         )}
       </div>
