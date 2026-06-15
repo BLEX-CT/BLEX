@@ -175,6 +175,8 @@ function injectCSS(){
     @media(min-width:769px){.ann-short{display:none!important}.promo-static{display:none!important}}
     @media(max-width:480px){.footer-grid{grid-template-columns:1fr!important}}
     @media(max-width:700px){.promo-split{grid-template-columns:1fr!important}.promo-split>div:first-child{min-height:180px!important}}
+    .promo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:10px 26px 0}
+    @media(max-width:700px){.promo-grid{grid-template-columns:1fr!important}}
   `;
   document.head.appendChild(s);
 }
@@ -1367,6 +1369,28 @@ export default function App() {
         </div>
       </div>
 
+      {/* PROMO GRID */}
+      <div className="promo-grid">
+        <div className="btn-t" style={{background:"#f5f0e8",borderRadius:"14px",padding:"16px",height:"120px",display:"flex",alignItems:"center",gap:"14px",cursor:"pointer",border:"1px solid #e8ddd0"}}>
+          <i className="ti ti-credit-card" style={{fontSize:"32px",color:"#2a7d7b",flexShrink:0}}/>
+          <div><p style={{fontWeight:700,fontSize:"14px",color:"#1a2424",marginBottom:"4px"}}>Shop Now, Pay with Tabby</p><p style={{fontSize:"11px",color:"#5a6e6e",lineHeight:1.5}}>Split into 4 interest-free payments</p></div>
+        </div>
+        <div className="btn-t" style={{borderRadius:"14px",height:"120px",overflow:"hidden",cursor:"pointer",display:"grid",gridTemplateColumns:"1fr 1fr"}}>
+          <div onClick={()=>{setCategory("clothing");document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});}} style={{background:"linear-gradient(135deg,#1a2424,#2a7d7b)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"4px",padding:"12px"}}>
+            <i className="ti ti-shirt" style={{fontSize:"22px",color:"rgba(255,255,255,0.9)"}}/>
+            <p style={{fontWeight:700,fontSize:"11px",color:"#fff",textAlign:"center",margin:0}}>Menswear</p>
+          </div>
+          <div onClick={()=>{setCategory("clothing");document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});}} style={{background:"linear-gradient(135deg,#b5896a,#c9a96e)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"4px",padding:"12px"}}>
+            <i className="ti ti-heart" style={{fontSize:"22px",color:"rgba(255,255,255,0.9)"}}/>
+            <p style={{fontWeight:700,fontSize:"11px",color:"#fff",textAlign:"center",margin:0}}>Womenswear</p>
+          </div>
+        </div>
+        <div className="btn-t" onClick={()=>addToast("Gift cards coming soon!","info")} style={{background:"#dff0f0",borderRadius:"14px",padding:"16px",height:"120px",display:"flex",alignItems:"center",gap:"14px",cursor:"pointer",border:"1px solid #b8d8d8"}}>
+          <i className="ti ti-gift" style={{fontSize:"32px",color:"#2a7d7b",flexShrink:0}}/>
+          <div><p style={{fontWeight:700,fontSize:"14px",color:"#1a2424",marginBottom:"4px"}}>Gift Cards Available</p><p style={{fontSize:"11px",color:"#5a6e6e",lineHeight:1.5}}>The perfect present for any occasion</p></div>
+        </div>
+      </div>
+
       {/* FEATURED COLLECTION BANNER */}
       <div style={{margin:"16px 26px",background:"linear-gradient(135deg,#ede9e1 0%,#dff0f0 100%)",borderRadius:"18px",border:"1px solid #d8d2c8",height:"160px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",overflow:"hidden",position:"relative"}}>
         <div>
@@ -1492,6 +1516,8 @@ export default function App() {
             {p.stock===0&&!p.is_preorder&&geoSupplier&&!geoSupplier.available&&geoSupplier.similar?.length>0&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`}}><p style={{fontSize:"11px",fontWeight:"700",color:c.error,marginBottom:"8px"}}>Not available from nearby supplier</p><div style={{display:"flex",flexDirection:"column",gap:"5px"}}>{geoSupplier.similar.map(s=><div key={s.id} className="btn-t" onClick={()=>{setSelectedProduct(s);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 8px",background:c.card,borderRadius:"7px",border:`1px solid ${c.border}`}}><span style={{flex:1,fontSize:"11px",fontWeight:"600"}}>{s.name}</span><span style={{fontSize:"11px",fontWeight:"700"}}>{fmt(s.price)}</span></div>)}</div></div>}
           </div>
         </div>
+        {/* PDP CROSS-SELL PROMO BANNER */}
+        {(()=>{const xm={electronics:"accessories",clothing:"accessories",jewelry:"clothing",accessories:"jewelry",home:"kitchen",beauty:"home",sports:"clothing",baby:"clothing",kitchen:"home",stationery:"home"};const rc=xm[p.category]||"all";const rl=rc.charAt(0).toUpperCase()+rc.slice(1);return(<div className="btn-t" onClick={()=>{setCategory(rc);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),80);}} style={{background:"linear-gradient(135deg,#ede9e1,#dff0f0)",borderRadius:"14px",padding:"16px 24px",height:"100px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"16px",marginBottom:"24px",border:"1px solid #d8d2c8",cursor:"pointer"}}><div><p style={{fontSize:"10px",fontWeight:700,color:"#2a7d7b",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:"5px"}}>You Might Also Like</p><p style={{fontWeight:700,fontSize:"16px",color:"#1a2424",marginBottom:"2px"}}>Explore {rl}</p><p style={{fontSize:"11px",color:"#5a6e6e",margin:0}}>Discover pieces that pair perfectly</p></div><button style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"9px 20px",fontSize:"12px",fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Explore →</button></div>);})()}
         {p.image_gallery&&(()=>{const g=typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery;const imgs=[{url:g.original,label:"Original",bg:c.chip},{url:g.cleaned,label:"Cleaned",bg:"#fff",text:""},{url:g.cleaned,label:g.promo1?.angle||"Benefit",bg:"#fff",text:g.promo1?.text},{url:g.cleaned,label:g.promo2?.angle||"Lifestyle",bg:"#fff",text:g.promo2?.text}].filter(x=>x.url);return imgs.length?<div style={{marginBottom:"28px"}}><h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"13px"}}>🎨 Image Gallery</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"11px"}}>{imgs.map((im,i)=><div key={i} style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"hidden"}}><div onClick={()=>setPdZoom(im.url)} style={{height:"140px",background:im.bg,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-in"}}><img src={im.url} alt={im.label} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} onError={e=>e.target.parentNode.style.display="none"}/></div><div style={{padding:"10px"}}><p style={{fontWeight:"800",fontSize:"10px",color:c.muted,textTransform:"uppercase",letterSpacing:".5px",marginBottom:im.text?"5px":"0"}}>{im.label}</p>{im.text&&<p style={{fontSize:"11px",color:c.text,lineHeight:1.5}}>{im.text}</p>}</div></div>)}</div></div>:null;})()}
         {(bundleSugg?.products?.length>0||bundleLoading)&&<div style={{marginBottom:"28px"}}>
           <h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"3px"}}>✨ Complete the Look</h2>
