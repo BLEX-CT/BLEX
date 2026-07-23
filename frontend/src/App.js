@@ -50,12 +50,12 @@ const LANGS=[{code:"en",label:"🇬🇧 EN"},{code:"ar",label:"🇸🇦 AR"},{co
 const _D={bg:"#0a0a0f",surface:"#0d0d14",card:"#11111a",cardHover:"#16162a",border:"#1e1e2e",text:"#f0f0f0",muted:"#5a5a7a",sub:"#2a2a3a",chip:"#141420",input:"#111118",inputBorder:"#252535",success:"#22c55e",error:"#ef4444",overlay:"rgba(0,0,0,0.88)",glow:"rgba(0,212,255,0.03)"};
 const THEMES={
   dark: {..._D,accent:"#00d4ff",accentTxt:"#030308",nav:"rgba(10,10,15,0.82)",navBorder:"rgba(0,212,255,0.15)"},
-  light:{bg:"#f5f5f5",surface:"#fff",card:"#fff",cardHover:"#f9f9f9",border:"#e5e5e5",text:"#0a0a0a",muted:"#888",sub:"#ccc",accent:"#0a0a0a",accentTxt:"#fff",chip:"#efefef",nav:"rgba(255,255,255,0.93)",navBorder:"#e8e8e8",input:"#fff",inputBorder:"#ddd",success:"#16a34a",error:"#dc2626",overlay:"rgba(0,0,0,0.5)",glow:"rgba(0,0,0,0.02)"},
+  light:{bg:"#ede9e1",surface:"#f5f2ec",card:"#f5f2ec",cardHover:"#ece8df",border:"#d8d2c8",text:"#1a2424",muted:"#5a6e6e",sub:"#8fa5a5",accent:"#2a7d7b",accentTxt:"#fff",chip:"#dff0f0",nav:"rgba(237,233,225,0.92)",navBorder:"#d8d2c8",input:"#f5f2ec",inputBorder:"#d8d2c8",success:"#3a9e5a",error:"#ef4444",overlay:"rgba(0,0,0,0.45)",glow:"rgba(42,125,123,0.03)"},
   ocean:{..._D,bg:"#040d1a",surface:"#071526",card:"#0a1e30",cardHover:"#0d2540",border:"#0e2d45",nav:"rgba(4,13,26,0.93)",navBorder:"#0e2d45",accent:"#0ea5e9",accentTxt:"#fff"},
   sunset:{..._D,bg:"#110600",surface:"#1a0b00",card:"#211000",cardHover:"#2a1400",border:"#3d1e00",nav:"rgba(17,6,0,0.93)",navBorder:"#3d1e00",accent:"#f97316",accentTxt:"#fff"},
   forest:{..._D,bg:"#030b04",surface:"#071209",card:"#0a180c",cardHover:"#0d1f0f",border:"#163018",nav:"rgba(3,11,4,0.93)",navBorder:"#163018",accent:"#22c55e",accentTxt:"#fff"},
   purple:{..._D,bg:"#08050f",surface:"#100a1c",card:"#160e26",cardHover:"#1c1330",border:"#2a1d42",nav:"rgba(8,5,15,0.93)",navBorder:"#2a1d42",accent:"#a855f7",accentTxt:"#fff"},
-  blex:{bg:"#ede9e1",surface:"#f5f2ec",card:"#f5f2ec",cardHover:"#ece8df",border:"#d8d2c8",text:"#1a2424",muted:"#5a6e6e",sub:"#8fa5a5",chip:"#dff0f0",input:"#f5f2ec",inputBorder:"#d8d2c8",success:"#3a9e5a",error:"#ef4444",overlay:"rgba(0,0,0,0.45)",glow:"rgba(42,125,123,0.03)",accent:"#2a7d7b",accentTxt:"#fff",nav:"rgba(237,233,225,0.92)",navBorder:"#d8d2c8"},
+  blex:{bg:"#0f0f1a",surface:"#1a1a2e",card:"#1a1a2e",cardHover:"#20203a",border:"#2d2d44",text:"#f8f9fa",muted:"#a0aec0",sub:"#6c757d",chip:"rgba(233,69,96,0.1)",input:"#1a1a2e",inputBorder:"#2d2d44",success:"#3a9e5a",error:"#ef4444",overlay:"rgba(0,0,0,0.6)",glow:"rgba(233,69,96,0.05)",accent:"#e94560",accentTxt:"#fff",nav:"rgba(15,15,26,0.92)",navBorder:"#2d2d44"},
 };
 const THEME_LABELS={"dark":"Default Dark","light":"Default Light","ocean":"Ocean Blue","sunset":"Sunset Orange","forest":"Forest Green","purple":"Royal Purple"};
 const CAT_ICONS={all:"◈",electronics:"⚡",accessories:"◉",clothing:"◎",jewelry:"◆",home:"⌂",beauty:"✦",sports:"◐",baby:"◕",kitchen:"⊡",stationery:"▤"};
@@ -90,12 +90,12 @@ function injectCSS(){
   if(cssReady)return; cssReady=true;
   const s=document.createElement("style");
   s.textContent=`
-    :root{--bg:#ede9e1;--bg2:#f5f2ec;--bg3:#e2eeee;--text:#1a2424;--text2:#5a6e6e;--text3:#8fa5a5;--accent:#2a7d7b;--accent-l:#3d9e9b;--accent-d:#1e5f5d;--accent-bg:#dff0f0;--accent-bg2:#eaf6f6;--border:#d8d2c8;--card:#f5f2ec}
+    :root{--bg:#0f0f1a;--bg2:#1a1a2e;--bg3:#16213e;--text:#f8f9fa;--text2:#a0aec0;--text3:#6c757d;--accent:#e94560;--accent-l:#ff6b6b;--accent-d:#c0392b;--accent-bg:rgba(233,69,96,0.1);--accent-bg2:rgba(233,69,96,0.05);--border:#2d2d44;--card:#1a1a2e}
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
     body{transition:background .35s,color .35s;-webkit-font-smoothing:antialiased;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
     input,select,textarea{outline:none;font-family:inherit}
-    ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(42,125,123,0.3);border-radius:3px}
+    ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(233,69,96,0.3);border-radius:3px}
     @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes scaleIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
@@ -116,13 +116,13 @@ function injectCSS(){
     .si{animation:scaleIn .3s ease both}.sr{animation:slideR .36s cubic-bezier(.4,0,.2,1) both}
     .sl{animation:slideL .36s cubic-bezier(.4,0,.2,1) both}
     .btn-t{transition:opacity .15s,transform .15s,background .2s,color .2s;position:relative;overflow:hidden}
-    .btn-t:hover{opacity:.88;transform:scale(1.03)}.btn-t:active{transform:scale(.97)}
+    .btn-t:hover{opacity:.88;transform:scale(1.03);filter:brightness(1.12)}.btn-t:active{transform:scale(.97)}
     .btn-t::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);transform:translateX(-100%);transition:transform .5s;pointer-events:none}
     .btn-t:hover::after{transform:translateX(100%)}
     .card-wrap{transition:all .3s cubic-bezier(.23,1,.32,1);border-radius:18px}
-    .card-wrap:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(42,125,123,.10)}
+    .card-wrap:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(233,69,96,.10)}
     .bento-card{transition:all .3s cubic-bezier(.23,1,.32,1)}
-    .bento-card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(42,125,123,.10)}
+    .bento-card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(233,69,96,.10)}
     .holo-card{position:relative;overflow:hidden}
     .holo-card::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(0,212,255,.07) 50%,rgba(123,47,247,.07) 60%,rgba(255,215,0,.04) 70%,transparent 80%);background-size:200% 100%;opacity:0;transition:opacity .3s;pointer-events:none;z-index:5}
     .holo-card:hover::after{opacity:1;animation:holoShine 1.8s linear infinite}
@@ -144,7 +144,7 @@ function injectCSS(){
     @keyframes marqueeRev{from{transform:translateX(-50%)}to{transform:translateX(0)}}
     .mq-rev{display:flex;animation:marqueeRev 25s linear infinite}.mq-rev:hover{animation-play-state:paused}
     .trust-mq{display:flex;animation:marquee 20s linear infinite}.trust-mq:hover{animation-play-state:paused}
-    .cat-circle:hover{background:#2a7d7b!important}.cat-circle:hover .cat-icon{color:#fff!important}
+    .cat-circle:hover{background:#e94560!important}.cat-circle:hover .cat-icon{color:#fff!important}
     @keyframes megaIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
     .mega-menu{animation:megaIn .2s ease both}
     @keyframes wlToastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -154,25 +154,25 @@ function injectCSS(){
     @keyframes qvIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
     .qv-modal{animation:qvIn .22s ease both}
     .srch-drop{animation:megaIn .15s ease both}
-    .srch-item:hover{background:#f5f2ec!important}
+    .srch-item:hover{background:#1a1a2e!important}
     .scroll-top{transition:background .2s,transform .2s;animation:fadeUp .25s ease both}
-    .scroll-top:hover{background:#1e5f5d!important;transform:scale(1.1)!important}
+    .scroll-top:hover{background:#c0392b!important;transform:scale(1.1)!important}
     @keyframes panelIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
     .filter-panel{animation:panelIn .3s cubic-bezier(0.23,1,0.32,1) both}
-    .auth-inp{transition:border-color .2s,box-shadow .2s!important}.auth-inp:focus{border-color:#2a7d7b!important;box-shadow:0 0 0 3px rgba(42,125,123,0.1)!important;outline:none!important}
-    .auth-btn-primary{background:#2a7d7b;color:#fff;border:none;border-radius:50px;padding:13px;font-weight:600;font-size:13px;width:100%;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s}
-    .auth-btn-primary:hover{background:#1e5f5d;transform:translateY(-1px);box-shadow:0 6px 20px rgba(42,125,123,0.3)}
+    .auth-inp{transition:border-color .2s,box-shadow .2s!important}.auth-inp:focus{border-color:#e94560!important;box-shadow:0 0 0 3px rgba(233,69,96,0.1)!important;outline:none!important}
+    .auth-btn-primary{background:#e94560;color:#fff;border:none;border-radius:50px;padding:13px;font-weight:600;font-size:13px;width:100%;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s}
+    .auth-btn-primary:hover{background:#ff6b6b;transform:translateY(-1px);box-shadow:0 6px 20px rgba(233,69,96,0.3)}
     .faq-answer{overflow:hidden;transition:max-height .3s ease,padding .3s ease}
-    @keyframes chatPulse{0%{box-shadow:0 0 0 0 rgba(42,125,123,.5)}70%{box-shadow:0 0 0 12px rgba(42,125,123,0)}100%{box-shadow:0 0 0 0 rgba(42,125,123,0)}}
+    @keyframes chatPulse{0%{box-shadow:0 0 0 0 rgba(233,69,96,.5)}70%{box-shadow:0 0 0 12px rgba(233,69,96,0)}100%{box-shadow:0 0 0 0 rgba(233,69,96,0)}}
     .chat-pulse{animation:chatPulse 2.5s ease-out infinite}
     @keyframes slideUp2{from{transform:translateY(80px);opacity:0}to{transform:translateY(0);opacity:1}}
     .slide-up2{animation:slideUp2 .35s ease both}
     .rec-scroll{display:flex;gap:16px;padding:0 26px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
     .rec-scroll::-webkit-scrollbar{display:none}
-    .checkout-step-btn{background:#2a7d7b;color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:14px;cursor:pointer;transition:background .2s,transform .2s}
-    .checkout-step-btn:hover{background:#1e5f5d;transform:translateY(-1px)}
-    .checkout-step-btn-sec{background:transparent;color:#5a6e6e;border:1px solid #d8d2c8;border-radius:50px;padding:12px 28px;font-weight:600;font-size:13px;cursor:pointer;transition:background .2s}
-    .checkout-step-btn-sec:hover{background:#f5f0e8}
+    .checkout-step-btn{background:#e94560;color:#fff;border:none;border-radius:50px;padding:12px 28px;font-weight:700;font-size:14px;cursor:pointer;transition:background .2s,transform .2s}
+    .checkout-step-btn:hover{background:#ff6b6b;transform:translateY(-1px)}
+    .checkout-step-btn-sec{background:transparent;color:#a0aec0;border:1px solid #2d2d44;border-radius:50px;padding:12px 28px;font-weight:600;font-size:13px;cursor:pointer;transition:background .2s}
+    .checkout-step-btn-sec:hover{background:#1a1a2e}
     @media(max-width:768px){.ann-full{display:none!important}.ann-short{display:inline!important}.promo-slider-wrap{display:none!important}.promo-static{display:flex!important}.footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important}}
     @media(min-width:769px){.ann-short{display:none!important}.promo-static{display:none!important}}
     @media(max-width:480px){.footer-grid{grid-template-columns:1fr!important}}
@@ -344,6 +344,8 @@ export default function App() {
   const [contentLoading,setContentLoading]=useState({});
   const [pdColor,setPdColor]=useState(0);
   const [pdSize,setPdSize]=useState(null);
+  const [pdGalIdx,setPdGalIdx]=useState(0);
+  const [pdAcc,setPdAcc]=useState("description");
   const [megaMenuCat,setMegaMenuCat]=useState(null);
   const [storyOpen,setStoryOpen]=useState(null);
   const [quickViewProd,setQuickViewProd]=useState(null);
@@ -433,7 +435,7 @@ export default function App() {
   useEffect(()=>{if(selectedProduct)fetchBundle(selectedProduct);},[selectedProduct]); // eslint-disable-line
   useEffect(()=>{if(promoHover)return;const iv=setInterval(()=>setPromoSlide(s=>(s+1)%3),4000);return()=>clearInterval(iv);},[promoHover]);
   useEffect(()=>{const iv=setInterval(()=>setPromoCountdown(s=>s>0?s-1:0),1000);return()=>clearInterval(iv);},[]);
-  useEffect(()=>{setPdColor(0);setPdSize(null);},[selectedProduct?.id]); // eslint-disable-line
+  useEffect(()=>{setPdColor(0);setPdSize(null);setPdGalIdx(0);setPdAcc("description");},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{if(view==="product"&&selectedProduct?.category){const prev=LS('blex_viewed')||[];const cat=selectedProduct.category;const next=[cat,...prev.filter(x=>x!==cat)].slice(0,5);LSS('blex_viewed',next);setViewedCats(next);}},[view,selectedProduct?.category]); // eslint-disable-line
   useEffect(()=>{const iv=setInterval(()=>setVisitCount(Math.floor(180+Math.random()*140)),9000);return()=>clearInterval(iv);},[]);
   useEffect(()=>{if(!sp.length)return;const NS=["Ahmed","Sara","Mohammed","Fatima","Omar","Layla","Khalid","Nora"],CS=["Riyadh","Jeddah","Dammam","Mecca","Khobar"];let tid;const show=()=>{const prod=sp[Math.floor(Math.random()*sp.length)];setRecentPurchaseMsg({name:NS[~~(Math.random()*NS.length)],city:CS[~~(Math.random()*CS.length)],product:prod.name.substring(0,28)});tid=setTimeout(()=>{setRecentPurchaseMsg(null);tid=setTimeout(show,30000+Math.random()*15000);},5000);};tid=setTimeout(show,30000+Math.random()*15000);return()=>clearTimeout(tid);},[sp.length]); // eslint-disable-line
@@ -733,7 +735,7 @@ export default function App() {
   const fmt=(price,d)=>{const v=Number(price)*(rates[currCode]||1);const dec=d??(['KRW','JPY'].includes(currCode)?0:2);return`${CURRENCY_SYMS[currCode]||currCode}${v.toFixed(dec)}`;};
   /* style helpers */
   const inp=err=>({width:"100%",padding:"10px 13px",borderRadius:"9px",border:`1.5px solid ${err?c.error:c.inputBorder}`,background:c.input,color:c.text,fontSize:"14px",transition:"border .2s"});
-  const btnP=(x={})=>({background:c.accent,color:c.accentTxt,border:"none",padding:"11px 22px",borderRadius:"50px",cursor:"pointer",fontWeight:"600",fontSize:"14px",width:"100%",...x});
+  const btnP=(x={})=>({background:c.accent,color:c.accentTxt,border:"none",padding:"11px 22px",borderRadius:"50px",cursor:"pointer",fontWeight:"600",fontSize:"14px",width:"100%",boxShadow:`0 4px 20px ${c.accent}4D`,...x});
   const btnS=(x={})=>({background:"transparent",color:c.text,border:`1px solid ${c.border}`,padding:"9px 18px",borderRadius:"50px",cursor:"pointer",fontWeight:"600",fontSize:"13px",...x});
   const alertedIds=alerts.map(a=>Number(a.product_id));
 
@@ -824,10 +826,10 @@ export default function App() {
     </>}
 
     {/* ANNOUNCEMENT BAR */}
-    {annVisible&&<div onClick={e=>{if(!e.target.closest("button"))trackBClick("announcement");}} style={{position:"sticky",top:0,zIndex:30,background:"#f5f0e8",borderBottom:"1px solid #d8d2c8",padding:"10px 20px",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",opacity:annHiding?0:1,maxHeight:annHiding?"0":"60px",overflow:"hidden",transition:"opacity 0.3s ease, max-height 0.3s ease",flexShrink:0}}>
-      <i className="ti ti-truck" style={{color:"#2a7d7b",fontSize:"15px",flexShrink:0}}/>
-      <span style={{fontSize:"12px",color:"#2a7d7b",fontWeight:500,textAlign:"center",opacity:annPhraseFading?0:1,transition:"opacity 0.3s ease",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{annPhrases[annPhraseIdx]||""}</span>
-      <button onClick={dismissAnn} style={{position:"absolute",right:"14px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"#2a7d7b",fontSize:"14px",lineHeight:1,padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"}}><i className="ti ti-x"/></button>
+    {annVisible&&<div onClick={e=>{if(!e.target.closest("button"))trackBClick("announcement");}} style={{position:"sticky",top:0,zIndex:30,background:c.card,borderBottom:`1px solid ${c.border}`,padding:"10px 20px",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",opacity:annHiding?0:1,maxHeight:annHiding?"0":"60px",overflow:"hidden",transition:"opacity 0.3s ease, max-height 0.3s ease",flexShrink:0}}>
+      <i className="ti ti-truck" style={{color:c.accent,fontSize:"15px",flexShrink:0}}/>
+      <span style={{fontSize:"12px",color:c.accent,fontWeight:500,textAlign:"center",opacity:annPhraseFading?0:1,transition:"opacity 0.3s ease",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{annPhrases[annPhraseIdx]||""}</span>
+      <button onClick={dismissAnn} style={{position:"absolute",right:"14px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:c.accent,fontSize:"14px",lineHeight:1,padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"}}><i className="ti ti-x"/></button>
     </div>}
 
     {/* NAVBAR */}
@@ -842,7 +844,7 @@ export default function App() {
           <span style={{position:"absolute",[isRtl?"right":"left"]:"11px",top:"50%",transform:"translateY(-50%)",color:navMutedC,fontSize:"13px",pointerEvents:"none",transition:"color 0.3s ease"}}>⌕</span>
           <input value={searchRaw}
             onChange={e=>{setSearchRaw(e.target.value);setView("store");}}
-            onFocus={()=>setSearchFocused(true)}
+            onFocus={e=>{if(window.innerWidth<=700){e.target.blur();setView("search");}else{setSearchFocused(true);}}}
             onBlur={()=>setTimeout(()=>setSearchFocused(false),150)}
             onKeyDown={e=>{if(e.key==="Enter"&&searchRaw.trim()){saveSearch(searchRaw.trim());setSearchFocused(false);}}}
             placeholder={t.search} style={{...inp(false),borderRadius:"20px",[isRtl?"paddingRight":"paddingLeft"]:"33px",[isRtl?"paddingLeft":"paddingRight"]:"33px",paddingTop:"7px",paddingBottom:"7px",fontSize:"13px",...(navTransparent?{background:"rgba(255,255,255,0.12)",color:"#fff",borderColor:"rgba(255,255,255,0.2)"}:{}),transition:"background 0.3s ease,border-color 0.3s ease,color 0.3s ease"}}/>
@@ -1033,11 +1035,11 @@ export default function App() {
       </>}
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(12,1fr)",gap:"10px",padding:"14px 26px 10px"}}>
-      <div style={{gridColumn:"span 7",position:"relative",overflow:"hidden",borderRadius:"18px",minHeight:"380px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType==="video"?{}:{background:theme==="blex"?"linear-gradient(140deg,#d8ecec 0%,#ede9e1 55%,#dff0f0 100%)":favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
+      <div style={{gridColumn:"span 7",position:"relative",overflow:"hidden",borderRadius:"18px",minHeight:"380px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType==="video"?{}:{background:theme==="blex"?"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)":theme==="light"?"linear-gradient(140deg,#d8ecec 0%,#ede9e1 55%,#dff0f0 100%)":favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
         {heroMediaType==="video"&&heroVideoUrl&&<video autoPlay muted loop playsInline src={heroVideoUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
         {heroMediaType==="gradient"&&<HeroCanvas color={c.accent}/>}
-        <div className="float-blob" style={{width:"540px",height:"540px",top:"-220px",left:"-160px",background:theme==="dark"?"rgba(0,212,255,0.14)":"rgba(42,125,123,0.08)",animation:"floatA 14s ease-in-out infinite"}}/>
-        <div className="float-blob" style={{width:"420px",height:"420px",bottom:"-160px",right:"-100px",background:theme==="dark"?"rgba(123,47,247,0.16)":"rgba(42,125,123,0.06)",animation:"floatB 11s ease-in-out infinite"}}/>
+        <div className="float-blob" style={{width:"540px",height:"540px",top:"-220px",left:"-160px",background:theme==="dark"?"rgba(0,212,255,0.14)":theme==="blex"?"rgba(233,69,96,0.10)":"rgba(42,125,123,0.08)",animation:"floatA 14s ease-in-out infinite"}}/>
+        <div className="float-blob" style={{width:"420px",height:"420px",bottom:"-160px",right:"-100px",background:theme==="dark"?"rgba(123,47,247,0.16)":theme==="blex"?"rgba(15,52,96,0.35)":"rgba(42,125,123,0.06)",animation:"floatB 11s ease-in-out infinite"}}/>
         {theme==="dark"&&[...Array(10)].map((_,i)=><span key={i} className="particle" style={{width:`${2+(i%3)}px`,height:`${2+(i%3)}px`,left:`${(i*10+5)%95}%`,bottom:0,background:i%3===0?"#00d4ff":i%3===1?"#7b2ff7":"#ffd700",animationDuration:`${8+i*1.2}s`,animationDelay:`${i*0.7}s`}}/>)}
         <div style={{position:"relative",zIndex:2,padding:"36px 28px",display:"flex",flexDirection:"column",flex:1}}>
           <div className="fu" style={{marginBottom:"16px",display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
@@ -1068,7 +1070,7 @@ export default function App() {
               {p.image?<img src={p.image} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"22px",opacity:.6,color:CAT_CLR[p.category]||c.accent}}>{CAT_ICONS[p.category]||"◈"}</span>}
             </div>
             <div style={{flex:1,minWidth:0}}>
-              <span style={{background:"#dff0f0",color:"#2a7d7b",padding:"2px 7px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",display:"inline-block",marginBottom:"4px"}}>{t[p.category]||p.category}</span>
+              <span style={{background:c.chip,color:c.accent,padding:"2px 7px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",display:"inline-block",marginBottom:"4px"}}>{t[p.category]||p.category}</span>
               <p style={{fontWeight:"600",fontSize:"14px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:c.text}}>{p.name}</p>
               <p style={{fontWeight:"700",fontSize:"14px",color:c.accent}}>{fmt(p.price)}</p>
             </div>
@@ -1095,7 +1097,7 @@ export default function App() {
               {p.image?<img src={p.image} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"22px",opacity:.6,color:CAT_CLR[p.category]||c.accent}}>{CAT_ICONS[p.category]||"◈"}</span>}
             </div>
             <div style={{flex:1,minWidth:0}}>
-              <span style={{background:"#dff0f0",color:"#2a7d7b",padding:"2px 7px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",display:"inline-block",marginBottom:"4px"}}>{t[p.category]||p.category}</span>
+              <span style={{background:c.chip,color:c.accent,padding:"2px 7px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",display:"inline-block",marginBottom:"4px"}}>{t[p.category]||p.category}</span>
               <p style={{fontWeight:"600",fontSize:"14px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:c.text}}>{p.name}</p>
               <p style={{fontWeight:"700",fontSize:"14px",color:c.accent}}>{fmt(p.price)}</p>
             </div>
@@ -1462,139 +1464,371 @@ export default function App() {
       </div>
     </div>}
 
+    {/* SEARCH VIEW */}
+    {view==="search"&&(()=>{
+      const pillCats=["all","electronics","jewelry","clothing","accessories"];
+      const liveResults=searchRaw.trim()?filtered.slice(0,20):[];
+      const trendingList=[{term:"Wireless Earbuds",count:"2.4k searches"},{term:"Summer Dresses",count:"1.8k searches"},{term:"Smart Watch",count:"1.5k searches"},{term:"Leather Bags",count:"980 searches"},{term:"Gold Necklace",count:"760 searches"}];
+      const inspoImgs=[{url:"https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80",label:"Streetwear"},{url:"https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&q=80",label:"Minimalist"},{url:"https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=400&q=80",label:"Boho Chic"},{url:"https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&q=80",label:"Formal Wear"}];
+      const browseCats=CATS.filter(cat=>cat!=="all");
+      const runSearch=term=>{setSearchRaw(term);saveSearch(term);};
+      return(<div className="fu" style={{minHeight:"100vh",background:c.bg,paddingBottom:"40px"}}>
+        {/* SEARCH HEADER */}
+        <div style={{background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",borderRadius:"0 0 24px 24px",padding:"16px 20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}}>
+            <button onClick={()=>setView("store")} style={{background:"none",border:"none",color:"#fff",cursor:"pointer",fontSize:"20px",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><i className={`ti ${isRtl?"ti-arrow-right":"ti-arrow-left"}`}/></button>
+            <div style={{flex:1,position:"relative",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",borderRadius:"16px",padding:"14px 16px",display:"flex",alignItems:"center",gap:"10px"}}>
+              <i className="ti ti-search" style={{color:"rgba(255,255,255,0.7)",fontSize:"18px",flexShrink:0}}/>
+              <input autoFocus value={searchRaw} onChange={e=>setSearchRaw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&searchRaw.trim())saveSearch(searchRaw.trim());}} placeholder={t.search} style={{flex:1,minWidth:0,background:"none",border:"none",outline:"none",color:"#fff",fontSize:"16px"}}/>
+              {searchRaw&&<button onClick={()=>setSearchRaw("")} style={{background:"none",border:"none",color:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"14px",padding:0,display:"flex",flexShrink:0}}><i className="ti ti-x"/></button>}
+              <button onClick={()=>addToast("Visual Search coming soon","info")} style={{background:"none",border:"none",color:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"18px",padding:0,display:"flex",flexShrink:0}}><i className="ti ti-camera"/></button>
+              <button onClick={startVoice} style={{background:"none",border:"none",color:voiceActive?"#ff6b6b":"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"18px",padding:0,display:"flex",flexShrink:0,animation:voiceActive?"pulse 1s infinite":undefined}}><i className="ti ti-microphone"/></button>
+            </div>
+          </div>
+          {/* CATEGORY FILTER PILLS */}
+          <div className="rec-scroll" style={{padding:0,gap:"8px"}}>
+            {pillCats.map(cat=>{const active=category===cat;return(
+              <button key={cat} onClick={()=>{setCategory(cat);if(!searchRaw.trim())setView("store");}} style={{flexShrink:0,background:active?"#fff":"rgba(255,255,255,0.1)",color:active?"#1a1a2e":"rgba(255,255,255,0.8)",border:"none",borderRadius:"50px",padding:"8px 18px",fontSize:"13px",fontWeight:active?700:600,cursor:"pointer",whiteSpace:"nowrap"}}>{t[cat]||cat}</button>
+            );})}
+          </div>
+        </div>
+
+        <div style={{padding:"20px",maxWidth:"600px",margin:"0 auto"}}>
+          {searchRaw.trim()?(
+            /* LIVE RESULTS */
+            <div>
+              <p style={{fontSize:"13px",color:c.muted,marginBottom:"12px"}}>{liveResults.length} result{liveResults.length!==1?"s":""} for "{searchRaw}"</p>
+              {liveResults.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:c.muted}}>{t.noProducts}</div>:
+              <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                {liveResults.map(p=>(
+                  <div key={p.id} onClick={()=>{setSelectedProduct(p);setPdQty(1);saveSearch(searchRaw.trim());setView("product");}} style={{display:"flex",alignItems:"center",gap:"12px",background:c.card,borderRadius:"14px",padding:"10px",cursor:"pointer"}}>
+                    <div style={{width:"52px",height:"52px",borderRadius:"10px",background:c.chip,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{p.image?<img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"20px"}}>{CAT_ICONS[p.category]||"◈"}</span>}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <p style={{fontSize:"13px",fontWeight:600,color:c.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+                      <p style={{fontSize:"13px",fontWeight:800,color:c.accent}}>{fmt(p.price)}</p>
+                    </div>
+                    <i className={`ti ${isRtl?"ti-chevron-left":"ti-chevron-right"}`} style={{color:c.muted,fontSize:"16px",flexShrink:0}}/>
+                  </div>
+                ))}
+              </div>}
+            </div>
+          ):(<>
+            {/* RECENT SEARCHES */}
+            {recentSearches.length>0&&<div style={{marginBottom:"28px"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"14px"}}>
+                <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,margin:0}}>Recent Searches</h2>
+                <button onClick={()=>{LSS('blex_searches',[]);setRecentSearches([]);}} style={{background:"none",border:"none",color:c.accent,fontSize:"13px",fontWeight:600,cursor:"pointer",padding:0}}>Clear All</button>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"10px"}}>
+                {recentSearches.map(s=>(
+                  <div key={s} onClick={()=>runSearch(s)} style={{display:"inline-flex",alignItems:"center",gap:"8px",background:c.card,border:`1.5px solid ${c.border}`,borderRadius:"14px",padding:"10px 18px",fontSize:"14px",color:c.text,cursor:"pointer"}}>
+                    <i className="ti ti-clock" style={{fontSize:"14px",color:c.muted}}/>
+                    <span>{s}</span>
+                    <button onClick={e=>{e.stopPropagation();removeRecentSearch(s);}} style={{background:"none",border:"none",color:c.muted,cursor:"pointer",padding:0,display:"flex",fontSize:"13px"}}><i className="ti ti-x"/></button>
+                  </div>
+                ))}
+              </div>
+            </div>}
+
+            {/* TRENDING NOW */}
+            <div style={{marginBottom:"28px"}}>
+              <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,marginBottom:"14px"}}>Trending Now</h2>
+              <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                {trendingList.map((tr,i)=>(
+                  <div key={tr.term} className="btn-t" onClick={()=>runSearch(tr.term)} style={{display:"flex",alignItems:"center",gap:"12px",background:c.card,borderRadius:"16px",padding:"14px 16px",cursor:"pointer",transition:"transform .2s"}} onMouseEnter={e=>e.currentTarget.style.transform=isRtl?"translateX(4px)":"translateX(-4px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateX(0)"}>
+                    <div style={{width:"28px",height:"28px",borderRadius:"8px",flexShrink:0,background:i<2?"linear-gradient(135deg,#e94560,#ff6b6b)":c.bg,color:i<2?"#fff":c.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800}}>{i+1}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <p style={{fontSize:"14px",fontWeight:600,color:c.text}}>{tr.term}</p>
+                      <p style={{fontSize:"11px",color:c.muted}}>{tr.count}</p>
+                    </div>
+                    <i className={`ti ${isRtl?"ti-chevron-left":"ti-chevron-right"}`} style={{color:c.muted,fontSize:"16px",flexShrink:0}}/>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* VISUAL SEARCH */}
+            <div style={{marginBottom:"28px"}}>
+              <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,marginBottom:"3px"}}>Visual Search</h2>
+              <p style={{fontSize:"13px",color:c.muted,marginBottom:"14px"}}>Upload a photo to find similar styles</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+                {inspoImgs.map(im=>(
+                  <div key={im.label} onClick={()=>addToast("Finding similar styles...","info")} style={{position:"relative",borderRadius:"20px",aspectRatio:"1",overflow:"hidden",cursor:"pointer"}}>
+                    <img src={im.url} alt={im.label} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>
+                    <div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,rgba(0,0,0,0.7),transparent 60%)"}}/>
+                    <div style={{position:"absolute",bottom:"12px",left:"14px",right:"14px"}}>
+                      <p style={{color:"#fff",fontSize:"13px",fontWeight:700}}>{im.label}</p>
+                      <p style={{color:"rgba(255,255,255,0.8)",fontSize:"11px"}}>Find similar</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* BROWSE BY CATEGORY */}
+            <div>
+              <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,marginBottom:"14px"}}>Browse by Category</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px"}}>
+                {browseCats.map(cat=>(
+                  <div key={cat} onClick={()=>{setCategory(cat);setView("store");}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"8px",background:c.card,borderRadius:"16px",padding:"16px 8px",cursor:"pointer"}}>
+                    <div style={{width:"44px",height:"44px",borderRadius:"14px",background:c.chip,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",color:CAT_CLR[cat]||c.muted}}>{CAT_ICONS[cat]||"◈"}</div>
+                    <span style={{fontSize:"12px",fontWeight:600,color:c.text,textAlign:"center"}}>{t[cat]||cat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>)}
+        </div>
+      </div>);
+    })()}
+
     {/* PRODUCT DETAIL VIEW */}
     {view==="product"&&selectedProduct&&(()=>{
       const p=selectedProduct,rel=sp.filter(x=>x.category===p.category&&x.id!==p.id&&x.stock>0).slice(0,3);
       const onSale=p.sale_price&&new Date(p.sale_ends_at)>Date.now();
       const dp=onSale?Number(p.sale_price):Number(p.price);
-      return(<div className="fu" style={{padding:"32px 22px",maxWidth:"920px",margin:"0 auto"}}>
-        <button onClick={()=>setView("store")} style={{background:"none",border:"none",color:c.muted,cursor:"pointer",fontSize:"13px",fontWeight:"700",marginBottom:"24px",display:"inline-flex",alignItems:"center",gap:"6px",padding:"0"}}>{isRtl?"→":"←"} {t.continueShop}</button>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:"28px",marginBottom:"36px"}}>
-          <div style={{background:c.card,borderRadius:"18px",border:`1px solid ${c.border}`,overflow:"hidden",minHeight:"340px",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-            {p.image?<img src={p.image} alt={p.name} onClick={()=>setPdZoom(p.image)} style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,transition:"transform .35s ease",cursor:"zoom-in"}} onMouseEnter={e=>e.target.style.transform="scale(1.07)"} onMouseLeave={e=>e.target.style.transform="scale(1)"} onError={e=>{e.target.style.display="none"}}/>:<span style={{fontSize:"96px",opacity:.3}}>{CAT_ICONS[p.category]||"◈"}</span>}
-            {p.stock===0&&!p.is_preorder&&<div style={{position:"absolute",top:"12px",right:"12px",background:"rgba(239,68,68,.9)",color:"#fff",padding:"4px 11px",borderRadius:"7px",fontSize:"11px",fontWeight:"800"}}>{t.outOfStock}</div>}
-            {p.is_preorder&&<div style={{position:"absolute",top:"12px",right:"12px",background:"rgba(59,130,246,.9)",color:"#fff",padding:"4px 11px",borderRadius:"7px",fontSize:"11px",fontWeight:"800"}}>PRE-ORDER</div>}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:"15px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
-              <span style={{background:c.chip,color:CAT_CLR[p.category]||c.muted,padding:"3px 10px",borderRadius:"9px",fontSize:"10px",fontWeight:"800",textTransform:"uppercase",border:`1px solid ${c.border}`}}>{t[p.category]||p.category}</span>
-              <span style={{fontSize:"11px",fontWeight:"700",color:p.stock>0?c.success:c.muted}}>● {p.stock>0?t.inStock:t.outOfStock}</span>
-              {geoSupplier?.available&&<span style={{fontSize:"11px",fontWeight:"600",color:c.muted,display:"inline-flex",alignItems:"center",gap:"4px"}}>🌍 Ships from {geoSupplier.ships_from} · Est. {geoSupplier.estimated_days} days</span>}
-              <span style={{fontSize:"11px",fontWeight:"500",color:"#e05555",display:"inline-flex",alignItems:"center",gap:"3px"}}>🔥 {pdViewers} people viewing this right now</span>
-              <span style={{fontSize:"10px",color:c.muted,display:"inline-flex",alignItems:"center",gap:"3px"}}>✓ {(p.id%7)+2} sold today</span>
-            </div>
-            <h1 style={{fontWeight:"800",fontSize:"clamp(17px,3vw,24px)",lineHeight:1.3,margin:0}}>{p.name}</h1>
-            <div>{onSale?<div style={{display:"flex",alignItems:"baseline",gap:"8px",flexWrap:"wrap"}}><span style={{fontWeight:"900",fontSize:"30px",color:c.error}}>{fmt(p.sale_price)}</span><span style={{textDecoration:"line-through",color:c.muted,fontSize:"15px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"10px",fontWeight:"800",padding:"2px 7px",borderRadius:"5px"}}>{countdown(p.sale_ends_at)}</span></div>:<div style={{display:"flex",alignItems:"baseline",gap:"6px"}}><span style={{fontWeight:"900",fontSize:"30px"}}>{fmt(p.price)}</span></div>}
-              {flags.vat!==false&&<p style={{fontSize:"11px",color:c.muted,marginTop:"4px"}}>{t.tax}: {fmt(dp*0.15)}</p>}
-            </div>
-            {pdCountdown!==null&&(()=>{const h=Math.floor(pdCountdown/3600),m=Math.floor((pdCountdown%3600)/60),s=pdCountdown%60;return(<div style={{background:"#fdf5ec",border:"1px solid #e8d4bc",borderRadius:"10px",padding:"10px 14px",display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}><i className="ti ti-clock" style={{color:"#b5896a",fontSize:"16px",flexShrink:0}}/><span style={{fontSize:"11px",color:"#5a6e6e",whiteSpace:"nowrap"}}>Your personalized offer expires in:</span><div style={{display:"flex",alignItems:"center",gap:"3px"}}>{[[h,"h"],[m,"m"],[s,"s"]].map(([v,u],i)=><React.Fragment key={u}>{i>0&&<span style={{color:"#b5896a",fontWeight:700,fontSize:"13px"}}>:</span>}<span style={{background:"#fff",borderRadius:"4px",padding:"2px 6px",fontWeight:700,fontSize:"13px",color:"#b5896a"}}>{String(v).padStart(2,"0")}</span></React.Fragment>)}</div></div>);})()}
-            {p.description&&<p style={{color:c.muted,fontSize:"13px",lineHeight:1.7,margin:0}}>{p.description.replace(/<[^>]*>/g,"")}</p>}
-            {(p.stock>0||p.is_preorder)&&<div>
-              <p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginBottom:"8px",textTransform:"uppercase",letterSpacing:".5px"}}>Quantity</p>
-              <div style={{display:"flex",alignItems:"stretch",background:c.chip,border:`1.5px solid ${c.border}`,borderRadius:"10px",width:"fit-content",overflow:"hidden"}}>
-                <button onClick={()=>setPdQty(q=>Math.max(1,q-1))} style={{background:"none",border:"none",color:c.text,width:"38px",height:"38px",cursor:"pointer",fontWeight:"800",fontSize:"20px",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-                <span style={{fontWeight:"800",fontSize:"15px",minWidth:"38px",textAlign:"center",borderLeft:`1px solid ${c.border}`,borderRight:`1px solid ${c.border}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{pdQty}</span>
-                <button onClick={()=>setPdQty(q=>Math.min(p.stock||999,q+1))} style={{background:"none",border:"none",color:c.text,width:"38px",height:"38px",cursor:"pointer",fontWeight:"800",fontSize:"20px",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-              </div>
-              {flags.vat!==false&&<p style={{fontSize:"11px",color:c.muted,marginTop:"6px"}}>Total incl. VAT: <b>{fmt(dp*pdQty*1.15)}</b></p>}
-            </div>}
-            {/* COLOR SELECTOR */}
-            <div>
-              <p style={{fontSize:"11px",fontWeight:600,color:"#5a6e6e",marginBottom:"8px",direction:"rtl"}}>اللون</p>
-              <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
-                {["#2a7d7b","#1a2424","#f5f0e8","#b5896a","#c4a7f0"].map((clr,i)=>(
-                  <button key={i} onClick={()=>setPdColor(i)} title={clr} style={{width:"24px",height:"24px",borderRadius:"50%",background:clr,border:`1.5px solid ${clr==="#f5f0e8"?"#d8d2c8":clr}`,cursor:"pointer",padding:0,outline:pdColor===i?"2px solid #2a7d7b":"none",outlineOffset:"2px",transition:"outline .15s,transform .15s",transform:pdColor===i?"scale(1.15)":"scale(1)"}}/>
-                ))}
-              </div>
-            </div>
-            {/* SIZE SELECTOR */}
-            <div>
-              <p style={{fontSize:"11px",fontWeight:600,color:"#5a6e6e",marginBottom:"8px",direction:"rtl"}}>المقاس</p>
-              <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
-                {["XS","S","M","L","XL"].map(sz=>(
-                  <button key={sz} onClick={()=>setPdSize(sz)} style={{width:"36px",height:"36px",borderRadius:"8px",background:pdSize===sz?"#2a7d7b":"#f5f0e8",color:pdSize===sz?"#fff":"#1a2424",border:`1px solid ${pdSize===sz?"#2a7d7b":"#d8d2c8"}`,cursor:"pointer",fontWeight:600,fontSize:"12px",transition:"all .15s"}}>{sz}</button>
-                ))}
-              </div>
-            </div>
-            <div style={{display:"flex",gap:"9px",flexWrap:"wrap"}}>
-              <button className="btn-t" onClick={()=>{if(p.stock>0||p.is_preorder){setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+pdQty}:i):[...pv,{...p,qty:pdQty}];});setCartOpen(true);addToast(p.name.substring(0,22)+" added","success");}}} disabled={p.stock===0&&!p.is_preorder} style={{...btnP({flex:1,minWidth:"140px",padding:"12px 20px",fontSize:"14px",opacity:(p.stock===0&&!p.is_preorder)?.4:1})}}>{p.is_preorder?"Pre-Order":t.addToCart}</button>
-              <button className="btn-t" onClick={()=>setView("store")} style={{...btnS({width:"auto",padding:"12px 18px",fontSize:"13px"})}}>{isRtl?"→":"←"} {t.store}</button>
-              {(p.category==="clothing"||p.category==="accessories")&&<button className="btn-t" onClick={()=>setArOpen(true)} style={{background:"linear-gradient(135deg,#7b2ff7,#00d4ff)",color:"#fff",border:"none",borderRadius:"9px",padding:"12px 18px",cursor:"pointer",fontWeight:"700",fontSize:"13px"}}>👁 Try On</button>}
-            </div>
-            {/* PURCHASE TRUST BADGES */}
-            <div style={{background:"#f5f0e8",borderRadius:"12px",padding:"14px",border:"1px solid #d8d2c8",display:"flex",justifyContent:"space-between",gap:"8px"}}>
-              {[{icon:"ti-truck",text:"شحن مجاني فوق 200 ريال"},{icon:"ti-shield-check",text:"دفع آمن 100%"},{icon:"ti-refresh",text:"إرجاع مجاني 30 يوم"}].map((b,i)=>(
-                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"5px",textAlign:"center"}}>
-                  <i className={`ti ${b.icon}`} style={{fontSize:"18px",color:"#2a7d7b"}}/>
-                  <span style={{fontSize:"10px",color:"#5a6e6e",lineHeight:1.4,direction:"rtl"}}>{b.text}</span>
-                </div>
-              ))}
-            </div>
-            {flags.b2b&&<p style={{fontSize:"11px",color:c.muted}}>★ B2B: 5–9 units ▸ 10% off · 10+ units ▸ 20% off</p>}
-            {p.category==="clothing"&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`,marginTop:"4px"}}><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"8px"}}>📏 Smart Size & Fit</p><div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>{[["chest","Chest (cm)"],["waist","Waist (cm)"],["height","Height (cm)"]].map(([k,l])=><div key={k} style={{flex:1}}><p style={{fontSize:"9px",color:c.muted,fontWeight:"700",marginBottom:"2px",textTransform:"uppercase"}}>{l}</p><input type="number" value={sizeM[k]} onChange={e=>setSizeM(m=>({...m,[k]:e.target.value}))} placeholder="e.g. 90" style={{...inp(false),padding:"6px 8px",fontSize:"12px"}}/></div>)}</div><button className="btn-t" onClick={()=>askSize(p)} disabled={sizeLoading} style={btnP({padding:"7px 14px",fontSize:"12px",opacity:sizeLoading?.5:1})}>{sizeLoading?"⏳ Analyzing…":"Get My Size"}</button>{sizeRes&&<div style={{marginTop:"8px",background:c.card,borderRadius:"7px",padding:"10px",border:`1px solid ${c.border}`}}><span style={{fontWeight:"900",fontSize:"22px",color:c.accent}}>{sizeRes.size}</span><span style={{fontSize:"11px",color:c.muted,marginLeft:"8px"}}>({sizeRes.confidence} confidence)</span>{sizeRes.note&&<p style={{fontSize:"11px",color:c.muted,marginTop:"4px"}}>{sizeRes.note}</p>}</div>}</div>}
-            {p.stock===0&&!p.is_preorder&&geoSupplier&&!geoSupplier.available&&geoSupplier.similar?.length>0&&<div style={{background:c.chip,borderRadius:"10px",padding:"12px",border:`1px solid ${c.border}`}}><p style={{fontSize:"11px",fontWeight:"700",color:c.error,marginBottom:"8px"}}>Not available from nearby supplier</p><div style={{display:"flex",flexDirection:"column",gap:"5px"}}>{geoSupplier.similar.map(s=><div key={s.id} className="btn-t" onClick={()=>{setSelectedProduct(s);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 8px",background:c.card,borderRadius:"7px",border:`1px solid ${c.border}`}}><span style={{flex:1,fontSize:"11px",fontWeight:"600"}}>{s.name}</span><span style={{fontSize:"11px",fontWeight:"700"}}>{fmt(s.price)}</span></div>)}</div></div>}
+      const discPct=onSale?Math.round((1-Number(p.sale_price)/Number(p.price))*100):0;
+      const gal=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};
+      const galImgs=[p.image,gal.cleaned,gal.original].filter((v,i,a)=>v&&a.indexOf(v)===i);
+      const dotCount=galImgs.length>1?galImgs.length:4;
+      const heroImg=galImgs[pdGalIdx%Math.max(1,galImgs.length)]||p.image;
+      const isClothing=p.category==="clothing";
+      const aiSize="M";
+      const sizes=["XS","S","M","L","XL"];
+      const colors=["#2a7d7b","#1a2424","#f5f0e8","#b5896a","#c4a7f0"];
+      const reviews=[{name:"أحمد الشمري",date:"12 يونيو 2026",stars:5,text:"منتج رائع جداً، التوصيل كان سريعاً والتغليف ممتاز. سأطلب مرة أخرى بالتأكيد!"},{name:"فاطمة العمري",date:"8 يونيو 2026",stars:5,text:"جودة عالية وسعر مناسب، تجربة تسوق ممتعة من البداية للنهاية."}];
+      const addPdToCart=()=>{if(!(p.stock>0||p.is_preorder))return;setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+pdQty}:i):[...pv,{...p,qty:pdQty}];});addToast(p.name.substring(0,22)+" added","success");};
+      const buyNow=()=>{addPdToCart();setCartOpen(false);setOrdered(false);setView("checkout");};
+      const ACC=[
+        {key:"description",label:"Description",content:p.description?p.description.replace(/<[^>]*>/g,""):"No description available for this product yet."},
+        {key:"specs",label:"Specifications"},
+        {key:"shipping",label:"Shipping & Returns"},
+      ];
+      return(<div className="fu" style={{maxWidth:"480px",margin:"0 auto",paddingBottom:"110px",position:"relative"}}>
+        {/* HERO GALLERY */}
+        <div style={{position:"relative",width:"100%",height:"400px",overflow:"hidden",background:c.chip}}>
+          {heroImg?<img key={heroImg} src={heroImg} alt={p.name} onClick={()=>setPdZoom(heroImg)} className="fi" style={{width:"100%",height:"100%",objectFit:"cover",cursor:"zoom-in"}} onError={e=>{e.target.style.display="none"}}/>:<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"96px",opacity:.3}}>{CAT_ICONS[p.category]||"◈"}</div>}
+          <button onClick={()=>setView("store")} style={{position:"absolute",top:"16px",[isRtl?"right":"left"]:"16px",width:"40px",height:"40px",borderRadius:"50%",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"}}><i className={`ti ${isRtl?"ti-arrow-right":"ti-arrow-left"}`}/></button>
+          <button onClick={()=>toggleWishlist(p.id)} style={{position:"absolute",top:"16px",[isRtl?"left":"right"]:"16px",width:"40px",height:"40px",borderRadius:"50%",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",border:"none",color:wishlist.includes(p.id)?"#e94560":"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"}}><i className={`ti ${wishlist.includes(p.id)?"ti-heart-filled":"ti-heart"}`}/></button>
+          {(p.stock===0&&!p.is_preorder||p.is_preorder)&&<div style={{position:"absolute",top:"64px",left:"50%",transform:"translateX(-50%)",background:p.is_preorder?"rgba(59,130,246,.9)":"rgba(239,68,68,.9)",color:"#fff",padding:"4px 12px",borderRadius:"7px",fontSize:"11px",fontWeight:"800",whiteSpace:"nowrap"}}>{p.is_preorder?"PRE-ORDER":t.outOfStock}</div>}
+          <div style={{position:"absolute",bottom:"14px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"6px"}}>
+            {Array.from({length:dotCount}).map((_,i)=>(
+              <button key={i} onClick={()=>galImgs.length>1&&setPdGalIdx(i)} style={{width:"7px",height:"7px",borderRadius:"50%",border:"none",padding:0,cursor:galImgs.length>1?"pointer":"default",background:i===(pdGalIdx%dotCount)?"#fff":"rgba(255,255,255,0.4)",transition:"background .2s"}}/>
+            ))}
           </div>
         </div>
-        {/* PDP CROSS-SELL PROMO BANNER */}
-        {(()=>{const xm={electronics:"accessories",clothing:"accessories",jewelry:"clothing",accessories:"jewelry",home:"kitchen",beauty:"home",sports:"clothing",baby:"clothing",kitchen:"home",stationery:"home"};const rc=xm[p.category]||"all";const rl=rc.charAt(0).toUpperCase()+rc.slice(1);return(<div className="btn-t" onClick={()=>{setCategory(rc);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),80);}} style={{background:"linear-gradient(135deg,#ede9e1,#dff0f0)",borderRadius:"14px",padding:"16px 24px",height:"100px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"16px",marginBottom:"24px",border:"1px solid #d8d2c8",cursor:"pointer"}}><div><p style={{fontSize:"10px",fontWeight:700,color:"#2a7d7b",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:"5px"}}>You Might Also Like</p><p style={{fontWeight:700,fontSize:"16px",color:"#1a2424",marginBottom:"2px"}}>Explore {rl}</p><p style={{fontSize:"11px",color:"#5a6e6e",margin:0}}>Discover pieces that pair perfectly</p></div><button style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"9px 20px",fontSize:"12px",fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Explore →</button></div>);})()}
-        {p.image_gallery&&(()=>{const g=typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery;const imgs=[{url:g.original,label:"Original",bg:c.chip},{url:g.cleaned,label:"Cleaned",bg:"#fff",text:""},{url:g.cleaned,label:g.promo1?.angle||"Benefit",bg:"#fff",text:g.promo1?.text},{url:g.cleaned,label:g.promo2?.angle||"Lifestyle",bg:"#fff",text:g.promo2?.text}].filter(x=>x.url);return imgs.length?<div style={{marginBottom:"28px"}}><h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"13px"}}>🎨 Image Gallery</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"11px"}}>{imgs.map((im,i)=><div key={i} style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"hidden"}}><div onClick={()=>setPdZoom(im.url)} style={{height:"140px",background:im.bg,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-in"}}><img src={im.url} alt={im.label} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} onError={e=>e.target.parentNode.style.display="none"}/></div><div style={{padding:"10px"}}><p style={{fontWeight:"800",fontSize:"10px",color:c.muted,textTransform:"uppercase",letterSpacing:".5px",marginBottom:im.text?"5px":"0"}}>{im.label}</p>{im.text&&<p style={{fontSize:"11px",color:c.text,lineHeight:1.5}}>{im.text}</p>}</div></div>)}</div></div>:null;})()}
-        {(bundleSugg?.products?.length>0||bundleLoading)&&<div style={{marginBottom:"28px"}}>
-          <h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"3px"}}>✨ Complete the Look</h2>
-          <p style={{fontSize:"11px",color:c.muted,marginBottom:"12px"}}>AI-curated bundle · 10% off when added together {bundleLoading?"⏳":""}</p>
-          {bundleSugg?.products&&<><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"9px",marginBottom:"11px"}}>{bundleSugg.products.map((b,i)=>{const bp=sp.find(x=>x.id===b.id)||sp.find(x=>x.name&&b.name&&x.name.toLowerCase().includes(b.name.toLowerCase().slice(0,8)));return bp?<div key={i} style={{background:c.card,borderRadius:"11px",border:`1px solid ${c.border}`,overflow:"hidden"}}><div style={{height:"80px",background:c.chip,display:"flex",alignItems:"center",justifyContent:"center"}}>{bp.image?<img src={bp.image} alt={bp.name} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"28px"}}>{CAT_ICONS[bp.category]||"◈"}</span>}</div><div style={{padding:"7px"}}><p style={{fontWeight:"700",fontSize:"10px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bp.name}</p><p style={{fontSize:"10px",color:c.accent,fontWeight:"800"}}>{fmt(bp.price)}</p>{b.reason&&<p style={{fontSize:"9px",color:c.muted,marginTop:"2px"}}>{b.reason}</p>}</div></div>:null;})} </div><button className="btn-t" onClick={()=>{bundleSugg.products.forEach(b=>{const bp=sp.find(x=>x.id===b.id)||sp.find(x=>x.name&&b.name&&x.name.toLowerCase().includes(b.name.toLowerCase().slice(0,8)));if(bp&&bp.stock>0)setCart(pv=>{const ex=pv.find(i=>i.id===bp.id);return ex?pv:[...pv,{...bp,qty:1}];});});setCartOpen(true);addToast("Bundle added! 10% off applied at checkout 🎉","success");}} style={{...btnP({width:"auto",padding:"10px 24px",fontSize:"13px",background:"linear-gradient(135deg,#7b2ff7,#00d4ff)"})}}> + Add Full Bundle — 10% off</button></>}
-        </div>}
-        {rel.length>0&&<><h2 style={{fontWeight:"800",fontSize:"15px",marginBottom:"13px"}}>You may also like</h2>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:"11px"}}>
-            {rel.map(r=>(
-              <div key={r.id} className="card-wrap" onClick={()=>{setSelectedProduct(r);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"hidden",cursor:"pointer"}}>
-                <div style={{height:"140px",background:c.chip,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{r.image?<img src={r.image} alt={r.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none"}}/>:<span style={{fontSize:"38px",opacity:.4}}>{CAT_ICONS[r.category]||"◈"}</span>}</div>
-                <div style={{padding:"10px"}}><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"4px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</p><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:"800",fontSize:"14px"}}>{fmt(r.price)}</span><button className="btn-t" onClick={e=>{e.stopPropagation();addToCart(r);}} style={{...btnP({width:"auto",padding:"4px 10px",fontSize:"11px"})}}>{t.addToCart}</button></div></div>
+
+        {/* INFO CARD */}
+        <div style={{background:c.card,borderRadius:"28px 28px 0 0",marginTop:"-30px",position:"relative",zIndex:2,padding:"24px 20px"}}>
+          {/* HEADER ROW */}
+          <div style={{display:"flex",alignItems:"flex-start",gap:"12px",marginBottom:"10px"}}>
+            <h1 style={{fontSize:"22px",fontWeight:800,color:c.text,flex:1,margin:0,lineHeight:1.3}}>{p.name}</h1>
+            <button onClick={()=>{navigator.share?navigator.share({title:p.name,url:window.location.href}).catch(()=>{}):addToast("Link copied!","success");}} style={{width:"44px",height:"44px",borderRadius:"14px",background:c.bg,border:"none",color:c.text,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}><i className="ti ti-share"/></button>
+          </div>
+
+          {/* META ROW */}
+          <div style={{display:"flex",alignItems:"center",gap:"14px",flexWrap:"wrap",marginBottom:"6px"}}>
+            <span style={{background:c.chip,color:CAT_CLR[p.category]||c.muted,padding:"3px 10px",borderRadius:"9px",fontSize:"10px",fontWeight:"800",textTransform:"uppercase",border:`1px solid ${c.border}`}}>{t[p.category]||p.category}</span>
+            <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
+              <div style={{display:"flex",gap:"1px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=4?"#f59e0b":c.border,fontSize:"13px"}}>★</span>)}</div>
+              <span style={{fontSize:"12px",color:c.muted,fontWeight:600}}>(124)</span>
+            </div>
+            {p.stock>0&&<span style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"12px",fontWeight:700,color:"#00d9a5"}}><i className="ti ti-circle-check" style={{fontSize:"14px"}}/>In Stock</span>}
+            <span style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"12px",fontWeight:700,color:c.accent}}><i className="ti ti-truck" style={{fontSize:"14px"}}/>Free Shipping</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap",marginBottom:"16px"}}>
+            {geoSupplier?.available&&<span style={{fontSize:"10px",fontWeight:"600",color:c.muted}}>🌍 Ships from {geoSupplier.ships_from} · Est. {geoSupplier.estimated_days} days</span>}
+            <span style={{fontSize:"10px",fontWeight:"500",color:"#e05555"}}>🔥 {pdViewers} viewing now</span>
+            <span style={{fontSize:"10px",color:c.muted}}>✓ {(p.id%7)+2} sold today</span>
+          </div>
+
+          {/* PRICE BLOCK */}
+          <div style={{background:"linear-gradient(135deg,rgba(233,69,96,0.05),rgba(255,107,107,0.05))",borderRadius:"16px",padding:"16px",marginBottom:"16px"}}>
+            <div style={{display:"flex",alignItems:"baseline",gap:"10px",flexWrap:"wrap"}}>
+              <span style={{fontSize:"32px",fontWeight:900,color:"#e94560"}}>{fmt(dp)}</span>
+              {onSale&&<span style={{fontSize:"18px",color:c.muted,textDecoration:"line-through"}}>{fmt(p.price)}</span>}
+              {onSale&&discPct>0&&<span style={{background:"linear-gradient(135deg,#e94560,#ff6b6b)",color:"#fff",borderRadius:"10px",padding:"4px 10px",fontSize:"11px",fontWeight:800}}>-{discPct}%</span>}
+            </div>
+            {flags.vat!==false&&<p style={{fontSize:"11px",color:c.muted,marginTop:"6px"}}>{t.tax}: {fmt(dp*0.15)}</p>}
+            {flags.b2b&&<p style={{fontSize:"11px",color:c.muted,marginTop:"2px"}}>★ B2B: 5–9 units ▸ 10% off · 10+ units ▸ 20% off</p>}
+          </div>
+
+          {p.stock===0&&!p.is_preorder&&geoSupplier&&!geoSupplier.available&&geoSupplier.similar?.length>0&&<div style={{background:c.bg,borderRadius:"12px",padding:"12px",marginBottom:"16px"}}>
+            <p style={{fontSize:"11px",fontWeight:"700",color:c.error,marginBottom:"8px"}}>Not available from nearby supplier</p>
+            <div style={{display:"flex",flexDirection:"column",gap:"5px"}}>{geoSupplier.similar.map(s=><div key={s.id} className="btn-t" onClick={()=>{setSelectedProduct(s);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer",padding:"6px 8px",background:c.card,borderRadius:"7px",border:`1px solid ${c.border}`}}><span style={{flex:1,fontSize:"11px",fontWeight:"600"}}>{s.name}</span><span style={{fontSize:"11px",fontWeight:"700"}}>{fmt(s.price)}</span></div>)}</div>
+          </div>}
+
+          {/* AI SIZE MATCH */}
+          {isClothing&&<div style={{background:"linear-gradient(135deg,rgba(0,217,165,0.1),rgba(0,217,165,0.05))",border:"1px solid rgba(0,217,165,0.3)",borderRadius:"16px",padding:"16px",marginBottom:"20px",display:"flex",alignItems:"center",gap:"14px"}}>
+            <div style={{width:"48px",height:"48px",borderRadius:"14px",background:"#00d9a5",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",flexShrink:0}}><i className="ti ti-robot"/></div>
+            <div>
+              <p style={{fontSize:"15px",fontWeight:700,color:c.text,marginBottom:"2px"}}>AI Size Match</p>
+              <p style={{fontSize:"13px",color:c.muted,lineHeight:1.4}}>Based on 10,000+ body profiles, we recommend Size {aiSize} for you</p>
+            </div>
+          </div>}
+
+          {/* COLOR SELECTOR */}
+          <div style={{marginBottom:"20px"}}>
+            <p style={{fontSize:"16px",fontWeight:700,color:c.text,marginBottom:"10px"}}>Color</p>
+            <div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
+              {colors.map((clr,i)=>(
+                <button key={i} onClick={()=>setPdColor(i)} title={clr} style={{width:"44px",height:"44px",borderRadius:"50%",background:clr,border:`1.5px solid ${clr==="#f5f0e8"?c.border:clr}`,cursor:"pointer",padding:0,outline:pdColor===i?`3px solid ${c.accent}`:"none",outlineOffset:"2px",transition:"outline .15s,transform .15s",transform:pdColor===i?"scale(1.06)":"scale(1)"}}/>
+              ))}
+            </div>
+          </div>
+
+          {/* SIZE SELECTOR */}
+          <div style={{marginBottom:"20px"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"10px"}}>
+              <p style={{fontSize:"16px",fontWeight:700,color:c.text,margin:0}}>Size</p>
+              <button onClick={()=>addToast("Size guide coming soon","info")} style={{background:"none",border:"none",color:c.accent,fontSize:"14px",fontWeight:600,cursor:"pointer",padding:0}}>Size Guide</button>
+            </div>
+            <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+              {sizes.map(sz=>(
+                <button key={sz} onClick={()=>setPdSize(sz)} style={{position:"relative",width:"52px",height:"48px",borderRadius:"14px",background:pdSize===sz?"#e94560":c.bg,color:pdSize===sz?"#fff":c.text,border:`2px solid ${pdSize===sz?"#e94560":c.border}`,cursor:"pointer",fontWeight:700,fontSize:"13px",transition:"all .15s"}}>
+                  {sz}
+                  {isClothing&&sz===aiSize&&<span style={{position:"absolute",top:"-7px",right:"-7px",background:"#00d9a5",color:"#fff",fontSize:"8px",fontWeight:800,borderRadius:"6px",padding:"1px 4px",lineHeight:1.4}}>AI</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {isClothing&&<div style={{background:c.bg,borderRadius:"12px",padding:"14px",marginBottom:"20px"}}>
+            <p style={{fontWeight:"700",fontSize:"13px",color:c.text,marginBottom:"8px"}}>📏 Smart Size & Fit</p>
+            <div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>{[["chest","Chest (cm)"],["waist","Waist (cm)"],["height","Height (cm)"]].map(([k,l])=><div key={k} style={{flex:1}}><p style={{fontSize:"9px",color:c.muted,fontWeight:"700",marginBottom:"2px",textTransform:"uppercase"}}>{l}</p><input type="number" value={sizeM[k]} onChange={e=>setSizeM(m=>({...m,[k]:e.target.value}))} placeholder="e.g. 90" style={{...inp(false),padding:"6px 8px",fontSize:"12px"}}/></div>)}</div>
+            <button className="btn-t" onClick={()=>askSize(p)} disabled={sizeLoading} style={btnP({padding:"7px 14px",fontSize:"12px",opacity:sizeLoading?.5:1})}>{sizeLoading?"⏳ Analyzing…":"Get My Size"}</button>
+            {sizeRes&&<div style={{marginTop:"8px",background:c.card,borderRadius:"7px",padding:"10px",border:`1px solid ${c.border}`}}><span style={{fontWeight:"900",fontSize:"22px",color:c.accent}}>{sizeRes.size}</span><span style={{fontSize:"11px",color:c.muted,marginLeft:"8px"}}>({sizeRes.confidence} confidence)</span>{sizeRes.note&&<p style={{fontSize:"11px",color:c.muted,marginTop:"4px"}}>{sizeRes.note}</p>}</div>}
+          </div>}
+
+          {(p.stock>0||p.is_preorder)&&<div style={{marginBottom:"20px"}}>
+            <p style={{fontWeight:"700",fontSize:"11px",color:c.muted,marginBottom:"8px",textTransform:"uppercase",letterSpacing:".5px"}}>Quantity</p>
+            <div style={{display:"flex",alignItems:"stretch",background:c.bg,border:`1.5px solid ${c.border}`,borderRadius:"10px",width:"fit-content",overflow:"hidden"}}>
+              <button onClick={()=>setPdQty(q=>Math.max(1,q-1))} style={{background:"none",border:"none",color:c.text,width:"38px",height:"38px",cursor:"pointer",fontWeight:"800",fontSize:"20px",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+              <span style={{fontWeight:"800",fontSize:"15px",minWidth:"38px",textAlign:"center",borderLeft:`1px solid ${c.border}`,borderRight:`1px solid ${c.border}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{pdQty}</span>
+              <button onClick={()=>setPdQty(q=>Math.min(p.stock||999,q+1))} style={{background:"none",border:"none",color:c.text,width:"38px",height:"38px",cursor:"pointer",fontWeight:"800",fontSize:"20px",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            </div>
+            {flags.vat!==false&&<p style={{fontSize:"11px",color:c.muted,marginTop:"6px"}}>Total incl. VAT: <b>{fmt(dp*pdQty*1.15)}</b></p>}
+          </div>}
+
+          {(p.category==="clothing"||p.category==="accessories")&&<button className="btn-t" onClick={()=>setArOpen(true)} style={{background:"linear-gradient(135deg,#7b2ff7,#00d4ff)",color:"#fff",border:"none",borderRadius:"14px",padding:"12px 18px",cursor:"pointer",fontWeight:"700",fontSize:"13px",width:"100%",marginBottom:"20px"}}>👁 Try On (AR)</button>}
+
+          {/* URGENCY TIMER */}
+          {pdCountdown!==null&&(()=>{const h=Math.floor(pdCountdown/3600),m=Math.floor((pdCountdown%3600)/60),s=pdCountdown%60;return(
+            <div style={{background:"linear-gradient(135deg,rgba(255,165,2,0.1),rgba(255,165,2,0.05))",border:"1px solid rgba(255,165,2,0.3)",borderRadius:"12px",padding:"12px 16px",display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap",marginBottom:"20px"}}>
+              <i className="ti ti-clock" style={{color:"#ffa502",fontSize:"18px",flexShrink:0}}/>
+              <span style={{fontSize:"12px",color:c.muted,whiteSpace:"nowrap"}}>Offer expires in:</span>
+              <div style={{display:"flex",alignItems:"center",gap:"3px"}}>{[[h,"h"],[m,"m"],[s,"s"]].map(([v,u],i)=><React.Fragment key={u}>{i>0&&<span style={{color:"#ffa502",fontWeight:700,fontSize:"13px"}}>:</span>}<span style={{background:"#fff",borderRadius:"6px",padding:"2px 7px",fontWeight:700,fontSize:"13px",color:"#ffa502"}}>{String(v).padStart(2,"0")}</span></React.Fragment>)}</div>
+            </div>
+          );})()}
+
+          {/* ACCORDION */}
+          <div style={{marginBottom:"28px"}}>
+            {ACC.map(a=>(
+              <div key={a.key} style={{borderBottom:`1px solid ${c.border}`}}>
+                <button onClick={()=>setPdAcc(pdAcc===a.key?null:a.key)} style={{width:"100%",background:"none",border:"none",cursor:"pointer",padding:"16px 0",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:"16px",fontWeight:600,color:c.text}}>
+                  {a.label}
+                  <i className={`ti ${pdAcc===a.key?"ti-minus":"ti-plus"}`} style={{fontSize:"16px",color:c.muted}}/>
+                </button>
+                {pdAcc===a.key&&<div style={{fontSize:"14px",color:c.muted,lineHeight:1.8,paddingBottom:"16px"}}>
+                  {a.key==="description"&&a.content}
+                  {a.key==="specs"&&<div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between"}}><span>Category</span><span style={{color:c.text,fontWeight:600}}>{t[p.category]||p.category}</span></div>
+                    <div style={{display:"flex",justifyContent:"space-between"}}><span>Availability</span><span style={{color:c.text,fontWeight:600}}>{p.stock>0?`${p.stock} in stock`:p.is_preorder?"Pre-order":"Out of stock"}</span></div>
+                    {geoSupplier?.available&&<div style={{display:"flex",justifyContent:"space-between"}}><span>Ships from</span><span style={{color:c.text,fontWeight:600}}>{geoSupplier.ships_from} · {geoSupplier.estimated_days} days</span></div>}
+                  </div>}
+                  {a.key==="shipping"&&<div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                    {[{icon:"ti-truck",text:"Free shipping over 200 SAR"},{icon:"ti-shield-check",text:"100% secure payment"},{icon:"ti-refresh",text:"Free returns within 30 days"}].map((b,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:"8px"}}><i className={`ti ${b.icon}`} style={{fontSize:"16px",color:c.accent,flexShrink:0}}/><span>{b.text}</span></div>
+                    ))}
+                  </div>}
+                </div>}
               </div>
             ))}
           </div>
-        </>}
 
-        {/* REVIEWS SECTION */}
-        <div style={{marginTop:"36px",marginBottom:"16px"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",marginBottom:"22px"}}>
-            <h2 style={{fontWeight:"800",fontSize:"17px",direction:"rtl"}}>آراء العملاء</h2>
-            <button style={{border:"1px solid #2a7d7b",color:"#2a7d7b",background:"none",borderRadius:"50px",padding:"8px 20px",cursor:"pointer",fontWeight:700,fontSize:"12px"}} onMouseEnter={e=>e.currentTarget.style.background="#eaf6f6"} onMouseLeave={e=>e.currentTarget.style.background="none"}>اكتب تقييمك</button>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:"20px",marginBottom:"26px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:"18px"}}>
+          {/* CROSS-SELL PROMO BANNER */}
+          {(()=>{const xm={electronics:"accessories",clothing:"accessories",jewelry:"clothing",accessories:"jewelry",home:"kitchen",beauty:"home",sports:"clothing",baby:"clothing",kitchen:"home",stationery:"home"};const rc=xm[p.category]||"all";const rl=rc.charAt(0).toUpperCase()+rc.slice(1);return(<div className="btn-t" onClick={()=>{setCategory(rc);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),80);}} style={{background:c.bg,borderRadius:"14px",padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"16px",marginBottom:"28px",cursor:"pointer"}}><div><p style={{fontSize:"10px",fontWeight:700,color:c.accent,textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:"5px"}}>You Might Also Like</p><p style={{fontWeight:700,fontSize:"15px",color:c.text,marginBottom:"2px"}}>Explore {rl}</p><p style={{fontSize:"11px",color:c.muted,margin:0}}>Discover pieces that pair perfectly</p></div><button style={{background:c.accent,color:"#fff",border:"none",borderRadius:"50px",padding:"9px 18px",fontSize:"12px",fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Explore →</button></div>);})()}
+
+          {/* COMPLETE THE LOOK */}
+          {rel.length>0&&<div style={{marginBottom:"28px"}}>
+            <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,marginBottom:"13px"}}>Complete the Look</h2>
+            <div style={{display:"flex",gap:"12px",overflowX:"auto",paddingBottom:"6px"}}>
+              {rel.map(r=>(
+                <div key={r.id} className="card-wrap" onClick={()=>{setSelectedProduct(r);setPdQty(1);window.scrollTo({top:0,behavior:"smooth"});}} style={{minWidth:"140px",width:"140px",background:c.bg,borderRadius:"16px",overflow:"hidden",cursor:"pointer",flexShrink:0}}>
+                  <div style={{height:"110px",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{r.image?<img src={r.image} alt={r.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none"}}/>:<span style={{fontSize:"32px",opacity:.4}}>{CAT_ICONS[r.category]||"◈"}</span>}</div>
+                  <div style={{padding:"8px"}}>
+                    <p style={{fontSize:"12px",fontWeight:600,color:c.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:"3px"}}>{r.name}</p>
+                    <p style={{fontSize:"14px",fontWeight:800,color:c.accent}}>{fmt(r.price)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>}
+
+          {/* AI BUNDLE */}
+          {(bundleSugg?.products?.length>0||bundleLoading)&&<div style={{marginBottom:"28px"}}>
+            <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,marginBottom:"3px"}}>✨ AI-Curated Bundle</h2>
+            <p style={{fontSize:"11px",color:c.muted,marginBottom:"12px"}}>10% off when added together {bundleLoading?"⏳":""}</p>
+            {bundleSugg?.products&&<>
+              <div style={{display:"flex",gap:"9px",overflowX:"auto",marginBottom:"11px",paddingBottom:"6px"}}>
+                {bundleSugg.products.map((b,i)=>{const bp=sp.find(x=>x.id===b.id)||sp.find(x=>x.name&&b.name&&x.name.toLowerCase().includes(b.name.toLowerCase().slice(0,8)));return bp?<div key={i} style={{minWidth:"120px",width:"120px",flexShrink:0,background:c.bg,borderRadius:"11px",overflow:"hidden"}}><div style={{height:"80px",display:"flex",alignItems:"center",justifyContent:"center"}}>{bp.image?<img src={bp.image} alt={bp.name} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"28px"}}>{CAT_ICONS[bp.category]||"◈"}</span>}</div><div style={{padding:"7px"}}><p style={{fontWeight:"700",fontSize:"10px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:c.text}}>{bp.name}</p><p style={{fontSize:"10px",color:c.accent,fontWeight:"800"}}>{fmt(bp.price)}</p></div></div>:null;})}
+              </div>
+              <button className="btn-t" onClick={()=>{bundleSugg.products.forEach(b=>{const bp=sp.find(x=>x.id===b.id)||sp.find(x=>x.name&&b.name&&x.name.toLowerCase().includes(b.name.toLowerCase().slice(0,8)));if(bp&&bp.stock>0)setCart(pv=>{const ex=pv.find(i=>i.id===bp.id);return ex?pv:[...pv,{...bp,qty:1}];});});setCartOpen(true);addToast("Bundle added! 10% off applied at checkout 🎉","success");}} style={{...btnP({width:"auto",padding:"10px 24px",fontSize:"13px",background:"linear-gradient(135deg,#7b2ff7,#00d4ff)"})}}> + Add Full Bundle — 10% off</button>
+            </>}
+          </div>}
+
+          {/* MORE VIEWS GALLERY */}
+          {p.image_gallery&&(()=>{const imgs=[{url:gal.original,label:"Original",bg:c.chip},{url:gal.cleaned,label:"Cleaned",bg:c.bg,text:""},{url:gal.cleaned,label:gal.promo1?.angle||"Benefit",bg:c.bg,text:gal.promo1?.text},{url:gal.cleaned,label:gal.promo2?.angle||"Lifestyle",bg:c.bg,text:gal.promo2?.text}].filter(x=>x.url);return imgs.length?<div style={{marginBottom:"28px"}}><h2 style={{fontWeight:"800",fontSize:"15px",color:c.text,marginBottom:"13px"}}>🎨 More Views</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"11px"}}>{imgs.map((im,i)=><div key={i} style={{background:c.bg,borderRadius:"13px",overflow:"hidden"}}><div onClick={()=>setPdZoom(im.url)} style={{height:"110px",background:im.bg,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-in"}}><img src={im.url} alt={im.label} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} onError={e=>e.target.parentNode.style.display="none"}/></div><div style={{padding:"10px"}}><p style={{fontWeight:"800",fontSize:"10px",color:c.muted,textTransform:"uppercase",letterSpacing:".5px",marginBottom:im.text?"5px":"0"}}>{im.label}</p>{im.text&&<p style={{fontSize:"11px",color:c.text,lineHeight:1.5}}>{im.text}</p>}</div></div>)}</div></div>:null;})()}
+
+          {/* REVIEWS */}
+          <div style={{marginBottom:"20px"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",marginBottom:"18px"}}>
+              <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,margin:0}}>Customer Reviews <span style={{fontWeight:600,color:c.muted,fontSize:"14px"}}>({reviews.length})</span></h2>
+              <button style={{border:`1px solid ${c.accent}`,color:c.accent,background:"none",borderRadius:"50px",padding:"8px 18px",cursor:"pointer",fontWeight:700,fontSize:"12px"}}>Write a Review</button>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:"18px",marginBottom:"20px"}}>
               <div style={{textAlign:"center",flexShrink:0}}>
-                <p style={{fontSize:"52px",fontWeight:900,lineHeight:1,color:"#1a2424"}}>4.8</p>
-                <div style={{display:"flex",gap:"2px",justifyContent:"center",margin:"5px 0"}}>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=4?"#f59e0b":"#d8d2c8",fontSize:"16px"}}>★</span>)}</div>
-                <p style={{fontSize:"11px",color:"#5a6e6e",direction:"rtl"}}>(124 تقييم)</p>
+                <p style={{fontSize:"44px",fontWeight:900,lineHeight:1,color:c.text}}>4.8</p>
+                <div style={{display:"flex",gap:"2px",justifyContent:"center",margin:"5px 0"}}>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=4?"#f59e0b":c.border,fontSize:"14px"}}>★</span>)}</div>
+                <p style={{fontSize:"11px",color:c.muted}}>124 reviews</p>
               </div>
               <div style={{flex:1}}>
                 {[[5,78],[4,14],[3,5],[2,2],[1,1]].map(([stars,pct])=>(
                   <div key={stars} style={{display:"flex",alignItems:"center",gap:"7px",marginBottom:"5px"}}>
-                    <span style={{fontSize:"10px",color:"#5a6e6e",width:"12px",textAlign:"right",flexShrink:0}}>{stars}</span>
+                    <span style={{fontSize:"10px",color:c.muted,width:"8px",flexShrink:0}}>{stars}</span>
                     <span style={{color:"#f59e0b",fontSize:"10px",flexShrink:0}}>★</span>
-                    <div style={{flex:1,height:"4px",borderRadius:"2px",background:"#d8d2c8",overflow:"hidden"}}>
-                      <div style={{width:`${pct}%`,height:"100%",background:"#2a7d7b",borderRadius:"2px"}}/>
-                    </div>
-                    <span style={{fontSize:"10px",color:"#5a6e6e",width:"28px",flexShrink:0}}>{pct}%</span>
+                    <div style={{flex:1,height:"4px",borderRadius:"2px",background:c.border,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:c.accent,borderRadius:"2px"}}/></div>
+                    <span style={{fontSize:"10px",color:c.muted,width:"28px",flexShrink:0}}>{pct}%</span>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:"13px"}}>
-            {[{name:"أحمد الشمري",date:"12 يونيو 2026",stars:5,text:"منتج رائع جداً، التوصيل كان سريعاً والتغليف ممتاز. سأطلب مرة أخرى بالتأكيد!"},{name:"فاطمة العمري",date:"8 يونيو 2026",stars:5,text:"جودة عالية وسعر مناسب، تجربة تسوق ممتعة من البداية للنهاية."},{name:"محمد القحطاني",date:"3 يونيو 2026",stars:4,text:"المنتج جيد لكن التوصيل تأخر يوم واحد. الجودة تستحق الانتظار."}].map((rev,i)=>(
-              <div key={i} style={{background:"#f5f2ec",borderRadius:"12px",border:"1px solid #d8d2c8",padding:"16px",direction:"rtl"}}>
-                <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px"}}>
-                  <div style={{width:"38px",height:"38px",borderRadius:"50%",background:`hsl(${i*60+160},40%,72%)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:"14px",color:"#fff",flexShrink:0}}>{rev.name[0]}</div>
-                  <div style={{flex:1}}>
-                    <p style={{fontWeight:700,fontSize:"13px",color:"#1a2424"}}>{rev.name}</p>
-                    <p style={{fontSize:"10px",color:"#8fa5a5"}}>{rev.date}</p>
+            <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+              {reviews.map((rev,i)=>(
+                <div key={i} style={{background:c.bg,borderRadius:"12px",padding:"14px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}}>
+                    <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`hsl(${i*60+160},40%,55%)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:"13px",color:"#fff",flexShrink:0}}>{rev.name[0]}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
+                        <p style={{fontWeight:700,fontSize:"13px",color:c.text,margin:0}}>{rev.name}</p>
+                        <span style={{background:"#00d9a520",color:"#00d9a5",fontSize:"9px",fontWeight:800,padding:"2px 6px",borderRadius:"5px"}}>Verified</span>
+                      </div>
+                      <p style={{fontSize:"10px",color:c.muted}}>{rev.date}</p>
+                    </div>
+                    <div style={{display:"flex",gap:"1px",flexShrink:0}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=rev.stars?"#f59e0b":c.border,fontSize:"11px"}}>★</span>)}</div>
                   </div>
-                  <div style={{display:"flex",gap:"1px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=rev.stars?"#f59e0b":"#d8d2c8",fontSize:"12px"}}>★</span>)}</div>
+                  <p style={{fontSize:"14px",color:c.muted,lineHeight:1.8,margin:0}}>{rev.text}</p>
                 </div>
-                <p style={{fontSize:"12px",color:"#5a6e6e",lineHeight:1.7}}>{rev.text}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM ACTION BAR */}
+        <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:500,background:c.card,padding:"16px 20px 24px",display:"flex",justifyContent:"center"}}>
+          <div style={{display:"flex",gap:"12px",width:"100%",maxWidth:"480px"}}>
+            <button onClick={addPdToCart} disabled={p.stock===0&&!p.is_preorder} style={{flex:1,background:c.bg,border:`2px solid ${c.border}`,color:c.text,borderRadius:"16px",padding:"14px",fontWeight:700,fontSize:"14px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",opacity:(p.stock===0&&!p.is_preorder)?.4:1}}>{p.is_preorder?"Pre-Order":"Add to Cart"}</button>
+            <button onClick={buyNow} disabled={p.stock===0&&!p.is_preorder} style={{flex:1,background:"#e94560",border:"none",color:"#fff",borderRadius:"16px",padding:"14px",fontWeight:700,fontSize:"14px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",opacity:(p.stock===0&&!p.is_preorder)?.4:1,boxShadow:"0 4px 20px rgba(233,69,96,0.3)"}}>Buy Now</button>
           </div>
         </div>
       </div>);
@@ -1677,79 +1911,170 @@ export default function App() {
     )}
 
     {/* PROFILE VIEW */}
-    {view==="profile"&&user&&(
-      <div className="fu" style={{padding:"36px 24px",maxWidth:"640px",margin:"0 auto"}}>
-        <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"28px"}}>
+    {view==="profile"&&user&&(()=>{
+      const tier=getTier(userPts),ti=TIER[tier];
+      const prev={bronze:0,silver:500,gold:2000,platinum:5000,diamond:10000}[tier]||0;
+      const pct=ti.next?Math.min(100,((userPts-prev)/(ti.next-prev))*100):100;
+      const nextLabel={bronze:"Silver",silver:"Gold",gold:"Platinum",platinum:"Diamond"}[tier];
+      const profileOrders=getLocalOrders().filter(o=>o.customerEmail===user.email);
+      const activeCoupons=getCoupons().filter(cp=>cp.active).length;
+      const scrollToId=id=>document.getElementById(id)?.scrollIntoView({behavior:"smooth",block:"start"});
+      const sectionTitle={fontSize:"12px",fontWeight:"700",color:c.muted,textTransform:"uppercase",letterSpacing:"1px",padding:"16px 20px 8px"};
+      const sectionCard={background:c.card,borderRadius:"20px",margin:"0 16px 16px"};
+      const QUICK_ACTIONS=[
+        {icon:"ti-box",label:"My Orders",badge:profileOrders.length||null,onClick:()=>scrollToId("order-history-section")},
+        {icon:"ti-truck",label:"Track Order",badge:profileOrders.length||null,onClick:()=>scrollToId("track-order-section")},
+        {icon:"ti-star",label:"Reviews",badge:null,onClick:()=>addToast("Reviews coming soon","info")},
+        {icon:"ti-refresh",label:"Reorder",badge:null,onClick:()=>profileOrders.length?reorder(profileOrders[0].items):addToast("No previous orders yet","info")},
+      ];
+      const MENU_ITEMS=[
+        {icon:"ti-package",label:"Order History",sub:`${profileOrders.length} orders`,onClick:()=>scrollToId("order-history-section")},
+        {icon:"ti-truck",label:"Track Order",onClick:()=>scrollToId("track-order-section")},
+        {icon:"ti-heart",label:"Wishlist",sub:`${wishlist.length} saved`,onClick:()=>wishlist.length?scrollToId("wishlist-section"):addToast("Your wishlist is empty","info")},
+        {icon:"ti-rotate",label:"Return Requests",onClick:()=>scrollToId("rma-form")},
+        ...(flags.wallet?[{icon:"ti-wallet",label:"Wallet",sub:fmt(walletBal||0),onClick:()=>setView("wallet")}]:[]),
+        ...(flags.b2b?[{icon:"ti-briefcase",label:"Business Account",onClick:()=>scrollToId("b2b-section")}]:[]),
+      ];
+      return(
+      <div className="fu" style={{maxWidth:"640px",margin:"0 auto",paddingBottom:"8px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px",padding:"20px 24px 0"}}>
           <button onClick={()=>setView("store")} style={{background:"none",border:"none",color:c.muted,cursor:"pointer",fontSize:"18px"}}>{isRtl?"→":"←"}</button>
-          <h2 style={{fontWeight:"800",fontSize:"20px"}}>{t.myAccount}</h2>
-          <button onClick={doLogout} className="btn-t" style={btnS({width:"auto",padding:"5px 12px",fontSize:"11px",marginInlineStart:"auto"})}>{t.logout}</button>
+          <h2 style={{fontWeight:"800",fontSize:"18px",flex:1}}>{t.myAccount}</h2>
+          <button onClick={doLogout} className="btn-t" style={btnS({width:"auto",padding:"5px 12px",fontSize:"11px"})}>{t.logout}</button>
         </div>
-        <div style={{background:c.card,borderRadius:"16px",border:`1px solid ${c.border}`,padding:"22px",marginBottom:"18px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"16px"}}>
-            <div><p style={{color:c.muted,fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}}>{t.welcome}</p><p style={{fontWeight:"800",fontSize:"20px"}}>{user.name}</p><p style={{color:c.muted,fontSize:"12px"}}>{user.email}</p></div>
-            <div style={{textAlign:"right"}}>
-              <div style={{background:TIER[getTier(userPts)].color+"22",color:TIER[getTier(userPts)].color,border:`1.5px solid ${TIER[getTier(userPts)].color}`,padding:"5px 14px",borderRadius:"20px",fontSize:"12px",fontWeight:"800",marginBottom:"4px"}}>◆ {TIER[getTier(userPts)].label}</div>
-              {flags.wallet&&<button className="btn-t" onClick={()=>setView("wallet")} style={btnS({width:"auto",padding:"5px 14px",fontSize:"11px",marginTop:"6px"})}>💳 Wallet</button>}
+
+        {/* PREMIUM HEADER */}
+        <div style={{position:"relative",background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",borderRadius:"0 0 28px 28px",padding:"20px 24px 44px",marginTop:"16px",overflow:"hidden"}}>
+          <button onClick={()=>addToast("Settings coming soon","info")} title="Settings" style={{position:"absolute",top:"20px",[isRtl?"left":"right"]:"20px",width:"44px",height:"44px",background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"14px",color:"#fff",fontSize:"18px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><i className="ti ti-settings"/></button>
+          <div style={{width:"72px",height:"72px",borderRadius:"50%",border:"4px solid #ffd700",background:"rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:"800",color:"#fff",marginBottom:"12px"}}>{(user.name||"?").trim()[0]?.toUpperCase()||"?"}</div>
+          <p style={{fontSize:"22px",fontWeight:"800",color:"#fff",marginBottom:"2px"}}>{user.name}</p>
+          <p style={{fontSize:"14px",color:"rgba(255,255,255,0.7)",marginBottom:"10px"}}>{user.email}</p>
+          <div style={{display:"inline-flex",alignItems:"center",gap:"5px",background:"linear-gradient(135deg,#ffd700,#ffaa00)",color:"#1a1a2e",padding:"4px 12px",borderRadius:"20px",fontSize:"12px",fontWeight:"800"}}><i className="ti ti-crown"/> {ti.label} Member</div>
+        </div>
+
+        {/* STATS ROW */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",padding:"0 16px",marginTop:"-20px",position:"relative",zIndex:10}}>
+          {[["Orders",profileOrders.length],["Reviews",0],["Wishlist",wishlist.length],["Coupons",activeCoupons]].map(([label,val])=>(
+            <div key={label} style={{background:c.card,borderRadius:"20px",padding:"16px 8px",textAlign:"center",boxShadow:"0 4px 20px rgba(0,0,0,0.15)"}}>
+              <p style={{fontSize:"22px",fontWeight:"900",color:"#e94560"}}>{val}</p>
+              <p style={{fontSize:"11px",color:c.muted,fontWeight:"600",textTransform:"uppercase",marginTop:"2px"}}>{label}</p>
             </div>
-          </div>
-          {(()=>{const tier=getTier(userPts);const ti=TIER[tier];const prev={bronze:0,silver:500,gold:2000,platinum:5000,diamond:10000}[tier]||0;const pct=ti.next?Math.min(100,((userPts-prev)/(ti.next-prev))*100):100;const nextLabel={bronze:"Silver",silver:"Gold",gold:"Platinum",platinum:"Diamond"}[tier];return<div style={{borderTop:`1px solid ${c.border}`,paddingTop:"13px",marginTop:"4px"}}><div style={{display:"flex",justifyContent:"space-between",fontSize:"10px",fontWeight:"700",marginBottom:"6px"}}><span style={{color:ti.color}}>◆ {ti.label}</span><span style={{color:c.muted}}>{ti.next?`${userPts} / ${ti.next} pts`:"✦ MAX TIER"}</span></div><div style={{height:"7px",background:c.chip,borderRadius:"4px",overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${ti.color},#00d4ff)`,borderRadius:"4px",transition:"width .9s ease"}}/></div>{nextLabel&&<p style={{fontSize:"9px",color:c.muted,marginTop:"4px"}}>{ti.next-userPts} pts to {nextLabel} · Unlocks exclusive perks</p>}</div>;})()}
+          ))}
         </div>
+
+        {/* QUICK ACTIONS */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",padding:"16px 16px 0",marginBottom:"16px"}}>
+          {QUICK_ACTIONS.map(qa=>(
+            <button key={qa.label} onClick={qa.onClick} className="btn-t" style={{position:"relative",background:c.card,border:"none",borderRadius:"20px",padding:"16px 8px",textAlign:"center",cursor:"pointer",boxShadow:"0 4px 16px rgba(0,0,0,0.08)"}}>
+              {qa.badge?<span style={{position:"absolute",top:"6px",right:"6px",background:"#ef4444",color:"#fff",fontSize:"9px",fontWeight:"800",borderRadius:"50%",width:"16px",height:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}>{qa.badge}</span>:null}
+              <i className={`ti ${qa.icon}`} style={{fontSize:"24px",color:"#e94560",display:"block",marginBottom:"6px"}}/>
+              <p style={{fontSize:"12px",fontWeight:"600",color:c.text}}>{qa.label}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* LOYALTY CARD */}
+        <div style={{background:"linear-gradient(135deg,#1a1a2e,#0f3460)",borderRadius:"24px",padding:"24px",margin:"0 16px 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px"}}>
+            <div>
+              <p style={{fontSize:"18px",fontWeight:"800",color:"#fff",marginBottom:"6px"}}>Style Points</p>
+              <p style={{fontSize:"32px",fontWeight:"900",color:"#fff"}}>{userPts}</p>
+            </div>
+            {flags.wallet&&<button className="btn-t" onClick={()=>setView("wallet")} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",padding:"6px 14px",borderRadius:"20px",cursor:"pointer",fontSize:"11px",fontWeight:"700"}}>💳 Wallet</button>}
+          </div>
+          <div style={{height:"10px",background:"rgba(255,255,255,0.2)",borderRadius:"5px",overflow:"hidden",marginBottom:"8px"}}>
+            <div style={{width:`${pct}%`,height:"100%",background:"linear-gradient(90deg,#ffd700,#ffaa00)",borderRadius:"5px",transition:"width .9s ease"}}/>
+          </div>
+          <p style={{fontSize:"13px",color:"rgba(255,255,255,0.8)"}}>{nextLabel?`${ti.next-userPts} pts to ${nextLabel} · Unlocks exclusive perks`:"✦ Maximum tier reached"}</p>
+        </div>
+
+        {/* ACCOUNT MENU */}
+        <div style={sectionCard}>
+          <p style={sectionTitle}>Account</p>
+          {MENU_ITEMS.map((mi,i)=>(
+            <div key={mi.label} onClick={mi.onClick} style={{display:"flex",alignItems:"center",gap:"14px",padding:"16px 20px",cursor:"pointer",borderBottom:i<MENU_ITEMS.length-1?`1px solid ${c.border}`:"none"}}>
+              <div style={{width:"40px",height:"40px",borderRadius:"12px",background:"rgba(233,69,96,0.1)",color:"#e94560",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}><i className={`ti ${mi.icon}`}/></div>
+              <div style={{flex:1,minWidth:0}}>
+                <p style={{fontSize:"15px",fontWeight:"600",color:c.text}}>{mi.label}</p>
+                {mi.sub&&<p style={{fontSize:"11px",color:c.muted,marginTop:"1px"}}>{mi.sub}</p>}
+              </div>
+              <i className="ti ti-chevron-right" style={{color:c.muted,fontSize:"16px"}}/>
+            </div>
+          ))}
+        </div>
+
+        {/* REFERRAL BANNER */}
+        <div style={{background:"linear-gradient(135deg,#667eea,#764ba2)",borderRadius:"24px",padding:"24px",margin:"0 16px 16px"}}>
+          <p style={{fontSize:"20px",fontWeight:"800",color:"#fff",marginBottom:"6px"}}><i className="ti ti-gift" style={{marginInlineEnd:"8px"}}/>Give SAR 50, Get SAR 50</p>
+          <p style={{fontSize:"14px",color:"rgba(255,255,255,0.9)",marginBottom:"14px"}}>Invite friends to BLEX and you'll both earn rewards.</p>
+          <button className="btn-t" onClick={()=>addToast("Referral program coming soon!","info")} style={{background:"#fff",color:"#667eea",border:"none",borderRadius:"14px",padding:"12px 24px",fontWeight:"700",cursor:"pointer",fontSize:"13px"}}>Invite Friends</button>
+        </div>
+
         {/* ORDER TRACKING UI */}
-        <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #d8d2c8",padding:"22px",marginBottom:"22px"}}>
-          <h3 style={{fontWeight:700,fontSize:"18px",marginBottom:"16px",color:"#1a2424"}}>Track Your Order</h3>
+        <div id="track-order-section" style={{...sectionCard,padding:"20px",margin:"0 16px 16px"}}>
+          <h3 style={{fontWeight:700,fontSize:"18px",marginBottom:"16px",color:c.text}}>Track Your Order</h3>
           <div style={{display:"flex",gap:"8px",marginBottom:"18px"}}>
-            <input value={trackInput} onChange={e=>setTrackInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&trackOrder()} placeholder="Enter order number (e.g. BLEX-1001)…" style={{flex:1,background:"#f5f2ec",border:"1px solid #d8d2c8",borderRadius:"10px",padding:"10px 14px",fontSize:"13px",color:"#1a2424",outline:"none"}}/>
-            <button onClick={trackOrder} disabled={trackLoading||!trackInput.trim()} style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"10px 18px",cursor:"pointer",fontWeight:700,fontSize:"13px",opacity:trackLoading||!trackInput.trim()?0.5:1}}>{trackLoading?"⏳":"Track"}</button>
+            <input value={trackInput} onChange={e=>setTrackInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&trackOrder()} placeholder="Enter order number (e.g. BLEX-1001)…" style={{flex:1,background:c.input,border:`1px solid ${c.border}`,borderRadius:"10px",padding:"10px 14px",fontSize:"13px",color:c.text,outline:"none"}}/>
+            <button onClick={trackOrder} disabled={trackLoading||!trackInput.trim()} style={{background:c.accent,color:"#fff",border:"none",borderRadius:"50px",padding:"10px 18px",cursor:"pointer",fontWeight:700,fontSize:"13px",opacity:trackLoading||!trackInput.trim()?0.5:1}}>{trackLoading?"⏳":"Track"}</button>
           </div>
           {(()=>{
             const STEPS=[{label:"Order Placed",icon:"ti-circle-check"},{label:"Processing",icon:"ti-settings"},{label:"Shipped",icon:"ti-truck"},{label:"Out for Delivery",icon:"ti-map-pin"},{label:"Delivered",icon:"ti-home"}];
             const si=trackResult?Math.max(0,["placed","confirmed","processing","shipped","delivered"].indexOf(trackResult.status||"placed")):2;
             return(<div style={{position:"relative",padding:"0 10px"}}>
-              <div style={{position:"absolute",top:"20px",left:"10px",right:"10px",height:"2px",background:"#d8d2c8",zIndex:0}}/>
-              <div style={{position:"absolute",top:"20px",left:"10px",height:"2px",background:"#2a7d7b",zIndex:1,width:`${si>0?Math.min(100,(si/(STEPS.length-1))*100):0}%`,transition:"width .8s ease"}}/>
+              <div style={{position:"absolute",top:"20px",left:"10px",right:"10px",height:"2px",background:c.border,zIndex:0}}/>
+              <div style={{position:"absolute",top:"20px",left:"10px",height:"2px",background:c.accent,zIndex:1,width:`${si>0?Math.min(100,(si/(STEPS.length-1))*100):0}%`,transition:"width .8s ease"}}/>
               <div style={{display:"flex",justifyContent:"space-between",position:"relative",zIndex:2}}>
                 {STEPS.map((s,i)=>{const done=i<si,active=i===si;return(
                   <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"8px",flex:1}}>
-                    <div style={{width:"40px",height:"40px",borderRadius:"50%",background:done?"#dff0f0":active?"#2a7d7b":"#f5f0e8",border:done?"2px solid #2a7d7b":active?"none":"2px solid #d8d2c8",display:"flex",alignItems:"center",justifyContent:"center",color:done?"#2a7d7b":active?"#fff":"#8fa5a5",transition:"all .4s",boxShadow:active?"0 0 0 4px rgba(42,125,123,0.2)":"none"}}>
+                    <div style={{width:"40px",height:"40px",borderRadius:"50%",background:done?c.chip:active?c.accent:c.input,border:done?`2px solid ${c.accent}`:active?"none":`2px solid ${c.border}`,display:"flex",alignItems:"center",justifyContent:"center",color:done?c.accent:active?"#fff":c.sub,transition:"all .4s",boxShadow:active?`0 0 0 4px ${c.accent}33`:"none"}}>
                       <i className={`ti ${s.icon}`} style={{fontSize:"16px"}}/>
                     </div>
-                    <p style={{fontSize:"10px",fontWeight:600,color:done||active?"#2a7d7b":"#8fa5a5",textAlign:"center",lineHeight:1.3}}>{s.label}</p>
+                    <p style={{fontSize:"10px",fontWeight:600,color:done||active?c.accent:c.sub,textAlign:"center",lineHeight:1.3}}>{s.label}</p>
                   </div>
                 );})}
               </div>
             </div>);
           })()}
-          {trackResult&&<div style={{background:"#f5f2ec",borderRadius:"9px",padding:"10px 14px",marginTop:"16px",textAlign:"center"}}>
-            <p style={{fontWeight:700,fontSize:"13px",color:"#2a7d7b"}}>{trackResult.order_ref||`#${trackResult.id}`} · {trackResult.status||"Placed"}</p>
+          {trackResult&&<div style={{background:c.chip,borderRadius:"9px",padding:"10px 14px",marginTop:"16px",textAlign:"center"}}>
+            <p style={{fontWeight:700,fontSize:"13px",color:c.accent}}>{trackResult.order_ref||`#${trackResult.id}`} · {trackResult.status||"Placed"}</p>
           </div>}
         </div>
 
-        <h3 style={{fontWeight:"700",fontSize:"15px",marginBottom:"12px"}}>{t.orderHistory}</h3>
-        {getLocalOrders().filter(o=>o.customerEmail===user.email).length===0
-          ?<div style={{textAlign:"center",padding:"48px 24px",color:c.muted,background:c.card,borderRadius:"14px",border:`1px solid ${c.border}`}}><div style={{fontSize:"44px",marginBottom:"12px",opacity:.5}}>📦</div><p style={{fontWeight:"700",fontSize:"14px",marginBottom:"6px"}}>{t.noHistory}</p><p style={{fontSize:"12px",marginBottom:"16px"}}>Your order history will appear here</p><button className="btn-t" onClick={()=>setView("store")} style={btnP({width:"auto",padding:"9px 24px",borderRadius:"20px",fontSize:"12px"})}>{t.shopNow}</button></div>
-          :getLocalOrders().filter(o=>o.customerEmail===user.email).map((o,i)=>(
-            <div key={i} style={{background:c.card,borderRadius:"12px",border:`1px solid ${c.border}`,padding:"14px",marginBottom:"10px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
-                <span style={{fontWeight:"700",fontSize:"13px",color:c.accent}}>{o.orderNum}</span>
-                <div style={{display:"flex",gap:"6px",alignItems:"center"}}><button className="btn-t" onClick={()=>reorder(o.items)} style={{background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none",borderRadius:"6px",padding:"3px 10px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>↺ Buy Again</button><span style={{fontWeight:"700",fontSize:"14px"}}>{fmt(o.total)}</span></div>
-              </div>
-              <p style={{color:c.muted,fontSize:"11px",marginBottom:"6px"}}>{new Date(o.date).toLocaleDateString()}</p>
-              <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginTop:"4px"}}>{o.items.map((it,j)=><button key={j} className="btn-t" title="Click to request return" onClick={()=>setRmaForm(f=>({...f,product_name:it.name}))} style={{background:c.chip,color:c.text,padding:"2px 7px",borderRadius:"5px",fontSize:"10px",border:`1px solid ${c.border}`,cursor:"pointer"}}>{it.name} ×{it.qty}</button>)}</div>
-            </div>
-          ))
-        }
-        {wishlist.length>0&&<div style={{marginTop:"20px",marginBottom:"8px"}}>
-          <h3 style={{fontWeight:"700",fontSize:"15px",marginBottom:"12px"}}>❤ Saved ({wishlist.length})</h3>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"9px"}}>
-            {wishlist.map(id=>{const p=sp.find(x=>x.id===id);if(!p)return null;return<div key={id} style={{background:c.card,borderRadius:"10px",border:`1px solid ${c.border}`,overflow:"hidden",cursor:"pointer"}} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");}}>
+        {/* ORDER HISTORY */}
+        <div id="order-history-section" style={sectionCard}>
+          <p style={sectionTitle}>{t.orderHistory}</p>
+          <div style={{padding:"0 20px 20px"}}>
+            {profileOrders.length===0
+              ?<div style={{textAlign:"center",padding:"32px 24px",color:c.muted}}><div style={{fontSize:"44px",marginBottom:"12px",opacity:.5}}>📦</div><p style={{fontWeight:"700",fontSize:"14px",marginBottom:"6px"}}>{t.noHistory}</p><p style={{fontSize:"12px",marginBottom:"16px"}}>Your order history will appear here</p><button className="btn-t" onClick={()=>setView("store")} style={btnP({width:"auto",padding:"9px 24px",borderRadius:"20px",fontSize:"12px"})}>{t.shopNow}</button></div>
+              :profileOrders.map((o,i)=>(
+                <div key={i} style={{background:c.input,borderRadius:"12px",border:`1px solid ${c.border}`,padding:"14px",marginTop:i>0?"10px":0}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
+                    <span style={{fontWeight:"700",fontSize:"13px",color:c.accent}}>{o.orderNum}</span>
+                    <div style={{display:"flex",gap:"6px",alignItems:"center"}}><button className="btn-t" onClick={()=>reorder(o.items)} style={{background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none",borderRadius:"6px",padding:"3px 10px",cursor:"pointer",fontSize:"10px",fontWeight:"700"}}>↺ Buy Again</button><span style={{fontWeight:"700",fontSize:"14px"}}>{fmt(o.total)}</span></div>
+                  </div>
+                  <p style={{color:c.muted,fontSize:"11px",marginBottom:"6px"}}>{new Date(o.date).toLocaleDateString()}</p>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginTop:"4px"}}>{o.items.map((it,j)=><button key={j} className="btn-t" title="Click to request return" onClick={()=>setRmaForm(f=>({...f,product_name:it.name}))} style={{background:c.chip,color:c.text,padding:"2px 7px",borderRadius:"5px",fontSize:"10px",border:`1px solid ${c.border}`,cursor:"pointer"}}>{it.name} ×{it.qty}</button>)}</div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+
+        {/* WISHLIST */}
+        {wishlist.length>0&&<div id="wishlist-section" style={sectionCard}>
+          <p style={sectionTitle}>❤ Saved ({wishlist.length})</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"9px",padding:"0 20px 20px"}}>
+            {wishlist.map(id=>{const p=sp.find(x=>x.id===id);if(!p)return null;return<div key={id} style={{background:c.input,borderRadius:"10px",border:`1px solid ${c.border}`,overflow:"hidden",cursor:"pointer"}} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");}}>
               <div style={{height:"80px",background:c.chip,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{p.image?<img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"28px"}}>{CAT_ICONS[p.category]||"◈"}</span>}</div>
               <div style={{padding:"8px"}}><p style={{fontWeight:"700",fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:"5px"}}>{p.name}</p><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:"800",fontSize:"12px"}}>{fmt(p.price)}</span><button onClick={e=>{e.stopPropagation();addToCart(p);}} style={{...btnP({width:"auto",padding:"3px 7px",fontSize:"9px"})}}>+{t.cart}</button></div></div>
             </div>;})}
           </div>
         </div>}
-        <div id="rma-form" style={{marginTop:"20px",marginBottom:"8px"}}>
-          <h3 style={{fontWeight:"700",fontSize:"15px",marginBottom:"12px"}}>↩ Request Return (RMA)</h3>
-          <div style={{background:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,padding:"20px"}}>
+
+        {/* RMA */}
+        <div id="rma-form" style={sectionCard}>
+          <p style={sectionTitle}>↩ Request Return (RMA)</p>
+          <div style={{padding:"0 20px 20px"}}>
             {rmaMsg&&<p style={{color:rmaMsg.includes("submitted")?c.success:c.error,fontSize:"12px",marginBottom:"12px",fontWeight:"600"}}>{rmaMsg}</p>}
             <div style={{marginBottom:"11px"}}><label style={{display:"block",marginBottom:"4px",fontSize:"11px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Product Name</label><input value={rmaForm.product_name} onChange={e=>setRmaForm({...rmaForm,product_name:e.target.value})} placeholder="Item to return (click item above)" style={inp(false)}/></div>
             <div style={{marginBottom:"11px"}}><label style={{display:"block",marginBottom:"4px",fontSize:"11px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Reason</label><input value={rmaForm.reason} onChange={e=>setRmaForm({...rmaForm,reason:e.target.value})} placeholder="e.g. Defective, wrong item" style={inp(false)}/></div>
@@ -1757,16 +2082,18 @@ export default function App() {
             <button className="btn-t" onClick={submitRMA} style={btnP()}>Submit Return Request</button>
           </div>
         </div>
-        {flags.b2b&&<div style={{marginTop:"20px"}}>
-          <h3 style={{fontWeight:"700",fontSize:"15px",marginBottom:"12px"}}>🏢 Business Account</h3>
-          <div style={{background:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,padding:"20px"}}>
+
+        {/* B2B */}
+        {flags.b2b&&<div id="b2b-section" style={sectionCard}>
+          <p style={sectionTitle}>🏢 Business Account</p>
+          <div style={{padding:"0 20px 20px"}}>
             {b2bMsg&&<p style={{color:b2bMsg.includes("submitted")?c.success:c.error,fontSize:"12px",marginBottom:"12px",fontWeight:"600"}}>{b2bMsg}</p>}
             <div style={{marginBottom:"11px"}}><label style={{display:"block",marginBottom:"4px",fontSize:"11px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Company Name</label><input value={b2bForm.company_name} onChange={e=>setB2bForm({...b2bForm,company_name:e.target.value})} placeholder="ACME Corp" style={inp(false)}/></div>
             <div style={{marginBottom:"14px"}}><label style={{display:"block",marginBottom:"4px",fontSize:"11px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Trade License #</label><input value={b2bForm.trade_license} onChange={e=>setB2bForm({...b2bForm,trade_license:e.target.value})} placeholder="TL-12345" style={inp(false)}/></div>
             <button className="btn-t" onClick={submitB2B} style={btnP()}>Apply for B2B Status</button>
           </div>
-          <div style={{background:c.card,borderRadius:"14px",border:`1px solid ${c.border}`,padding:"20px",marginTop:"12px"}}>
-            <p style={{fontWeight:"700",fontSize:"13px",marginBottom:"12px"}}>📋 Request for Quote (RFQ)</p>
+          <div style={{padding:"0 20px 20px"}}>
+            <p style={{fontWeight:"700",fontSize:"13px",marginBottom:"12px",color:c.text}}>📋 Request for Quote (RFQ)</p>
             {rfqMsg&&<p style={{color:rfqMsg.includes("submitted")?c.success:c.error,fontSize:"12px",marginBottom:"10px",fontWeight:"600"}}>{rfqMsg}</p>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"8px"}}>
               <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase"}}>Product</label><input value={rfqForm.product_name} onChange={e=>setRfqForm({...rfqForm,product_name:e.target.value})} placeholder="e.g. Laptop × 50 units" style={inp(false)}/></div>
@@ -1777,7 +2104,8 @@ export default function App() {
           </div>
         </div>}
       </div>
-    )}
+      );
+    })()}
 
     {/* CHECKOUT VIEW — MULTI-STEP */}
     {view==="checkout"&&(()=>{
@@ -2734,7 +3062,7 @@ export default function App() {
     </div>
 
     {/* FOOTER */}
-    <footer style={{background:"#1a2424",color:"rgba(255,255,255,0.7)",padding:"48px 26px 0",marginTop:"auto"}}>
+    <footer style={{background:"#0a0a12",color:"rgba(255,255,255,0.7)",padding:"48px 26px 0",marginTop:"auto"}}>
       <div className="footer-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"40px",paddingBottom:"40px"}}>
         <div>
           <div style={{fontWeight:900,fontSize:"22px",letterSpacing:"5px",color:"#fff",marginBottom:"14px"}}>BLEX</div>
