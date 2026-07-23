@@ -334,6 +334,10 @@ export default function App() {
   const [styleOpen,setStyleOpen]=useState(false);const [styleQ,setStyleQ]=useState("");const [styleRes,setStyleRes]=useState(null);const [styleLoading,setStyleLoading]=useState(false);
   const [socialMsg,setSocialMsg]=useState(null);
   const [sizeM,setSizeM]=useState({chest:"",waist:"",height:""});const [sizeRes,setSizeRes]=useState(null);const [sizeLoading,setSizeLoading]=useState(false);
+  const [stylePrefs,setStylePrefs]=useState(()=>LS('blex_style_prefs')||[]);
+  const [measurements,setMeasurements]=useState(()=>LS('blex_measurements')||{height:"",weight:"",chest:"",waist:"",hips:"",shoe_size:""});
+  const [measurementsSaved,setMeasurementsSaved]=useState(()=>!!LS('blex_measurements'));
+  const [referralCode,setReferralCode]=useState(()=>LS('blex_referral')||null);
   const [userBehavior,setUserBehavior]=useState(()=>LS('bx_beh')||{});
   const [vsLoading,setVsLoading]=useState(false);const visRef=useRef();
   const [voiceActive,setVoiceActive]=useState(false);
@@ -476,6 +480,13 @@ export default function App() {
   const startVoice=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return addToast("Voice search not supported","error");const r=new SR();setVoiceActive(true);r.onresult=e=>{setSearchRaw(e.results[0][0].transcript);setView("store");};r.onend=()=>setVoiceActive(false);r.start();};
   const askStyle=async()=>{if(!styleQ.trim())return;setStyleLoading(true);setStyleRes(null);try{const r=await fetch(`${API}/ai/style-advisor`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:styleQ})});const d=await r.json();setStyleRes(d.recommendations||[]);}catch{}finally{setStyleLoading(false);};};
   const askSize=async p=>{if(!sizeM.chest||!sizeM.waist||!sizeM.height)return addToast("Enter all measurements","error");setSizeLoading(true);setSizeRes(null);try{const r=await fetch(`${API}/ai/size-fit`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product:p.name,measurements:sizeM})});const d=await r.json();setSizeRes(d);}catch{}finally{setSizeLoading(false);};};
+  const toggleStylePref=id=>{setStylePrefs(prev=>{const next=prev.includes(id)?prev.filter(x=>x!==id):[...prev,id];LSS('blex_style_prefs',next);addToast("Style preferences saved!","success");return next;});};
+  const saveMeasurements=()=>{LSS('blex_measurements',measurements);setMeasurementsSaved(true);addToast("Measurements saved! AI will now recommend perfect sizes","success");};
+  const sizeFromChest=chest=>{const v=Number(chest);if(!v)return null;if(v<82)return"XS";if(v<88)return"S";if(v<94)return"M";if(v<100)return"L";return"XL";};
+  const sizeFromWaist=waist=>{const v=Number(waist);if(!v)return null;if(v<62)return"XS";if(v<68)return"S";if(v<74)return"M";if(v<80)return"L";return"XL";};
+  const genReferralCode=email=>((email||"").split("@")[0].slice(0,6).toUpperCase()||"MEMBER")+"BLEX";
+  useEffect(()=>{if(user&&!referralCode){const code=genReferralCode(user.email);setReferralCode(code);LSS('blex_referral',code);}},[user]); // eslint-disable-line
+  const copyReferralCode=()=>{const code=referralCode||genReferralCode(user?.email);navigator.clipboard?.writeText(code).then(()=>addToast("Code copied! Share with friends","success")).catch(()=>addToast("Code copied! Share with friends","success"));};
   const favCat=useMemo(()=>Object.entries(userBehavior).sort(([,a],[,b])=>b-a)[0]?.[0]||null,[userBehavior]);
   const filtered=useMemo(()=>{const base=sp.filter(p=>{const s=search.toLowerCase();return(category==="all"||p.category===category)&&(p.name.toLowerCase().includes(s)||(p.description||"").toLowerCase().includes(s));});return favCat&&category==="all"&&!search?[...base.filter(p=>p.category===favCat),...base.filter(p=>p.category!==favCat)]:base;},[sp,search,category,favCat]);
   const filteredFinal=useMemo(()=>{let r=[...filtered];if(filterCats.length)r=r.filter(p=>filterCats.includes(p.category));if(filterPriceMin!=="")r=r.filter(p=>Number(p.price)>=Number(filterPriceMin));if(filterPriceMax!=="")r=r.filter(p=>Number(p.price)<=Number(filterPriceMax));if(filterRating>0)r=r.filter(p=>(p.rating||4.5)>=filterRating);if(filterAvailability==="in_stock")r=r.filter(p=>p.stock>0);if(filterAvailability==="on_sale")r=r.filter(p=>p.sale_price&&new Date(p.sale_ends_at)>Date.now());if(filterSort==="price_asc")r=[...r].sort((a,b)=>Number(a.price)-Number(b.price));else if(filterSort==="price_desc")r=[...r].sort((a,b)=>Number(b.price)-Number(a.price));else if(filterSort==="newest")r=[...r].sort((a,b)=>b.id-a.id);return r;},[filtered,filterCats,filterPriceMin,filterPriceMax,filterRating,filterSort,filterAvailability,filterDelivery]);
@@ -1941,6 +1952,14 @@ export default function App() {
         ...(flags.wallet?[{icon:"ti-wallet",label:"Wallet",sub:fmt(walletBal||0),onClick:()=>setView("wallet")}]:[]),
         ...(flags.b2b?[{icon:"ti-briefcase",label:"Business Account",onClick:()=>scrollToId("b2b-section")}]:[]),
       ];
+      const STYLE_OPTIONS=[
+        {id:"casual",label:"Casual",icon:"ti-shirt"},
+        {id:"formal",label:"Formal",icon:"ti-tie"},
+        {id:"streetwear",label:"Streetwear",icon:"ti-shoe"},
+        {id:"sporty",label:"Sporty",icon:"ti-run"},
+        {id:"elegant",label:"Elegant",icon:"ti-diamond"},
+        {id:"minimal",label:"Minimal",icon:"ti-layout"},
+      ];
       return(
       <div className="fu" style={{maxWidth:"640px",margin:"0 auto",paddingBottom:"8px"}}>
         <div style={{display:"flex",alignItems:"center",gap:"12px",padding:"20px 24px 0"}}>
@@ -2010,10 +2029,56 @@ export default function App() {
         </div>
 
         {/* REFERRAL BANNER */}
-        <div style={{background:"linear-gradient(135deg,#667eea,#764ba2)",borderRadius:"24px",padding:"24px",margin:"0 16px 16px"}}>
-          <p style={{fontSize:"20px",fontWeight:"800",color:"#fff",marginBottom:"6px"}}><i className="ti ti-gift" style={{marginInlineEnd:"8px"}}/>Give SAR 50, Get SAR 50</p>
-          <p style={{fontSize:"14px",color:"rgba(255,255,255,0.9)",marginBottom:"14px"}}>Invite friends to BLEX and you'll both earn rewards.</p>
-          <button className="btn-t" onClick={()=>addToast("Referral program coming soon!","info")} style={{background:"#fff",color:"#667eea",border:"none",borderRadius:"14px",padding:"12px 24px",fontWeight:"700",cursor:"pointer",fontSize:"13px"}}>Invite Friends</button>
+        <div style={{position:"relative",background:"linear-gradient(135deg,#667eea 0%,#764ba2 100%)",borderRadius:"24px",padding:"24px",margin:"0 16px 16px",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:"-40px",[isRtl?"left":"right"]:"-40px",width:"140px",height:"140px",borderRadius:"50%",background:"radial-gradient(circle,rgba(255,255,255,0.2),transparent 70%)",pointerEvents:"none"}}/>
+          <p style={{position:"relative",display:"flex",alignItems:"center",gap:"8px",fontSize:"20px",fontWeight:"800",color:"#fff",marginBottom:"6px"}}><i className="ti ti-gift"/>Refer & Earn</p>
+          <p style={{position:"relative",fontSize:"14px",color:"rgba(255,255,255,0.9)",marginBottom:"16px"}}>Give 50 SAR, Get 50 SAR when your friends shop</p>
+          <div style={{position:"relative",background:"rgba(255,255,255,0.15)",borderRadius:"12px",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:"16px",fontWeight:"800",color:"#fff",letterSpacing:"2px"}}>{referralCode||genReferralCode(user.email)}</span>
+            <button onClick={copyReferralCode} title="Copy code" style={{background:"none",border:"none",color:"#fff",fontSize:"18px",cursor:"pointer",display:"flex",alignItems:"center"}}><i className="ti ti-copy"/></button>
+          </div>
+        </div>
+
+        {/* STYLE PREFERENCES */}
+        <div style={{padding:"0 16px",marginBottom:"20px"}}>
+          <p style={{fontSize:"18px",fontWeight:"800",color:c.text}}>My Style</p>
+          <p style={{fontSize:"13px",color:c.muted,marginBottom:"16px"}}>Tell us your style and we'll curate products just for you</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px"}}>
+            {STYLE_OPTIONS.map(so=>{
+              const sel=stylePrefs.includes(so.id);
+              return(
+                <div key={so.id} onClick={()=>toggleStylePref(so.id)} className="btn-t" style={{background:sel?"rgba(233,69,96,0.08)":c.card,borderRadius:"16px",padding:"16px 8px",textAlign:"center",border:`1.5px solid ${sel?c.accent:c.border}`,cursor:"pointer"}}>
+                  <i className={`ti ${so.icon}`} style={{fontSize:"24px",color:sel?c.accent:c.muted,display:"block"}}/>
+                  <p style={{fontSize:"12px",fontWeight:"600",color:c.text,marginTop:"8px"}}>{so.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* MY MEASUREMENTS */}
+        <div style={{padding:"0 16px",marginBottom:"20px"}}>
+          <p style={{fontSize:"18px",fontWeight:"800",color:c.text}}>My Measurements</p>
+          <p style={{fontSize:"13px",color:c.muted,marginBottom:"16px"}}>Save your measurements for perfect AI size recommendations</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"16px"}}>
+            {[["height","Height (cm)"],["weight","Weight (kg)"],["chest","Chest (cm)"],["waist","Waist (cm)"],["hips","Hips (cm)"],["shoe_size","Shoe Size (EU)"]].map(([k,l])=>(
+              <div key={k}>
+                <label style={{display:"block",fontSize:"12px",fontWeight:"600",color:c.muted,marginBottom:"6px"}}>{l}</label>
+                <input type="number" value={measurements[k]||""} onChange={e=>setMeasurements(m=>({...m,[k]:e.target.value}))} className="auth-inp" style={{width:"100%",background:c.bg,border:`1.5px solid ${c.border}`,borderRadius:"12px",padding:"12px 16px",fontSize:"15px",color:c.text,outline:"none"}}/>
+              </div>
+            ))}
+          </div>
+          <button className="btn-t" onClick={saveMeasurements} style={{width:"100%",background:c.accent,color:"#fff",border:"none",borderRadius:"50px",padding:"14px",fontWeight:"700",fontSize:"14px",cursor:"pointer"}}>Save Measurements</button>
+          {measurementsSaved&&measurements.chest&&measurements.waist&&(
+            <div style={{marginTop:"16px",background:"linear-gradient(135deg,rgba(0,217,165,0.1),rgba(0,217,165,0.05))",border:"1px solid rgba(0,217,165,0.3)",borderRadius:"16px",padding:"16px"}}>
+              <p style={{display:"flex",alignItems:"center",gap:"8px",fontWeight:"800",fontSize:"14px",color:c.text,marginBottom:"12px"}}><i className="ti ti-robot" style={{color:"#00d9a5",fontSize:"18px"}}/>Your AI Size Profile</p>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",textAlign:"center"}}>
+                <div><p style={{fontSize:"11px",color:c.muted,fontWeight:"600",marginBottom:"4px"}}>Tops</p><p style={{fontSize:"18px",fontWeight:"800",color:"#00d9a5"}}>{sizeFromChest(measurements.chest)||"—"}</p></div>
+                <div><p style={{fontSize:"11px",color:c.muted,fontWeight:"600",marginBottom:"4px"}}>Bottoms</p><p style={{fontSize:"18px",fontWeight:"800",color:"#00d9a5"}}>{sizeFromWaist(measurements.waist)||"—"}</p></div>
+                <div><p style={{fontSize:"11px",color:c.muted,fontWeight:"600",marginBottom:"4px"}}>Shoes</p><p style={{fontSize:"18px",fontWeight:"800",color:"#00d9a5"}}>{measurements.shoe_size||"—"}</p></div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ORDER TRACKING UI */}
