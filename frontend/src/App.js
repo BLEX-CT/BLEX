@@ -102,6 +102,7 @@ function injectCSS(){
     @keyframes slideR{from{transform:translateX(110%)}to{transform:translateX(0)}}
     @keyframes slideL{from{transform:translateX(-110%)}to{transform:translateX(0)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+    @keyframes floatBadge{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
     @keyframes floatA{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(30px,-40px) rotate(180deg)}}
     @keyframes floatB{0%,100%{transform:translate(0,0)}50%{transform:translate(-25px,35px) rotate(-140deg)}}
     @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
@@ -1034,92 +1035,61 @@ export default function App() {
         </div>
       </>}
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(12,1fr)",gap:"10px",padding:"14px 26px 10px"}}>
-      <div style={{gridColumn:"span 7",position:"relative",overflow:"hidden",borderRadius:"18px",minHeight:"380px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType==="video"?{}:{background:theme==="blex"?"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)":theme==="light"?"linear-gradient(140deg,#d8ecec 0%,#ede9e1 55%,#dff0f0 100%)":favCat==="electronics"?(theme==="dark"?"linear-gradient(145deg,#020d1a,#051428)":"linear-gradient(145deg,#eef6ff,#dbeafe)"):favCat==="clothing"?(theme==="dark"?"linear-gradient(145deg,#1a060e,#280a16)":"linear-gradient(145deg,#fdf2f8,#fce7f3)"):favCat==="accessories"?(theme==="dark"?"linear-gradient(145deg,#16100a,#241a08)":"linear-gradient(145deg,#fffbeb,#fef3c7)"):theme==="dark"?"linear-gradient(145deg,#0a0a0f 0%,#080818 55%,#0a0a20 100%)":"linear-gradient(145deg,#f0f0f0 0%,#e8e8e8 100%)"}),display:"flex",flexDirection:"column",justifyContent:"center"}}>
+      {/* HERO */}
+      <div style={{position:"relative",width:"100%",height:"320px",overflow:"hidden",borderRadius:"0 0 28px 28px",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"24px 24px 20px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType!=="video"?{background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)"}:{background:"#0f0f1a"})}}>
         {heroMediaType==="video"&&heroVideoUrl&&<video autoPlay muted loop playsInline src={heroVideoUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
-        {heroMediaType==="gradient"&&<HeroCanvas color={c.accent}/>}
-        <div className="float-blob" style={{width:"540px",height:"540px",top:"-220px",left:"-160px",background:theme==="dark"?"rgba(0,212,255,0.14)":theme==="blex"?"rgba(233,69,96,0.10)":"rgba(42,125,123,0.08)",animation:"floatA 14s ease-in-out infinite"}}/>
-        <div className="float-blob" style={{width:"420px",height:"420px",bottom:"-160px",right:"-100px",background:theme==="dark"?"rgba(123,47,247,0.16)":theme==="blex"?"rgba(15,52,96,0.35)":"rgba(42,125,123,0.06)",animation:"floatB 11s ease-in-out infinite"}}/>
-        {theme==="dark"&&[...Array(10)].map((_,i)=><span key={i} className="particle" style={{width:`${2+(i%3)}px`,height:`${2+(i%3)}px`,left:`${(i*10+5)%95}%`,bottom:0,background:i%3===0?"#00d4ff":i%3===1?"#7b2ff7":"#ffd700",animationDuration:`${8+i*1.2}s`,animationDelay:`${i*0.7}s`}}/>)}
-        <div style={{position:"relative",zIndex:2,padding:"36px 28px",display:"flex",flexDirection:"column",flex:1}}>
-          <div className="fu" style={{marginBottom:"16px",display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
-            <div style={{display:"inline-flex",alignItems:"center",gap:"7px",background:c.chip,border:`1px solid ${c.border}`,padding:"4px 14px",borderRadius:"18px",fontSize:"10px",fontWeight:"700",letterSpacing:"3px",textTransform:"uppercase",color:c.accent}}><span style={{width:"5px",height:"5px",borderRadius:"50%",background:c.success,animation:"pulse 2s ease-in-out infinite",display:"inline-block"}}/>{t.heroTag}</div>
-            <div style={{display:"inline-flex",alignItems:"center",gap:"5px",background:"#f5f0e8",border:"1px solid #d8d2c8",borderRadius:"50px",padding:"4px 12px"}}><i className="ti ti-eye" style={{fontSize:"11px",color:"#5a6e6e"}}/><span style={{fontSize:"11px",fontWeight:500,color:"#5a6e6e"}}>{visitCount} people viewing this store</span></div>
-          </div>
-          <div className="fu" style={{animationDelay:".1s",marginBottom:"10px"}}>{theme==="blex"?<h2 style={{fontSize:"38px",fontWeight:"700",letterSpacing:"-0.5px",lineHeight:1.2,color:c.text,margin:0}}><em style={{color:c.accent,fontWeight:300,fontStyle:"italic"}}>Curated</em><br/>Premium<br/>Collection</h2>:<h1 className={theme==="dark"?"hero-title":"hero-title-l"}>BLEX</h1>}</div>
-          <div className="fu" style={{animationDelay:".2s",marginBottom:"22px"}}><p style={{color:c.muted,fontSize:"12px",lineHeight:1.8,maxWidth:"300px"}}><span key={morphIdx} className="morph-text">{["Electronics","Jewelry","Fashion","Accessories"][morphIdx]}</span>{theme==="blex"?" — handpicked for you":""}</p>{favCat&&user&&<p style={{color:c.muted,fontSize:"12px",marginTop:"4px",fontStyle:"italic"}}>✨ Curated for you — top picks in {t[favCat]||favCat}</p>}</div>
-          <div className="fu" style={{animationDelay:".3s",display:"flex",gap:"10px",flexWrap:"wrap",marginBottom:"auto"}}>
-            <button className="btn-t" onClick={()=>{document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});trackBClick('hero');}} style={btnP({width:"auto",padding:"11px 22px",borderRadius:"50px",fontSize:"13px"})}>{t.shopNow} →</button>
-            {flags.trade_in&&<button className="btn-t" onClick={()=>setView("tradein")} style={btnS({width:"auto",padding:"11px 22px",borderRadius:"50px",fontSize:"13px"})}>Trade-In</button>}
-          </div>
-          <div className="fu" style={{animationDelay:".42s",display:"flex",gap:"0",paddingTop:"20px",borderTop:`1px solid ${c.border}`,flexWrap:"wrap",marginTop:"28px"}}>
-            {[t.stat1,t.stat2,t.stat3].map((s,i)=><div key={i} style={{textAlign:"left",borderLeft:i>0?`1px solid ${c.border}`:"none",paddingLeft:i>0?"20px":"0",paddingRight:"20px",background:"transparent"}}><p style={{fontWeight:"700",fontSize:"16px",color:i===2?c.accent:c.text}}>{s.split(" ")[0]}</p><p style={{color:c.muted,fontSize:"10px",marginTop:"2px"}}>{s.split(" ").slice(1).join(" ")}</p></div>)}
+        {heroMediaType==="gradient"&&<div style={{position:"absolute",inset:0,opacity:.5,pointerEvents:"none"}}><HeroCanvas color="#e94560"/></div>}
+        {(heroMediaType==="image"||heroMediaType==="video")&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.35)"}}/>}
+        <div style={{position:"relative",zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"10px",flexWrap:"wrap"}}>
+          <span style={{display:"inline-block",background:"linear-gradient(135deg,#e94560,#ff6b6b)",color:"#fff",padding:"6px 14px",borderRadius:"20px",fontSize:"12px",fontWeight:700,animation:"floatBadge 3s ease-in-out infinite"}}>Summer Collection</span>
+          <div style={{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",borderRadius:"50px",padding:"4px 12px"}}><i className="ti ti-eye" style={{fontSize:"11px",color:"rgba(255,255,255,0.8)"}}/><span style={{fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.8)"}}>{visitCount} viewing</span></div>
+        </div>
+        <div style={{position:"relative",zIndex:2}}>
+          <h1 style={{fontSize:"32px",fontWeight:900,color:"#fff",lineHeight:1.2,margin:"0 0 6px"}}>Discover Your Perfect Style</h1>
+          <p style={{fontSize:"14px",color:"rgba(255,255,255,0.8)",margin:"0 0 16px"}}>AI-curated fashion just for you</p>
+          <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
+            <button className="btn-t" onClick={()=>{document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});trackBClick('hero');}} style={{background:"#fff",color:"#1a1a2e",border:"none",borderRadius:"14px",padding:"14px 28px",fontWeight:700,fontSize:"14px",cursor:"pointer",transition:"transform .2s,box-shadow .2s"}} onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.boxShadow="0 4px 20px rgba(255,255,255,0.3)";}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>{t.shopNow} →</button>
+            {flags.trade_in&&<button className="btn-t" onClick={()=>setView("tradein")} style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"#fff",borderRadius:"14px",padding:"14px 22px",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>Trade-In</button>}
           </div>
         </div>
-        <div style={{borderTop:`1px solid ${c.border}`,overflow:"hidden",padding:"8px 0",background:c.glow}}>
-          <div className="mq-track">{MQ.map((cat,i)=><span key={i} style={{display:"inline-flex",alignItems:"center",gap:"6px",padding:"0 26px",color:c.muted,fontSize:"11px",fontWeight:"700",letterSpacing:"2px",textTransform:"uppercase",flexShrink:0}}><span style={{color:CAT_CLR[cat]}}>{CAT_ICONS[cat]}</span>{t[cat]}<span style={{color:c.sub,margin:"0 5px"}}>·</span></span>)}</div>
+        <div style={{position:"relative",zIndex:2,display:"flex",paddingTop:"16px",marginTop:"14px",borderTop:"1px solid rgba(255,255,255,0.2)"}}>
+          {[[sp.length,"Products"],[LANGS.length,"Languages"],[6,"AI Agents"]].map(([n,l],i)=>(
+            <div key={l} style={{flex:1,borderLeft:i>0?"1px solid rgba(255,255,255,0.2)":"none",paddingLeft:i>0?"14px":"0"}}>
+              <p style={{fontSize:"20px",fontWeight:700,color:"#fff",margin:0}}>{n}</p>
+              <p style={{fontSize:"9px",fontWeight:600,color:"rgba(255,255,255,0.6)",textTransform:"uppercase",letterSpacing:".5px",marginTop:"2px"}}>{l}</p>
+            </div>
+          ))}
         </div>
-      </div>
-      <div style={{gridColumn:"span 5",display:"flex",flexDirection:"column",gap:"10px"}}>
-        {sp.slice(0,2).map(p=>(
-          <div key={p.id} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
-            style={{cursor:"pointer",background:c.card,border:`1px solid ${c.border}`,borderRadius:"18px",padding:"14px 16px",display:"flex",gap:"12px",alignItems:"center",transition:"all .3s cubic-bezier(.23,1,.32,1)"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 10px 28px rgba(42,125,123,.10)";e.currentTarget.style.borderColor="#3d9e9b";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";e.currentTarget.style.borderColor=c.border;}}>
-            <div style={{width:"50px",height:"50px",borderRadius:"12px",background:"#eaf6f6",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
-              {p.image?<img src={p.image} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"22px",opacity:.6,color:CAT_CLR[p.category]||c.accent}}>{CAT_ICONS[p.category]||"◈"}</span>}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <span style={{background:c.chip,color:c.accent,padding:"2px 7px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",display:"inline-block",marginBottom:"4px"}}>{t[p.category]||p.category}</span>
-              <p style={{fontWeight:"600",fontSize:"14px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:c.text}}>{p.name}</p>
-              <p style={{fontWeight:"700",fontSize:"14px",color:c.accent}}>{fmt(p.price)}</p>
-            </div>
-            <button onClick={e=>{e.stopPropagation();if(p.stock>0||p.is_preorder){addToCart(p);flyToCart(e);}}}
-              style={{background:c.accent,color:"#fff",border:"none",borderRadius:"8px",width:"28px",height:"28px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"18px",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:"700",lineHeight:1,opacity:(p.stock>0||p.is_preorder)?1:.4}}>+</button>
-          </div>
-        ))}
-        {flags.style_advisor&&<div onClick={()=>setStyleOpen(true)}
-          style={{cursor:"pointer",background:"#e2eeee",border:"1px solid #c8dede",borderRadius:"18px",padding:"16px",flex:1,transition:"all .3s cubic-bezier(.23,1,.32,1)"}}
-          onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 10px 28px rgba(42,125,123,.10)";}}
-          onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
-          <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}}>
-            <div style={{width:"38px",height:"38px",borderRadius:"11px",background:"#dff0f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>✦</div>
-            <div><p style={{fontSize:"9px",fontWeight:"600",letterSpacing:"1.5px",textTransform:"uppercase",color:c.accent,marginBottom:"2px"}}>AI STYLIST</p><p style={{fontSize:"13px",fontWeight:"700",color:c.text}}>Style Advisor</p></div>
-          </div>
-          <p style={{fontSize:"11px",color:c.muted,lineHeight:1.6}}>Let AI find perfect items for you</p>
-        </div>}
-        {sp.slice(2,flags.style_advisor?2:3).map(p=>(
-          <div key={p.id} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
-            style={{cursor:"pointer",background:c.card,border:`1px solid ${c.border}`,borderRadius:"18px",padding:"14px 16px",display:"flex",gap:"12px",alignItems:"center",flex:1,transition:"all .3s cubic-bezier(.23,1,.32,1)"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 10px 28px rgba(42,125,123,.10)";e.currentTarget.style.borderColor="#3d9e9b";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";e.currentTarget.style.borderColor=c.border;}}>
-            <div style={{width:"50px",height:"50px",borderRadius:"12px",background:"#eaf6f6",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
-              {p.image?<img src={p.image} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"22px",opacity:.6,color:CAT_CLR[p.category]||c.accent}}>{CAT_ICONS[p.category]||"◈"}</span>}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <span style={{background:c.chip,color:c.accent,padding:"2px 7px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",display:"inline-block",marginBottom:"4px"}}>{t[p.category]||p.category}</span>
-              <p style={{fontWeight:"600",fontSize:"14px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:c.text}}>{p.name}</p>
-              <p style={{fontWeight:"700",fontSize:"14px",color:c.accent}}>{fmt(p.price)}</p>
-            </div>
-            <button onClick={e=>{e.stopPropagation();if(p.stock>0||p.is_preorder){addToCart(p);flyToCart(e);}}}
-              style={{background:c.accent,color:"#fff",border:"none",borderRadius:"8px",width:"28px",height:"28px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"18px",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:"700",lineHeight:1,opacity:(p.stock>0||p.is_preorder)?1:.4}}>+</button>
-          </div>
-        ))}
-      </div>
       </div>
 
-      {/* CATEGORY CIRCLES */}
-      <div className="reveal-card" style={{display:"flex",justifyContent:"center",gap:"24px",padding:"22px 26px 10px",flexWrap:"wrap"}}>
-        {[{icon:"ti-sparkles",label:"وصل حديثاً",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-tag",label:"العروض",fn:()=>{setSearchRaw("");setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-clock",label:"الفرصة الأخيرة",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-grid",label:"كل المنتجات",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}
-        ].map((item,i)=>(
-          <div key={i} onClick={item.fn} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"8px",cursor:"pointer"}}>
-            <div className="cat-circle" style={{width:"72px",height:"72px",borderRadius:"50%",background:"#dff0f0",border:"2px solid #2a7d7b",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .22s"}}>
-              <i className={`ti ${item.icon} cat-icon`} style={{fontSize:"22px",color:"#2a7d7b"}}/>
+      {/* AI STYLIST BANNER */}
+      {flags.style_advisor&&<div onClick={()=>setStyleOpen(true)} className="btn-t" style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",borderRadius:"20px",margin:"16px",padding:"20px",display:"flex",alignItems:"center",gap:"16px",cursor:"pointer"}}>
+        <div style={{width:"56px",height:"56px",borderRadius:"16px",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",flexShrink:0}}>🤖</div>
+        <div>
+          <p style={{fontSize:"16px",fontWeight:700,color:"#fff",margin:"0 0 2px"}}>AI Style Match</p>
+          <p style={{fontSize:"13px",color:"rgba(255,255,255,0.8)",margin:0}}>Get personalized recommendations based on your taste</p>
+        </div>
+      </div>}
+
+      {/* CATEGORIES GRID */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",padding:"0 16px",marginBottom:"24px"}}>
+        {[
+          {icon:"ti-device-laptop",label:"Electronics",fn:()=>{setCategory("electronics");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+          {icon:"ti-diamond",label:"Jewelry",fn:()=>{setCategory("jewelry");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+          {icon:"ti-shirt",label:"Clothing",fn:()=>{setCategory("clothing");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+          {icon:"ti-sunglasses",label:"Accessories",fn:()=>{setCategory("accessories");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+          {icon:"ti-sparkles",label:"New Arrivals",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+          {icon:"ti-tag",label:"Sale",fn:()=>{setSearchRaw("");setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+          {icon:"ti-star",label:"Top Rated",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+          {icon:"ti-flame",label:"Trending",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
+        ].map(item=>(
+          <div key={item.label} onClick={item.fn} style={{display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer"}}>
+            <div style={{width:"64px",height:"64px",borderRadius:"20px",background:theme==="light"?"linear-gradient(135deg,#f8f9fa,#e9ecef)":"linear-gradient(135deg,#1a1a2e,#2d2d44)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",color:theme==="light"?"#1a1a2e":"#fff",transition:"all .2s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="linear-gradient(135deg,#e94560,#ff6b6b)";e.currentTarget.style.color="#fff";e.currentTarget.style.transform="scale(1.1)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background=theme==="light"?"linear-gradient(135deg,#f8f9fa,#e9ecef)":"linear-gradient(135deg,#1a1a2e,#2d2d44)";e.currentTarget.style.color=theme==="light"?"#1a1a2e":"#fff";e.currentTarget.style.transform="scale(1)";}}>
+              <i className={`ti ${item.icon}`}/>
             </div>
-            <span style={{fontSize:"11px",fontWeight:600,color:"#1a2424"}}>{item.label}</span>
+            <span style={{fontSize:"12px",fontWeight:600,color:c.text,marginTop:"8px",textAlign:"center"}}>{item.label}</span>
           </div>
         ))}
       </div>
@@ -1139,7 +1109,10 @@ export default function App() {
 
       {/* Smart Bundles */}
       {flags.smart_bundles&&bundles.length>0&&<div style={{padding:"10px 26px 0"}}>
-        <h2 style={{fontWeight:"800",fontSize:"18px",marginBottom:"14px"}}>🎁 Special Deals</h2>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",marginBottom:"12px"}}>
+          <h2 style={{fontSize:"20px",fontWeight:800,color:c.text,margin:0}}>🎁 Special Deals</h2>
+          <button onClick={()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"})} style={{background:"none",border:"none",color:c.accent,fontSize:"14px",fontWeight:600,cursor:"pointer",padding:0}}>See All</button>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"12px",marginBottom:"8px"}}>
           {bundles.map(b=>(
             <div key={b.id} style={{background:c.card,borderRadius:"18px",border:`1px solid ${c.border}`,padding:"18px",position:"relative",overflow:"hidden",transition:"all .3s cubic-bezier(.23,1,.32,1)"}}>
@@ -1153,10 +1126,13 @@ export default function App() {
       </div>}
 
       {user&&favCat&&sp.filter(p=>p.category===favCat).length>0&&<div style={{padding:"10px 26px 0"}}>
-        <div style={{display:"flex",alignItems:"center",gap:"9px",marginBottom:"14px"}}>
-          <span style={{fontSize:"22px"}}>✨</span>
-          <h2 style={{fontWeight:"800",fontSize:"17px"}}>Picked for you</h2>
-          <span style={{fontSize:"11px",color:c.muted,fontStyle:"italic",fontWeight:"500"}}>Based on your browsing in {t[favCat]||favCat}</span>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",marginBottom:"12px",flexWrap:"wrap",gap:"6px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"9px"}}>
+            <span style={{fontSize:"20px"}}>✨</span>
+            <h2 style={{fontSize:"20px",fontWeight:800,color:c.text,margin:0}}>Picked for you</h2>
+            <span style={{fontSize:"11px",color:c.muted,fontStyle:"italic",fontWeight:"500"}}>Based on your browsing in {t[favCat]||favCat}</span>
+          </div>
+          <button onClick={()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"})} style={{background:"none",border:"none",color:c.accent,fontSize:"14px",fontWeight:600,cursor:"pointer",padding:0}}>See All</button>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:"10px"}}>
           {sp.filter(p=>p.category===favCat).slice(0,6).map(p=>(
@@ -1318,11 +1294,11 @@ export default function App() {
             </div>
             {filteredFinal.map((p,idx)=>{const bIdx=idx>0&&idx%BANNER_INTERVAL===0?Math.floor(idx/BANNER_INTERVAL)-1:-1;const _b=bIdx>=0&&flags.promo_banners!==false?PROMO_BANNERS[bIdx%PROMO_BANNERS.length]:null;const effectiveTpl=_b?(bannerTpls[_b.id]||LAYOUT_TYPES[bIdx%LAYOUT_TYPES.length]):null;const handleBClick=()=>{setCategory(_b?.cat);document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});if(_b)trackBClick('infeed_'+_b.id);};return(<React.Fragment key={p.id}>{_b&&effectiveTpl==="tall"&&<div className="reveal-card promo-tall" onClick={handleBClick} style={{gridColumn:"span 2",margin:"6px 0",background:_b.media.type==="gradient"?_b.media.value:"#1a2424"}}>{_b.media.type==="image"&&_b.media.url&&<img src={_b.media.url} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}{_b.media.type==="video"&&_b.media.url&&<video autoPlay muted loop playsInline src={_b.media.url} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",zIndex:1}}/><div style={{position:"absolute",bottom:"20px",left:"20px",right:"20px",background:"rgba(0,0,0,0.35)",backdropFilter:"blur(10px)",borderRadius:"12px",padding:"20px",zIndex:2}}><span style={{color:"rgba(255,255,255,0.7)",fontSize:"9px",fontWeight:700,letterSpacing:"3px",textTransform:"uppercase",display:"block",marginBottom:"8px"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(20px,3.5vw,32px)",fontWeight:800,lineHeight:1.2,margin:"0 0 8px"}}>{_b.headline}</h2><p style={{color:"rgba(255,255,255,0.75)",fontSize:"12px",lineHeight:1.65,margin:"0 0 14px"}}>{_b.sub}</p><button className="btn-t" onClick={e=>{e.stopPropagation();handleBClick();}} style={{background:"#fff",color:"#1a2424",border:"none",borderRadius:"50px",padding:"9px 22px",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>{_b.cta}</button></div></div>}{_b&&effectiveTpl==="split"&&<div className="reveal-card promo-split-tpl" onClick={handleBClick}><div className="promo-split-left" style={{flex:"0 0 50%",position:"relative",background:_b.media.type==="gradient"?_b.media.value:"#1a2424"}}>{_b.media.type==="image"&&_b.media.url&&<img src={_b.media.url} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>}{_b.media.type==="video"&&_b.media.url&&<video autoPlay muted loop playsInline src={_b.media.url} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/></div><div className="promo-split-right" style={{flex:"0 0 50%",background:"#1a2424",padding:"32px",display:"flex",flexDirection:"column",justifyContent:"center",gap:"12px"}}><span style={{color:"rgba(255,255,255,0.45)",fontSize:"9px",fontWeight:700,letterSpacing:"3px",textTransform:"uppercase"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(18px,2.5vw,28px)",fontWeight:800,lineHeight:1.2,margin:0}}>{_b.headline}</h2><p style={{color:"rgba(255,255,255,0.62)",fontSize:"12px",lineHeight:1.7,margin:0}}>{_b.sub}</p>{_b.points&&<ul style={{listStyle:"none",padding:0,margin:0,display:"flex",flexDirection:"column",gap:"5px"}}>{_b.points.map((pt,pi)=><li key={pi} style={{color:"rgba(255,255,255,0.68)",fontSize:"11px",display:"flex",alignItems:"center",gap:"7px"}}><span style={{color:"#2a7d7b",fontWeight:700,flexShrink:0}}>✓</span>{pt}</li>)}</ul>}<button className="btn-t" onClick={e=>{e.stopPropagation();handleBClick();}} style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"10px 22px",fontWeight:700,fontSize:"13px",cursor:"pointer",alignSelf:"flex-start"}}>{_b.cta}</button></div></div>}{_b&&effectiveTpl==="panorama"&&<div className="reveal-card promo-panorama" onClick={handleBClick} style={{background:_b.media.type==="gradient"?_b.media.value:"#1a2424"}}>{_b.media.type==="image"&&_b.media.url&&<img src={_b.media.url} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}} onError={e=>e.target.style.display="none"}/>}{_b.media.type==="video"&&_b.media.url&&<video autoPlay muted loop playsInline src={_b.media.url} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1}}/><div style={{position:"absolute",inset:0,zIndex:2,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",maxWidth:"600px",padding:"0 24px"}}><span style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(8px)",color:"#fff",fontSize:"9px",fontWeight:700,padding:"4px 14px",borderRadius:"50px",letterSpacing:"2px",textTransform:"uppercase",border:"1px solid rgba(255,255,255,0.2)",display:"inline-block",marginBottom:"16px"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(22px,4vw,40px)",fontWeight:800,lineHeight:1.15,margin:"0 0 12px",textShadow:"0 2px 16px rgba(0,0,0,0.3)"}}>{_b.headline}</h2><p style={{color:"rgba(255,255,255,0.8)",fontSize:"13px",lineHeight:1.65,margin:"0 0 20px"}}>{_b.sub}</p><button className="btn-t" onClick={e=>{e.stopPropagation();handleBClick();}} style={{background:"#fff",color:"#1a2424",border:"none",borderRadius:"50px",padding:"10px 28px",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>{_b.cta}</button></div></div></div>}{_b&&effectiveTpl==="oversized"&&<div className="reveal-card promo-oversized" onClick={handleBClick}><div style={{position:"absolute",inset:0,transform:"scale(1.03)",transformOrigin:"center",background:_b.media.type==="gradient"?_b.media.value:"#1a2424"}}>{_b.media.type==="image"&&_b.media.url&&<img src={_b.media.url} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>}{_b.media.type==="video"&&_b.media.url&&<video autoPlay muted loop playsInline src={_b.media.url} style={{width:"100%",height:"100%",objectFit:"cover"}}/>}</div><div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.25)",zIndex:1}}/><div style={{position:"absolute",bottom:"24px",right:"24px",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(8px)",borderRadius:"14px",padding:"24px",zIndex:2,maxWidth:"320px"}}><span style={{color:"rgba(255,255,255,0.7)",fontSize:"9px",fontWeight:700,letterSpacing:"3px",textTransform:"uppercase",display:"block",marginBottom:"10px"}}>{_b.tag}</span><h2 style={{color:"#fff",fontSize:"clamp(20px,3vw,34px)",fontWeight:800,lineHeight:1.2,margin:"0 0 16px",textShadow:"0 2px 12px rgba(0,0,0,0.4)"}}>{_b.headline}</h2><button className="btn-t" onClick={e=>{e.stopPropagation();handleBClick();}} style={{background:"rgba(255,255,255,0.15)",backdropFilter:"blur(8px)",color:"#fff",border:"1px solid rgba(255,255,255,0.3)",borderRadius:"50px",padding:"10px 22px",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>{_b.cta}</button></div></div>}
               <div className="card-wrap holo-card reveal-card" data-delay={(idx*100).toString()} onMouseEnter={e=>{setHovered(p.id);e.currentTarget.style.borderColor="#3d9e9b";}} onMouseLeave={e=>{setHovered(null);e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';e.currentTarget.style.borderColor=c.border;}} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}
-                style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"18px",border:`1px solid ${c.border}`,overflow:"hidden",boxShadow:"0 2px 8px rgba(42,125,123,.04)",transition:"all .3s cubic-bezier(.23,1,.32,1)"}}>
-                <div style={{height:"188px",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
+                style={{cursor:"pointer",background:hovered===p.id?c.cardHover:c.card,borderRadius:"20px",border:`1px solid ${c.border}`,overflow:"hidden",boxShadow:"0 2px 8px rgba(42,125,123,.04)",transition:"all .3s cubic-bezier(.23,1,.32,1)"}}>
+                <div style={{aspectRatio:"3/4",overflow:"hidden",background:p.image?c.chip:`linear-gradient(135deg,${CAT_CLR[p.category]||c.chip}22,${CAT_CLR[p.category]||c.chip}44)`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
                   {(()=>{const g=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};const imgs=[p.image,g.cleaned].filter(Boolean);const ci=(cardImgIdx[p.id]||0)%Math.max(1,imgs.length);return<>
-                    {imgs[ci]?<img src={imgs[ci]} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",transition:"opacity .25s"}} onError={e=>{e.target.style.display="none"}}/>:<span style={{fontSize:"50px",opacity:.65,color:CAT_CLR[p.category]||c.muted}}>{CAT_ICONS[p.category]||"◈"}</span>}
-                    {imgs.length>1&&hovered===p.id&&<><button onClick={e=>{e.stopPropagation();setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)-1+imgs.length)%imgs.length}));}} style={{position:"absolute",left:"6px",top:"83px",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:"22px",height:"22px",cursor:"pointer",fontSize:"14px",zIndex:3,lineHeight:1,padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button><button onClick={e=>{e.stopPropagation();setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)+1)%imgs.length}));}} style={{position:"absolute",right:"6px",top:"83px",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:"22px",height:"22px",cursor:"pointer",fontSize:"14px",zIndex:3,lineHeight:1,padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button><div style={{position:"absolute",bottom:"42px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"3px",zIndex:3}}>{imgs.map((_,i)=><span key={i} style={{width:"5px",height:"5px",borderRadius:"50%",background:i===ci?"#fff":"rgba(255,255,255,.4)",display:"block"}}/>)}</div></>}
+                    {imgs[ci]?<img src={imgs[ci]} alt={p.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .3s ease,opacity .25s",transform:hovered===p.id?"scale(1.05)":"scale(1)"}} onError={e=>{e.target.style.display="none"}}/>:<span style={{fontSize:"50px",opacity:.65,color:CAT_CLR[p.category]||c.muted}}>{CAT_ICONS[p.category]||"◈"}</span>}
+                    {imgs.length>1&&hovered===p.id&&<><button onClick={e=>{e.stopPropagation();setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)-1+imgs.length)%imgs.length}));}} style={{position:"absolute",left:"6px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:"22px",height:"22px",cursor:"pointer",fontSize:"14px",zIndex:3,lineHeight:1,padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button><button onClick={e=>{e.stopPropagation();setCardImgIdx(m=>({...m,[p.id]:((m[p.id]||0)+1)%imgs.length}));}} style={{position:"absolute",right:"6px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:"22px",height:"22px",cursor:"pointer",fontSize:"14px",zIndex:3,lineHeight:1,padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button><div style={{position:"absolute",bottom:"42px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"3px",zIndex:3}}>{imgs.map((_,i)=><span key={i} style={{width:"5px",height:"5px",borderRadius:"50%",background:i===ci?"#fff":"rgba(255,255,255,.4)",display:"block"}}/>)}</div></>}
                   </>})()}
                   <div className="img-ov" style={{position:"absolute",inset:0,background:"rgba(0,0,0,.44)",display:"flex",alignItems:"flex-end",padding:"12px"}}>
                     {(p.stock>0||p.is_preorder)
@@ -1330,8 +1306,8 @@ export default function App() {
                       :flags.back_in_stock&&<button className="btn-t" onClick={e=>{e.stopPropagation();toggleAlert(p.id);}} style={{...btnP({borderRadius:"8px",padding:"8px 14px",fontSize:"12px",width:"100%"}),background:alertedIds.includes(p.id)?c.success:c.accent}}>{alertedIds.includes(p.id)?"✓ Notified":"🔔 Notify Me"}</button>
                     }
                   </div>
-                  {p.stock===0&&(p.is_preorder?<div style={{position:"absolute",top:"9px",[isRtl?"left":"right"]:"9px",background:"rgba(59,130,246,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800"}}>PRE-ORDER</div>:<div style={{position:"absolute",top:"9px",[isRtl?"left":"right"]:"9px",background:"rgba(239,68,68,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800"}}>{t.outOfStock}</div>)}
-                  <button onClick={e=>{e.stopPropagation();toggleWishlist(p.id);}} style={{position:"absolute",top:"8px",[isRtl?"right":"left"]:"8px",background:"rgba(0,0,0,.5)",border:"none",borderRadius:"50%",width:"26px",height:"26px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",zIndex:4}}>{wishlist.includes(p.id)?"❤️":"🤍"}</button>
+                  {p.stock===0&&(p.is_preorder?<div style={{position:"absolute",top:"9px",left:"50%",transform:"translateX(-50%)",background:"rgba(59,130,246,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800",whiteSpace:"nowrap"}}>PRE-ORDER</div>:<div style={{position:"absolute",top:"9px",left:"50%",transform:"translateX(-50%)",background:"rgba(239,68,68,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800",whiteSpace:"nowrap"}}>{t.outOfStock}</div>)}
+                  <button onClick={e=>{e.stopPropagation();toggleWishlist(p.id);}} style={{position:"absolute",top:"8px",right:"8px",background:theme==="light"?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.5)",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",zIndex:4}}>{wishlist.includes(p.id)?"❤️":"🤍"}</button>
                   {/* PRODUCT BADGES */}
                   <div style={{position:"absolute",top:"10px",left:"10px",zIndex:5,display:"flex",flexDirection:"column",gap:"4px",pointerEvents:"none"}}>
                     {(()=>{const spIdx=sp.findIndex(x=>x.id===p.id);const badges=[];if(spIdx>=0&&spIdx<Math.ceil(sp.length*0.2))badges.push({label:"NEW",bg:"#2a7d7b"});if(Number(p.price)<200)badges.push({label:"SALE",bg:"#e05555"});if(p.rating>=4.5||p.id%5===0)badges.push({label:"HOT",bg:"#b5896a"});if(p.stock>0&&p.stock<10)badges.push({label:"LIMITED",bg:"#1a2424"});return badges.slice(0,2).map((b,i)=><span key={i} style={{display:"block",background:b.bg,color:"#fff",fontSize:"9px",fontWeight:700,padding:"3px 8px",borderRadius:"50px",letterSpacing:"1px",whiteSpace:"nowrap"}}>{b.label}</span>);})()}
@@ -1356,10 +1332,14 @@ export default function App() {
                     <span style={{background:"#dff0f0",color:"#2a7d7b",padding:"2px 8px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",letterSpacing:".3px"}}>{t[p.category]||p.category}</span>
                     {p.stock>0&&<span style={{fontSize:"9px",fontWeight:"700",color:c.success}}>● {t.inStock}</span>}
                   </div>
-                  <h3 style={{fontWeight:"600",fontSize:"15px",marginBottom:"4px",lineHeight:1.35,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.name}</h3>
+                  <h3 style={{fontWeight:"600",fontSize:"14px",marginBottom:"4px",lineHeight:1.3,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.name}</h3>
+                  <div style={{display:"flex",alignItems:"center",gap:"4px",marginBottom:"6px"}}>
+                    <div style={{display:"flex",gap:"1px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(p.rating||4.5)?"#f59e0b":c.border,fontSize:"12px"}}>★</span>)}</div>
+                    <span style={{fontSize:"12px",color:c.muted}}>({(p.id%50)+12})</span>
+                  </div>
                   <p style={{color:c.muted,fontSize:"11px",marginBottom:"11px",lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.description?.replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim()}</p>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"700",fontSize:"17px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"700",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span style={{fontWeight:"700",fontSize:"18px",color:c.accent}}>{fmt(p.price)}</span></div>}</div>
+                    <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"800",fontSize:"18px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"700",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span style={{fontWeight:"800",fontSize:"18px",color:c.accent}}>{fmt(p.price)}</span></div>}</div>
                     <button className="btn-t" onClick={e=>{e.stopPropagation();if(p.stock>0||p.is_preorder){addToCart(p);flyToCart(e);}}} style={{background:c.accent,color:"#fff",border:"none",width:"28px",height:"28px",borderRadius:"8px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"16px",fontWeight:"700",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:(p.stock>0||p.is_preorder)?1:.4}}>+</button>
                   </div>
                   {flags.b2b&&<p style={{fontSize:"8px",color:c.muted,marginTop:"3px",letterSpacing:".3px"}}>★ B2B tiers: 5–9 ▸ 10% off · 10+ ▸ 20% off</p>}
@@ -1369,6 +1349,32 @@ export default function App() {
             </React.Fragment>);})}
           </div>
         }
+      </div>
+
+      {/* STYLED BY YOU */}
+      <div style={{marginBottom:"24px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",marginBottom:"12px"}}>
+          <h2 style={{fontSize:"20px",fontWeight:800,color:c.text,margin:0}}>Styled By You</h2>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px",padding:"0 16px"}}>
+          {[
+            {url:"https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=300&q=80",name:"Layla K."},
+            {url:"https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=300&q=80",name:"Noura S."},
+            {url:"https://images.unsplash.com/photo-1483985988355-763728e1935b?w=300&q=80",name:"Reem A."},
+            {url:"https://images.unsplash.com/photo-1475180098004-ca77a66827be?w=300&q=80",name:"Sara M."},
+            {url:"https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=300&q=80",name:"Dana F."},
+            {url:"https://images.unsplash.com/photo-1509631179647-0177331693ae?w=300&q=80",name:"Huda R."},
+          ].map((item,i)=>(
+            <div key={i} onClick={()=>addToast("Opening style inspiration...","info")} style={{position:"relative",borderRadius:"16px",aspectRatio:"1",overflow:"hidden",cursor:"pointer"}}>
+              <img src={item.url} alt={item.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,rgba(0,0,0,0.6),transparent 60%)"}}/>
+              <div style={{position:"absolute",bottom:"8px",left:"8px",right:"8px",display:"flex",alignItems:"center",gap:"6px"}}>
+                <div style={{width:"24px",height:"24px",borderRadius:"50%",background:`hsl(${i*60+160},40%,55%)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",fontWeight:800,color:"#fff",flexShrink:0,border:"1.5px solid rgba(255,255,255,0.8)"}}>{item.name[0]}</div>
+                <span style={{color:"#fff",fontSize:"11px",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* CATEGORY SHOWCASE */}
