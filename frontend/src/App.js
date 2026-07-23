@@ -417,7 +417,7 @@ export default function App() {
   useEffect(()=>{ const h=e=>{if(langRef.current&&!langRef.current.contains(e.target))setLangOpen(false);}; document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[]);
   useEffect(()=>{const t=setTimeout(()=>setSplash(false),2000);return()=>clearTimeout(t);},[]);
   useEffect(()=>{fetch(API+"/currency/rates").then(r=>r.json()).then(d=>{if(d&&typeof d==='object')setRates(d);}).catch(()=>{});},[]);
-  useEffect(()=>{fetch("http://ip-api.com/json").then(r=>r.json()).then(d=>{if(d?.countryCode){setDetectedCountry(d.countryCode);if(!userManualLang.current)setCurrCode(COUNTRY_CURRENCY[d.countryCode]||'USD');}}).catch(()=>{});},[]);
+  useEffect(()=>{fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{if(d?.country_code){setDetectedCountry(d.country_code);if(!userManualLang.current)setCurrCode(COUNTRY_CURRENCY[d.country_code]||'USD');}}).catch(()=>{});},[]);
   useEffect(()=>{if(userManualLang.current)setCurrCode(LANG_CURRENCY[lang]||'USD');},[lang]);
   useEffect(()=>{const t=setTimeout(()=>setSearch(searchRaw),300);return()=>clearTimeout(t);},[searchRaw]);
   useEffect(()=>{if(new URLSearchParams(window.location.search).get("admin")==="BLEX2026"){setMaintBypass(true);LSS('bx_maint_bypass',1);setView("admin");setAdminAuth(true);fetchOrders();}},[]);// eslint-disable-line
