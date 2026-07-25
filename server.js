@@ -402,14 +402,14 @@ async function sendLowStockEmail(name, stock) {
 
 app.post('/auth/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'name, email, and password are required' });
     }
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const result = await pool.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, wallet_balance, created_at',
-      [name, email, hash, role === 'admin' ? 'admin' : 'customer']
+      [name, email, hash, 'customer']
     );
     const user = result.rows[0];
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
@@ -463,7 +463,7 @@ app.get('/products', async (req, res) => {
   }
 });
 
-app.post('/products', async (req, res) => {
+app.post('/products', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, price, description, stock, category, image, image_gallery } = req.body;
     const result = await pool.query(
@@ -476,7 +476,7 @@ app.post('/products', async (req, res) => {
   }
 });
 
-app.put('/products/:id', async (req, res) => {
+app.put('/products/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, price, description, stock, category, image, sale_price, sale_ends_at, is_preorder, preorder_date, cost_price, supplier_id, image_gallery } = req.body;
     const result = await pool.query(
@@ -492,7 +492,7 @@ app.put('/products/:id', async (req, res) => {
   }
 });
 
-app.delete('/products/:id', async (req, res) => {
+app.delete('/products/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM products WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -517,7 +517,7 @@ app.post('/orders', async (req, res) => {
   }
 });
 
-app.get('/orders', async (req, res) => {
+app.get('/orders', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
     res.json(result.rows);
@@ -526,7 +526,7 @@ app.get('/orders', async (req, res) => {
   }
 });
 
-app.get('/orders/:id', async (req, res) => {
+app.get('/orders/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
     if (!result.rows[0]) return res.status(404).json({ error: 'Order not found' });
@@ -536,7 +536,7 @@ app.get('/orders/:id', async (req, res) => {
   }
 });
 
-app.patch('/orders/:id/status', async (req, res) => {
+app.patch('/orders/:id/status', authenticate, requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const result = await pool.query(

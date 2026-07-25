@@ -226,9 +226,7 @@ export default function App() {
   const [orderNum,setOrderNum]=useState("");
   const [couponInput,setCouponInput]=useState("");
   const [appliedCoupon,setAppliedCoupon]=useState(null);
-  const [adminAuth,setAdminAuth]=useState(false);
-  const [adminPwd,setAdminPwd]=useState("");
-  const [pwdErr,setPwdErr]=useState(false);
+  const isAdminUser=user?.role==="admin";
   const [adminTab,setAdminTab]=useState("products");
   const [bannerTpls,setBannerTpls]=useState(()=>LS("bx_banner_tpl")||{});
   const [bannerStats,setBannerStats]=useState(()=>LS('bx_banner_stats')||{});
@@ -438,7 +436,6 @@ export default function App() {
   useEffect(()=>{fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{if(d?.country_code){setDetectedCountry(d.country_code);if(!userManualLang.current)setCurrCode(COUNTRY_CURRENCY[d.country_code]||'USD');}}).catch(()=>{});},[]);
   useEffect(()=>{if(userManualLang.current)setCurrCode(LANG_CURRENCY[lang]||'USD');},[lang]);
   useEffect(()=>{const t=setTimeout(()=>setSearch(searchRaw),300);return()=>clearTimeout(t);},[searchRaw]);
-  useEffect(()=>{if(new URLSearchParams(window.location.search).get("admin")==="BLEX2026"){setMaintBypass(true);LSS('bx_maint_bypass',1);setView("admin");setAdminAuth(true);fetchOrders();}},[]);// eslint-disable-line
   useEffect(()=>{let buf="";const h=e=>{buf=(buf+e.key).slice(-8);if(buf==="BLEX2026"){setMaintBypass(true);setMaintPreview(false);LSS('bx_maint_bypass',1);}};document.addEventListener("keydown",h);return()=>document.removeEventListener("keydown",h);},[]);
   useEffect(()=>{if(!maintenance?.launch_date)return;const tick=()=>{const diff=new Date(maintenance.launch_date)-Date.now();setMCountdown(diff<=0?{d:0,h:0,m:0,s:0}:{d:Math.floor(diff/86400000),h:Math.floor((diff%86400000)/3600000),m:Math.floor((diff%3600000)/60000),s:Math.floor((diff%60000)/1000)});};tick();const iv=setInterval(tick,1000);return()=>clearInterval(iv);},[maintenance?.launch_date]);
   useEffect(()=>{setGeoSupplier(null);if(selectedProduct?.id)fetchGeoSupplier(selectedProduct.id,detectedCountry||'US');},[selectedProduct,detectedCountry]); // eslint-disable-line
@@ -653,19 +650,17 @@ export default function App() {
   };
 
   /* admin */
-  const fetchOrders=()=>fetch(API+"/orders").then(r=>r.json()).then(d=>setAllOrders(Array.isArray(d)?d:[])).catch(()=>{});
-  const ADMIN_PWD=process.env.REACT_APP_ADMIN_PASSWORD||"BLEX2026";
-  const loginAdmin=()=>{if(adminPwd===ADMIN_PWD){setAdminAuth(true);setPwdErr(false);fetchOrders();}else setPwdErr(true);};
+  const fetchOrders=()=>fetch(API+"/orders",{headers:authH()}).then(r=>r.json()).then(d=>setAllOrders(Array.isArray(d)?d:[])).catch(()=>{});
   const saveProduct=async()=>{
     const payload={...pForm,price:Number(pForm.price),stock:Number(pForm.stock),sale_price:pForm.sale_price?Number(pForm.sale_price):null,cost_price:pForm.cost_price?Number(pForm.cost_price):null,image_gallery:pGallery||null};
     try{
-      if(editing)await fetch(`${API}/products/${editing.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      else await fetch(`${API}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      if(editing)await fetch(`${API}/products/${editing.id}`,{method:"PUT",headers:authH(),body:JSON.stringify(payload)});
+      else await fetch(`${API}/products`,{method:"POST",headers:authH(),body:JSON.stringify(payload)});
       setProducts(await fetch(API+"/products").then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));
       setShowForm(false);setEditing(null);setBgPreview(null);setPGallery(null);setPForm({name:"",price:"",category:"electronics",description:"",stock:"",image:"",sale_price:"",sale_ends_at:"",is_preorder:false,preorder_date:"",cost_price:""});
     }catch{}
   };
-  const delProduct=async id=>{if(!window.confirm(t.confirmDelete))return;try{await fetch(`${API}/products/${id}`,{method:"DELETE"});setProducts(p=>(Array.isArray(p)?p:[]).filter(x=>x.id!==id));}catch{}};
+  const delProduct=async id=>{if(!window.confirm(t.confirmDelete))return;try{await fetch(`${API}/products/${id}`,{method:"DELETE",headers:authH()});setProducts(p=>(Array.isArray(p)?p:[]).filter(x=>x.id!==id));}catch{}};
   const startEdit=p=>{setEditing(p);setBgPreview(null);setPGallery(p.image_gallery||null);setPForm({name:p.name,price:String(p.price),category:p.category||"electronics",description:p.description||"",stock:String(p.stock||0),image:p.image||"",sale_price:String(p.sale_price||""),sale_ends_at:p.sale_ends_at?p.sale_ends_at.slice(0,16):"",is_preorder:p.is_preorder||false,preorder_date:p.preorder_date||"",cost_price:String(p.cost_price||"")});setShowForm(true);fetchProductSuppliers(p.id);};
   const sendChat=async msg=>{if(!msg?.trim())return;const hist=chatMsgs;setChatMsgs(h=>[...h,{role:"user",content:msg}]);setChatInput("");setChatTyping(true);try{const r=await fetch(`${API}/ai/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,history:hist})});const d=await r.json();setChatMsgs(h=>[...h,{role:"assistant",content:d.response||"Sorry, something went wrong.",escalate:d.escalate,product:sp.find(p=>d.response&&p.name&&d.response.toLowerCase().includes(p.name.toLowerCase().slice(0,10)))||null}]);}catch{setChatMsgs(h=>[...h,{role:"assistant",content:"Connection error. Please try again."}]);}finally{setChatTyping(false);}};
   const fetchApStatus=async()=>{try{const r=await fetch(`${API}/autopilot/status`);const d=await r.json();setApStatus(d);setApEnabled(!!d.enabled);setApHour(d.hour??2);}catch{}};
@@ -737,10 +732,10 @@ export default function App() {
   const generatePromo=async()=>{setPromoLoading(true);try{const r=await fetch(API+"/ai/generate-promotion",{method:"POST",headers:{"Content-Type":"application/json"}});const d=await r.json();if(d.error){addToast(d.error,"error");}else{setPromoData(d);fetchPromos();}}catch(e){addToast(e.message,"error");}finally{setPromoLoading(false);};};
   const fetchPromos=async()=>{try{const r=await fetch(API+"/ai/promotions");const d=await r.json();setPromoList(Array.isArray(d)?d:[]);}catch{}};
   const runPriceMonitor=async()=>{setPriceMonitorLoading(true);try{const r=await fetch(`${API}/ai/price-monitor`);const d=await r.json();if(d.error){addToast(d.error,"error");}else{setPriceMonitor(Array.isArray(d)?d:[]);}}catch(e){addToast(e.message,"error");}finally{setPriceMonitorLoading(false);};};
-  const applyAllPriceSuggestions=async()=>{const toUpdate=priceMonitor.filter(p=>p.suggested_price);if(!toUpdate.length)return;await Promise.all(toUpdate.map(p=>{const full=sp.find(pr=>pr.id===p.id)||{};return fetch(`${API}/products/${p.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:p.name,price:p.suggested_price,description:full.description||"",stock:full.stock||0,category:full.category||"electronics",image:full.image||null,sale_price:full.sale_price||null,is_preorder:full.is_preorder||false})}).catch(()=>{});}));const r=await fetch(API+"/products").then(r=>r.json()).catch(()=>sp);setProducts(Array.isArray(r)?r:[]);addToast(`Updated ${toUpdate.length} prices`,"success");setPriceMonitor(pm=>pm.map(p=>p.suggested_price?{...p,blex_price:p.suggested_price,suggested_price:null,status:"competitive"}:p));};
+  const applyAllPriceSuggestions=async()=>{const toUpdate=priceMonitor.filter(p=>p.suggested_price);if(!toUpdate.length)return;await Promise.all(toUpdate.map(p=>{const full=sp.find(pr=>pr.id===p.id)||{};return fetch(`${API}/products/${p.id}`,{method:"PUT",headers:authH(),body:JSON.stringify({name:p.name,price:p.suggested_price,description:full.description||"",stock:full.stock||0,category:full.category||"electronics",image:full.image||null,sale_price:full.sale_price||null,is_preorder:full.is_preorder||false})}).catch(()=>{});}));const r=await fetch(API+"/products").then(r=>r.json()).catch(()=>sp);setProducts(Array.isArray(r)?r:[]);addToast(`Updated ${toUpdate.length} prices`,"success");setPriceMonitor(pm=>pm.map(p=>p.suggested_price?{...p,blex_price:p.suggested_price,suggested_price:null,status:"competitive"}:p));};
   const removeBg=async()=>{if(!pForm.image)return;setBgRemoving(true);const orig=pForm.image;try{const r=await fetch(`${API}/ai/process-image`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image_url:orig})});const d=await r.json();if(d.error){addToast(d.error,"error");}else{setBgPreview({orig,proc:d.result_url});setPForm(f=>({...f,image:d.result_url}));addToast("Background removed!","success");}}catch(e){addToast(e.message,"error");}finally{setBgRemoving(false);};};
   const trackOrder=async()=>{if(!trackInput.trim())return;setTrackLoading(true);setTrackResult(null);try{const r=await fetch(`${API}/orders/track/${encodeURIComponent(trackInput.trim())}`);const d=await r.json();if(d.error){addToast(d.error,"error");}else{setTrackResult(d);}}catch(e){addToast(e.message,"error");}finally{setTrackLoading(false);};};
-  const updateOrderStatus=async(id,status)=>{try{await fetch(`${API}/orders/${id}/status`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});fetchOrders();}catch{}};
+  const updateOrderStatus=async(id,status)=>{try{await fetch(`${API}/orders/${id}/status`,{method:"PATCH",headers:authH(),body:JSON.stringify({status})});fetchOrders();}catch{}};
 
   const applyPromo=p=>{const ncp=[...getCoupons().filter(c=>c.code!==p.coupon_code),{code:p.coupon_code,type:"pct",val:p.discount_pct,active:true}];LSS('bx_cp',ncp);setCouponsState(ncp);addToast(p.coupon_code+" activated!","success");};
   const handleLogoClick=()=>{logoTaps.current++;clearTimeout(logoTimer.current);if(logoTaps.current>=7){logoTaps.current=0;setEasterEgg(true);setTimeout(()=>setEasterEgg(false),700);setView("admin");setCartOpen(false);}else{setView("store");setCartOpen(false);logoTimer.current=setTimeout(()=>{logoTaps.current=0;},3000);}};
@@ -748,7 +743,7 @@ export default function App() {
   const analyzeCustomers=async()=>{setCustLoading(true);try{const r=await fetch(API+"/ai/customer-insights");const d=await r.json();if(d.error)addToast(d.error,"error");else setCustInsights(d);}catch(e){addToast(e.message,"error");}finally{setCustLoading(false);};};
   const sendPersonalizedEmail=async cu=>{setEmailLoading(cu.email);try{const r=await fetch(API+"/ai/send-targeted-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:cu.email,name:cu.name,segment:cu.segment,total_spent:cu.total_spent,fav_category:cu.fav_category,last_order:cu.last_order})});const d=await r.json();if(d.error)addToast(d.error,"error");else setEmailPreview({...d,customer:cu});}catch(e){addToast(e.message,"error");}finally{setEmailLoading(false);};};
   const analyzePrices=async()=>{setPriceAnalyzing(true);try{const r=await fetch(`${API}/ai/price-report`);const d=await r.json();setPriceReport(Array.isArray(d)?d:[]);}catch{}finally{setPriceAnalyzing(false);};};
-  const applyPrice=async(id,price)=>{try{const p=sp.find(x=>x.id===id);if(!p)return;await fetch(`${API}/products/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...p,price,stock:p.stock||0,category:p.category||"electronics"})});setProducts(await fetch(`${API}/products`).then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));setPriceReport(pr=>pr.map(r=>r.id===id?{...r,status:"good"}:r));}catch{}};
+  const applyPrice=async(id,price)=>{try{const p=sp.find(x=>x.id===id);if(!p)return;await fetch(`${API}/products/${id}`,{method:"PUT",headers:authH(),body:JSON.stringify({...p,price,stock:p.stock||0,category:p.category||"electronics"})});setProducts(await fetch(`${API}/products`).then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));setPriceReport(pr=>pr.map(r=>r.id===id?{...r,status:"good"}:r));}catch{}};
   const generateImageSet=async()=>{if(!pForm.image&&!pForm.name)return;setImgGalleryLoading(true);try{const r=await fetch(`${API}/ai/generate-product-images`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:pForm.name,category:pForm.category,image_url:pForm.image||null})});const d=await r.json();if(d.error){addToast(d.error,"error");}else{setPGallery(d);if(d.original&&!pForm.image)setPForm(f=>({...f,image:d.original}));addToast("Image set generated!","success");}}catch(e){addToast(e.message,"error");}finally{setImgGalleryLoading(false);};};
   const generateAIDesc=async()=>{if(!pForm.name)return;setAiGenerating(true);try{const r=await fetch(`${API}/ai/generate-description`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:pForm.name,category:pForm.category,price:pForm.price})});const d=await r.json();if(d.descriptions?.en)setPForm(f=>({...f,description:d.descriptions.en}));}catch{}finally{setAiGenerating(false);};};
   const generateAllContent=async(pId)=>{setContentLoading(p=>({...p,[pId]:true}));try{const r=await fetch(API+"/ai/content-agent",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pId})});const d=await r.json();if(d.error)addToast(d.error,"error");else{addToast(`Content generated for ${d.results?.[0]?.name||"product"} ✓`,"success");fetch(API+"/products").then(r=>r.json()).then(d=>Array.isArray(d)&&setProducts(d));}}catch(e){addToast(e.message,"error");}finally{setContentLoading(p=>{const n={...p};delete n[pId];return n;});};};
@@ -767,7 +762,7 @@ export default function App() {
   const alertedIds=alerts.map(a=>Number(a.product_id));
 
   /* ════════════════════════════════════════════════════════════ RENDER */
-  if(maintPreview||(maintenance?.enabled&&!maintBypass&&!adminAuth)) return(<div style={{position:"fixed",inset:0,background:"#030303",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,overflow:"hidden",fontFamily:"'Segoe UI',system-ui,sans-serif"}}>
+  if(maintPreview||(maintenance?.enabled&&!maintBypass&&!isAdminUser)) return(<div style={{position:"fixed",inset:0,background:"#030303",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,overflow:"hidden",fontFamily:"'Segoe UI',system-ui,sans-serif"}}>
     {[{w:520,h:520,x:"-130px",y:"-180px",c:"#7c3aed"},{w:380,h:380,x:"68%",y:"58%",c:"#0ea5e9"},{w:280,h:280,x:"42%",y:"-100px",c:"#a855f7"},{w:240,h:240,x:"8%",y:"62%",c:"#3b82f6"}].map((b,i)=><div key={i} className="float-blob" style={{width:b.w,height:b.h,left:b.x,top:b.y,background:b.c,opacity:.08,animation:`floatA ${5+i*1.5}s ease-in-out infinite`,animationDelay:`${i*0.8}s`}}/>)}
     {maintPreview&&<button onClick={()=>setMaintPreview(false)} style={{position:"absolute",top:"16px",right:"16px",background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.15)",color:"#fff",borderRadius:"8px",padding:"7px 14px",cursor:"pointer",fontSize:"12px",fontWeight:"700",zIndex:10,letterSpacing:".5px"}}>✕ Exit Preview</button>}
     <div style={{position:"relative",zIndex:2,textAlign:"center",maxWidth:"480px",width:"100%",padding:"0 20px"}}>
@@ -2337,18 +2332,17 @@ export default function App() {
     {/* ADMIN VIEW */}
     {view==="admin"&&(
       <div className="fu" style={{padding:"32px 22px",maxWidth:"960px",margin:"0 auto"}}>
-        {!adminAuth?(
-          <div className="si" style={{maxWidth:"320px",margin:"56px auto",background:c.card,borderRadius:"18px",border:`1px solid ${c.border}`,padding:"30px"}}>
-            <h2 style={{fontWeight:"800",fontSize:"18px",textAlign:"center",marginBottom:"20px"}}>{t.adminLogin}</h2>
-            <input type="password" value={adminPwd} placeholder="••••••••" onChange={e=>setAdminPwd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&loginAdmin()} style={inp(pwdErr)}/>
-            {pwdErr&&<p style={{color:c.error,fontSize:"11px",margin:"4px 0 8px"}}>{t.wrongPassword}</p>}
-            <button className="btn-t" onClick={loginAdmin} style={btnP({marginTop:"12px"})}>{t.login}</button>
+        {!isAdminUser?(
+          <div className="si" style={{maxWidth:"320px",margin:"56px auto",background:c.card,borderRadius:"18px",border:`1px solid ${c.border}`,padding:"30px",textAlign:"center"}}>
+            <h2 style={{fontWeight:"800",fontSize:"18px",marginBottom:"10px"}}>{t.adminLogin}</h2>
+            <p style={{fontSize:"13px",color:c.muted,marginBottom:"20px"}}>{user?"You are signed in but this account does not have admin access.":"Sign in with an admin account to continue."}</p>
+            {!user&&<button className="btn-t" onClick={()=>{setAuthOpen(true);setAuthMode("login");}} style={btnP()}>{t.login}</button>}
           </div>
         ):(
           <>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"}}>
               <h2 style={{fontWeight:"800",fontSize:"19px"}}>{t.dashboard}</h2>
-              <button className="btn-t" onClick={()=>{setAdminAuth(false);setAdminPwd("");}} style={btnS({width:"auto"})}>{t.logout}</button>
+              <button className="btn-t" onClick={doLogout} style={btnS({width:"auto"})}>{t.logout}</button>
             </div>
             {sp.filter(p=>p.stock>0&&p.stock<5).length>0&&(
               <div style={{background:"#ef444418",border:"1px solid #ef444444",borderRadius:"10px",padding:"10px 14px",marginBottom:"16px",display:"flex",alignItems:"center",gap:"10px"}}>
@@ -3015,8 +3009,8 @@ export default function App() {
     {imgMgrProd&&(()=>{
       const p=imgMgrProd;
       const g=p.image_gallery?(typeof p.image_gallery==='string'?JSON.parse(p.image_gallery):p.image_gallery):{};
-      const setMain=async url=>{try{await fetch(`${API}/products/${p.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...p,image:url,price:Number(p.price),stock:p.stock||0,category:p.category||"electronics"})});setProducts(await fetch(API+"/products").then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));setImgMgrProd(pv=>({...pv,image:url}));addToast("Main image updated","success");}catch{}};
-      const saveSlot=async(field,url)=>{const ng=field==="original"?{...g,original:url}:{...g,cleaned:url};try{await fetch(`${API}/products/${p.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...p,image_gallery:ng,price:Number(p.price),stock:p.stock||0,category:p.category||"electronics"})});setProducts(await fetch(API+"/products").then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));setImgMgrProd(pv=>({...pv,image_gallery:ng}));addToast("Slot updated","success");}catch{}};
+      const setMain=async url=>{try{await fetch(`${API}/products/${p.id}`,{method:"PUT",headers:authH(),body:JSON.stringify({...p,image:url,price:Number(p.price),stock:p.stock||0,category:p.category||"electronics"})});setProducts(await fetch(API+"/products").then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));setImgMgrProd(pv=>({...pv,image:url}));addToast("Main image updated","success");}catch{}};
+      const saveSlot=async(field,url)=>{const ng=field==="original"?{...g,original:url}:{...g,cleaned:url};try{await fetch(`${API}/products/${p.id}`,{method:"PUT",headers:authH(),body:JSON.stringify({...p,image_gallery:ng,price:Number(p.price),stock:p.stock||0,category:p.category||"electronics"})});setProducts(await fetch(API+"/products").then(r=>r.json()).then(d=>Array.isArray(d)?d:[]));setImgMgrProd(pv=>({...pv,image_gallery:ng}));addToast("Slot updated","success");}catch{}};
       const slots=[{field:"original",label:"Original",url:g.original||p.image||""},{field:"cleaned",label:"Cleaned",url:g.cleaned||""}];
       const promos=[{label:g.promo1?.angle||"Benefit",url:g.cleaned,text:g.promo1?.text},{label:g.promo2?.angle||"Lifestyle",url:g.cleaned,text:g.promo2?.text}].filter(x=>x.url);
       return<><div onClick={()=>setImgMgrProd(null)} style={{position:"fixed",inset:0,background:c.overlay,zIndex:9000}}/>
