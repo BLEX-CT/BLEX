@@ -1608,6 +1608,8 @@ export default function App() {
       const sizes=["XS","S","M","L","XL"];
       const colors=["#2a7d7b","#1a2424","#f5f0e8","#b5896a","#c4a7f0"];
       const reviews=[{name:"أحمد الشمري",date:"12 يونيو 2026",stars:5,text:"منتج رائع جداً، التوصيل كان سريعاً والتغليف ممتاز. سأطلب مرة أخرى بالتأكيد!"},{name:"فاطمة العمري",date:"8 يونيو 2026",stars:5,text:"جودة عالية وسعر مناسب، تجربة تسوق ممتعة من البداية للنهاية."}];
+      const avgRating=reviews.length?reviews.reduce((s,r)=>s+r.stars,0)/reviews.length:0;
+      const starDist=[5,4,3,2,1].map(st=>({stars:st,pct:reviews.length?Math.round(reviews.filter(r=>r.stars===st).length/reviews.length*100):0}));
       const addPdToCart=()=>{if(!(p.stock>0||p.is_preorder))return;setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+pdQty}:i):[...pv,{...p,qty:pdQty}];});addToast(p.name.substring(0,22)+" added","success");};
       const buyNow=()=>{addPdToCart();setCartOpen(false);setOrdered(false);setView("checkout");};
       const ACC=[
@@ -1642,8 +1644,8 @@ export default function App() {
           <div style={{display:"flex",alignItems:"center",gap:"14px",flexWrap:"wrap",marginBottom:"6px"}}>
             <span style={{background:c.chip,color:CAT_CLR[p.category]||c.muted,padding:"3px 10px",borderRadius:"9px",fontSize:"10px",fontWeight:"800",textTransform:"uppercase",border:`1px solid ${c.border}`}}>{t[p.category]||p.category}</span>
             <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
-              <div style={{display:"flex",gap:"1px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=4?"#f59e0b":c.border,fontSize:"13px"}}>★</span>)}</div>
-              <span style={{fontSize:"12px",color:c.muted,fontWeight:600}}>(124)</span>
+              <div style={{display:"flex",gap:"1px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(avgRating)?"#f59e0b":c.border,fontSize:"13px"}}>★</span>)}</div>
+              <span style={{fontSize:"12px",color:c.muted,fontWeight:600}}>({reviews.length})</span>
             </div>
             {p.stock>0&&<span style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"12px",fontWeight:700,color:"#00d9a5"}}><i className="ti ti-circle-check" style={{fontSize:"14px"}}/>In Stock</span>}
             <span style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"12px",fontWeight:700,color:c.accent}}><i className="ti ti-truck" style={{fontSize:"14px"}}/>Free Shipping</span>
@@ -1800,12 +1802,12 @@ export default function App() {
             </div>
             <div style={{display:"flex",alignItems:"center",gap:"18px",marginBottom:"20px"}}>
               <div style={{textAlign:"center",flexShrink:0}}>
-                <p style={{fontSize:"44px",fontWeight:900,lineHeight:1,color:c.text}}>4.8</p>
-                <div style={{display:"flex",gap:"2px",justifyContent:"center",margin:"5px 0"}}>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=4?"#f59e0b":c.border,fontSize:"14px"}}>★</span>)}</div>
-                <p style={{fontSize:"11px",color:c.muted}}>124 reviews</p>
+                <p style={{fontSize:"44px",fontWeight:900,lineHeight:1,color:c.text}}>{avgRating.toFixed(1)}</p>
+                <div style={{display:"flex",gap:"2px",justifyContent:"center",margin:"5px 0"}}>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=Math.round(avgRating)?"#f59e0b":c.border,fontSize:"14px"}}>★</span>)}</div>
+                <p style={{fontSize:"11px",color:c.muted}}>{reviews.length} reviews</p>
               </div>
               <div style={{flex:1}}>
-                {[[5,78],[4,14],[3,5],[2,2],[1,1]].map(([stars,pct])=>(
+                {starDist.map(({stars,pct})=>(
                   <div key={stars} style={{display:"flex",alignItems:"center",gap:"7px",marginBottom:"5px"}}>
                     <span style={{fontSize:"10px",color:c.muted,width:"8px",flexShrink:0}}>{stars}</span>
                     <span style={{color:"#f59e0b",fontSize:"10px",flexShrink:0}}>★</span>
@@ -3046,7 +3048,7 @@ export default function App() {
           <div style={{padding:"28px 24px",display:"flex",flexDirection:"column",gap:"12px"}}>
             <span style={{background:"#dff0f0",color:"#2a7d7b",fontSize:"10px",fontWeight:700,padding:"3px 9px",borderRadius:"20px",alignSelf:"flex-start"}}>{t[quickViewProd.category]||quickViewProd.category}</span>
             <h2 style={{fontWeight:700,fontSize:"20px",lineHeight:1.3,color:"#1a2424",margin:0}}>{quickViewProd.name}</h2>
-            <div style={{display:"flex",alignItems:"center",gap:"5px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=4?"#f59e0b":"#d8d2c8",fontSize:"13px"}}>★</span>)}<span style={{fontSize:"11px",color:"#8fa5a5",marginInlineStart:"4px"}}>(124)</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:"5px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(quickViewProd.rating||4.5)?"#f59e0b":"#d8d2c8",fontSize:"13px"}}>★</span>)}<span style={{fontSize:"11px",color:"#8fa5a5",marginInlineStart:"4px"}}>({(quickViewProd.id%50)+12})</span></div>
             <p style={{fontWeight:800,fontSize:"24px",color:"#2a7d7b",margin:0}}>{fmt(quickViewProd.price)}</p>
             <div>
               <p style={{fontSize:"11px",fontWeight:600,color:"#5a6e6e",marginBottom:"7px"}}>اللون</p>
