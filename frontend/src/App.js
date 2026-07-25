@@ -207,7 +207,14 @@ export default function App() {
   const [detectedCountry,setDetectedCountry]=useState(null);
   const [rates,setRates]=useState(FIXED_RATES);
   const [products,setProducts]=useState([]);
+  const [adminProdSearch,setAdminProdSearch]=useState("");
+  const [adminProdCat,setAdminProdCat]=useState("all");
+  const [adminProdPage,setAdminProdPage]=useState(1);
+  const ADMIN_PAGE_SIZE=50;
   const sp=useMemo(()=>Array.isArray(products)?products:[],[products]);
+  const adminFilteredProducts=useMemo(()=>{const q=adminProdSearch.trim().toLowerCase();return sp.filter(p=>(adminProdCat==="all"||p.category===adminProdCat)&&(!q||(p.name||"").toLowerCase().includes(q)));},[sp,adminProdSearch,adminProdCat]);
+  const adminPageCount=Math.max(1,Math.ceil(adminFilteredProducts.length/ADMIN_PAGE_SIZE));
+  const adminPageProducts=useMemo(()=>adminFilteredProducts.slice((adminProdPage-1)*ADMIN_PAGE_SIZE,adminProdPage*ADMIN_PAGE_SIZE),[adminFilteredProducts,adminProdPage]);
   const [cart,setCart]=useState([]);
   const [view,setView]=useState("store");
   const [cartOpen,setCartOpen]=useState(false);
@@ -2361,7 +2368,7 @@ export default function App() {
 
             {adminTab==="products"&&<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
-                <h3 style={{fontWeight:"700"}}>{t.products} ({sp.length})</h3>
+                <h3 style={{fontWeight:"700"}}>{t.products} ({adminFilteredProducts.length}{adminFilteredProducts.length!==sp.length?` / ${sp.length}`:""})</h3>
                 <div style={{display:"flex",gap:"7px"}}><button className="btn-t" onClick={analyzePrices} disabled={priceAnalyzing} style={btnS({width:"auto",padding:"7px 14px",fontSize:"12px",borderColor:"#f59e0b",color:"#f59e0b"})}>{priceAnalyzing?"⏳ Analyzing…":"📊 Analyze Prices"}</button><button className="btn-t" onClick={()=>{setShowForm(true);setEditing(null);setBgPreview(null);setPForm({name:"",price:"",category:"electronics",description:"",stock:"",image:"",sale_price:"",sale_ends_at:"",is_preorder:false,preorder_date:"",cost_price:""});}} style={btnP({width:"auto",padding:"7px 14px",fontSize:"12px"})}>+ {t.addProduct}</button></div>
               </div>
               {showForm&&<div className="si" style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"13px",padding:"18px",marginBottom:"16px"}}>
@@ -2372,7 +2379,7 @@ export default function App() {
                     {f.k==="image"?<div style={{display:"flex",gap:"5px"}}><input type="text" value={pForm.image} onChange={e=>{setPForm({...pForm,image:e.target.value});setBgPreview(null);}} style={{...inp(false),flex:1}}/><button className="btn-t" onClick={removeBg} disabled={bgRemoving||!pForm.image} title="Remove Background" style={{background:"#3b82f6",color:"#fff",border:"none",borderRadius:"7px",padding:"0 11px",cursor:"pointer",fontSize:"15px",flexShrink:0,opacity:bgRemoving||!pForm.image?0.5:1}}>{bgRemoving?"⏳":"🖼️"}</button></div>:<input type={f.type} value={pForm[f.k]} onChange={e=>setPForm({...pForm,[f.k]:e.target.value})} style={inp(false)}/>}
                     </div>
                   ))}
-                  <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase",letterSpacing:".5px"}}>{t.category}</label><select value={pForm.category} onChange={e=>setPForm({...pForm,category:e.target.value})} style={inp(false)}>{["electronics","accessories","clothing"].map(cat=><option key={cat} value={cat}>{t[cat]}</option>)}</select></div>
+                  <div><label style={{display:"block",marginBottom:"3px",fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase",letterSpacing:".5px"}}>{t.category}</label><select value={pForm.category} onChange={e=>setPForm({...pForm,category:e.target.value})} style={inp(false)}>{["electronics","jewelry","clothing","accessories"].map(cat=><option key={cat} value={cat}>{t[cat]}</option>)}</select></div>
                   <div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"3px"}}><label style={{fontSize:"10px",fontWeight:"700",color:c.muted,textTransform:"uppercase",letterSpacing:".5px"}}>{t.description}</label><button className="btn-t" onClick={generateAIDesc} disabled={aiGenerating} style={{background:"linear-gradient(135deg,#7c3aed,#3b82f6)",color:"#fff",border:"none",borderRadius:"5px",padding:"2px 9px",fontSize:"10px",fontWeight:"700",cursor:aiGenerating?"wait":"pointer",opacity:aiGenerating?0.65:1,whiteSpace:"nowrap"}}>{aiGenerating?"⏳ Generating…":"✨ Generate with AI"}</button></div><input type="text" value={pForm.description} onChange={e=>setPForm({...pForm,description:e.target.value})} style={inp(false)}/></div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"9px",marginTop:"9px"}}>
@@ -2398,10 +2405,17 @@ export default function App() {
                 </div>
               </div>}
               {priceReport.length>0&&<div className="si" style={{background:c.card,border:`1px solid ${c.border}`,borderRadius:"13px",padding:"16px",marginBottom:"16px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"11px"}}><h4 style={{fontWeight:"700",fontSize:"13px"}}>📊 Price Analysis</h4><button onClick={()=>setPriceReport([])} style={{background:"none",border:"none",color:c.muted,cursor:"pointer",fontSize:"18px",lineHeight:1}}>✕</button></div>{priceReport.map(r=>{const p=sp.find(x=>x.id===r.id);if(!p)return null;const col=r.status==="good"?c.success:r.status==="adjust"?"#f59e0b":c.error;return(<div key={r.id} style={{display:"flex",alignItems:"center",gap:"8px",padding:"8px 0",borderTop:`1px solid ${c.border}`,flexWrap:"wrap"}}><span style={{flex:"1 1 130px",fontWeight:"600",fontSize:"12px"}}>{p.name}</span><span style={{fontSize:"11px",color:c.muted,whiteSpace:"nowrap"}}>{p.price} → <b style={{color:col}}>{r.suggested_price}</b> SAR</span><span style={{fontSize:"10px",color:c.muted}}>{r.market_estimate}</span><span style={{flex:"2 1 160px",fontSize:"11px",color:c.muted,fontStyle:"italic"}}>{r.reasoning}</span><span style={{fontSize:"10px",fontWeight:"700",color:col,background:col+"22",padding:"2px 7px",borderRadius:"4px",whiteSpace:"nowrap"}}>{r.status.toUpperCase()}</span>{r.status!=="good"&&<button className="btn-t" onClick={()=>applyPrice(r.id,r.suggested_price)} style={{background:col,color:"#fff",border:"none",borderRadius:"5px",padding:"3px 10px",fontSize:"10px",fontWeight:"700",cursor:"pointer",whiteSpace:"nowrap"}}>Apply</button>}</div>);})}</div>}
+              <div style={{display:"flex",gap:"8px",marginBottom:"11px",flexWrap:"wrap"}}>
+                <input type="text" value={adminProdSearch} onChange={e=>{setAdminProdSearch(e.target.value);setAdminProdPage(1);}} placeholder={t.search||"Search products…"} style={{...inp(false),flex:"1 1 220px"}}/>
+                <select value={adminProdCat} onChange={e=>{setAdminProdCat(e.target.value);setAdminProdPage(1);}} style={{...inp(false),flex:"0 0 auto",width:"auto",minWidth:"140px"}}>
+                  <option value="all">{t.all||"All categories"}</option>
+                  {Array.from(new Set(sp.map(p=>p.category).filter(Boolean))).sort().map(cat=><option key={cat} value={cat}>{t[cat]||cat}</option>)}
+                </select>
+              </div>
               <div style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,overflow:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",minWidth:"520px"}}>
                   <thead><tr style={{background:c.chip}}>{[t.name,t.category,t.price,t.stock,""].map((h,i)=><th key={i} style={{padding:"9px 13px",textAlign:isRtl?"right":"left",fontWeight:"700",fontSize:"10px",color:c.muted,textTransform:"uppercase",letterSpacing:".5px"}}>{h}</th>)}</tr></thead>
-                  <tbody>{sp.map(p=>(
+                  <tbody>{adminPageProducts.map(p=>(
                     <tr key={p.id} style={{borderTop:`1px solid ${c.border}`}}>
                       <td style={{padding:"9px 13px",fontWeight:"600",fontSize:"12px"}}>{p.name}</td>
                       <td style={{padding:"9px 13px",fontSize:"11px",color:c.muted}}>{t[p.category]||p.category}</td>
@@ -2417,6 +2431,11 @@ export default function App() {
                   ))}</tbody>
                 </table>
               </div>
+              {adminPageCount>1&&<div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:"12px",marginTop:"13px"}}>
+                <button className="btn-t" disabled={adminProdPage<=1} onClick={()=>setAdminProdPage(pg=>Math.max(1,pg-1))} style={btnS({width:"auto",padding:"6px 14px",fontSize:"12px",opacity:adminProdPage<=1?0.5:1})}>‹ {t.prev||"Prev"}</button>
+                <span style={{fontSize:"12px",color:c.muted,fontWeight:"700"}}>{adminProdPage} / {adminPageCount}</span>
+                <button className="btn-t" disabled={adminProdPage>=adminPageCount} onClick={()=>setAdminProdPage(pg=>Math.min(adminPageCount,pg+1))} style={btnS({width:"auto",padding:"6px 14px",fontSize:"12px",opacity:adminProdPage>=adminPageCount?0.5:1})}>{t.next||"Next"} ›</button>
+              </div>}
             </>}
 
             {adminTab==="orders"&&<div>
