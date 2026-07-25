@@ -1089,28 +1089,6 @@ export default function App() {
         </div>
       </div>}
 
-      {/* CATEGORIES GRID */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",padding:"0 16px",marginBottom:"24px"}}>
-        {[
-          {icon:"ti-device-laptop",label:"Electronics",fn:()=>{setCategory("electronics");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-diamond",label:"Jewelry",fn:()=>{setCategory("jewelry");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-shirt",label:"Clothing",fn:()=>{setCategory("clothing");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-sunglasses",label:"Accessories",fn:()=>{setCategory("accessories");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-sparkles",label:"New Arrivals",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-tag",label:"Sale",fn:()=>{setSearchRaw("");setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-star",label:"Top Rated",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-          {icon:"ti-flame",label:"Trending",fn:()=>{setCategory("all");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}},
-        ].map(item=>(
-          <div key={item.label} onClick={item.fn} style={{display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer"}}>
-            <div style={{width:"64px",height:"64px",borderRadius:"20px",background:theme==="light"?"linear-gradient(135deg,#f8f9fa,#e9ecef)":"linear-gradient(135deg,#1a1a2e,#2d2d44)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",color:theme==="light"?"#1a1a2e":"#fff",transition:"all .2s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="linear-gradient(135deg,#e94560,#ff6b6b)";e.currentTarget.style.color="#fff";e.currentTarget.style.transform="scale(1.1)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background=theme==="light"?"linear-gradient(135deg,#f8f9fa,#e9ecef)":"linear-gradient(135deg,#1a1a2e,#2d2d44)";e.currentTarget.style.color=theme==="light"?"#1a1a2e":"#fff";e.currentTarget.style.transform="scale(1)";}}>
-              <i className={`ti ${item.icon}`}/>
-            </div>
-            <span style={{fontSize:"12px",fontWeight:600,color:c.text,marginTop:"8px",textAlign:"center"}}>{item.label}</span>
-          </div>
-        ))}
-      </div>
 
       {/* TRUST BADGES MARQUEE */}
       <div style={{background:"#f5f0e8",borderTop:"1px solid #d8d2c8",borderBottom:"1px solid #d8d2c8",padding:"12px 0",overflow:"hidden",marginTop:"10px"}}>
