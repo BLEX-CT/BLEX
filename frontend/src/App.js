@@ -177,6 +177,14 @@ function injectCSS(){
     .checkout-step-btn-sec:hover{background:#1a1a2e}
     @media(max-width:768px){.ann-full{display:none!important}.ann-short{display:inline!important}.promo-slider-wrap{display:none!important}.promo-static{display:flex!important}.footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important}}
     @media(min-width:769px){.ann-short{display:none!important}.promo-static{display:none!important}}
+    @media(min-width:1024px){
+      .product-page-wrap{padding:0 32px}
+      .pd-layout{display:flex;align-items:flex-start;gap:36px}
+      .pd-hero{flex:0 0 47%;max-width:47%;height:620px!important;border-radius:20px!important;overflow:hidden;position:sticky!important;top:96px}
+      .pd-info{flex:1;min-width:0;margin-top:0!important;border-radius:20px!important}
+      .pd-bottom-bar-inner{max-width:720px!important}
+    }
+    @media(min-width:1280px){.pd-bottom-bar-inner{max-width:880px!important}}
     .product-page-wrap{max-width:480px;margin:0 auto}
     @media(min-width:900px){.product-page-wrap{max-width:720px}}
     @media(min-width:1280px){.product-page-wrap{max-width:880px}}
@@ -1609,7 +1617,8 @@ export default function App() {
       ];
       return(<div className="fu product-page-wrap" style={{paddingBottom:"110px",position:"relative"}}>
         {/* HERO GALLERY */}
-        <div style={{position:"relative",width:"100%",height:"400px",overflow:"hidden",background:c.chip}}>
+        <div className="pd-layout">
+        <div className="pd-hero" style={{position:"relative",width:"100%",height:"400px",overflow:"hidden",background:c.chip}}>
           {heroImg?<img key={heroImg} src={heroImg} alt={p.name} onClick={()=>setPdZoom(heroImg)} className="fi" style={{width:"100%",height:"100%",objectFit:"cover",cursor:"zoom-in"}} onError={e=>{e.target.style.display="none"}}/>:<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"96px",opacity:.3}}>{CAT_ICONS[p.category]||"◈"}</div>}
           <button onClick={()=>setView("store")} style={{position:"absolute",top:"16px",[isRtl?"right":"left"]:"16px",width:"40px",height:"40px",borderRadius:"50%",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"}}><i className={`ti ${isRtl?"ti-arrow-right":"ti-arrow-left"}`}/></button>
           <button onClick={()=>toggleWishlist(p.id)} style={{position:"absolute",top:"16px",[isRtl?"left":"right"]:"16px",width:"40px",height:"40px",borderRadius:"50%",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",border:"none",color:wishlist.includes(p.id)?"#e94560":"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"}}><i className={`ti ${wishlist.includes(p.id)?"ti-heart-filled":"ti-heart"}`}/></button>
@@ -1622,7 +1631,7 @@ export default function App() {
         </div>
 
         {/* INFO CARD */}
-        <div style={{background:c.card,borderRadius:"28px 28px 0 0",marginTop:"-30px",position:"relative",zIndex:2,padding:"24px 20px"}}>
+        <div className="pd-info" style={{background:c.card,borderRadius:"28px 28px 0 0",marginTop:"-30px",position:"relative",zIndex:2,padding:"24px 20px"}}>
           {/* HEADER ROW */}
           <div style={{display:"flex",alignItems:"flex-start",gap:"12px",marginBottom:"10px"}}>
             <h1 style={{fontSize:"22px",fontWeight:800,color:c.text,flex:1,margin:0,lineHeight:1.3}}>{p.name}</h1>
@@ -1826,10 +1835,11 @@ export default function App() {
             </div>
           </div>
         </div>
+        </div>
 
         {/* BOTTOM ACTION BAR */}
         <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:500,background:c.card,padding:"16px 20px 24px",display:"flex",justifyContent:"center"}}>
-          <div style={{display:"flex",gap:"12px",width:"100%",maxWidth:"480px"}}>
+          <div className="pd-bottom-bar-inner" style={{display:"flex",gap:"12px",width:"100%",maxWidth:"480px"}}>
             <button onClick={addPdToCart} disabled={p.stock===0&&!p.is_preorder} style={{flex:1,background:c.bg,border:`2px solid ${c.border}`,color:c.text,borderRadius:"16px",padding:"14px",fontWeight:700,fontSize:"14px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",opacity:(p.stock===0&&!p.is_preorder)?.4:1}}>{p.is_preorder?"Pre-Order":"Add to Cart"}</button>
             <button onClick={buyNow} disabled={p.stock===0&&!p.is_preorder} style={{flex:1,background:"#e94560",border:"none",color:"#fff",borderRadius:"16px",padding:"14px",fontWeight:700,fontSize:"14px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",opacity:(p.stock===0&&!p.is_preorder)?.4:1,boxShadow:"0 4px 20px rgba(233,69,96,0.3)"}}>Buy Now</button>
           </div>
