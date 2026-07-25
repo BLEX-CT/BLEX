@@ -443,7 +443,7 @@ export default function App() {
   useEffect(()=>{const iv=setInterval(()=>setMorphIdx(i=>(i+1)%4),2800);return()=>clearInterval(iv);},[]);
   useEffect(()=>{if(!arOpen)return;let s;navigator.mediaDevices?.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{s=stream;if(arRef.current)arRef.current.srcObject=stream;}).catch(()=>{});return()=>s?.getTracks().forEach(t=>t.stop());},[arOpen]);
   useEffect(()=>{if(selectedProduct)fetchBundle(selectedProduct);},[selectedProduct]); // eslint-disable-line
-  useEffect(()=>{if(promoHover)return;const iv=setInterval(()=>setPromoSlide(s=>(s+1)%3),4000);return()=>clearInterval(iv);},[promoHover]);
+  useEffect(()=>{if(promoHover)return;const iv=setInterval(()=>setPromoSlide(s=>(s+1)%2),4000);return()=>clearInterval(iv);},[promoHover]);
   useEffect(()=>{const iv=setInterval(()=>setPromoCountdown(s=>s>0?s-1:0),1000);return()=>clearInterval(iv);},[]);
   useEffect(()=>{setPdColor(0);setPdSize(null);setPdGalIdx(0);setPdAcc("description");},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{if(view==="product"&&selectedProduct?.category){const prev=LS('blex_viewed')||[];const cat=selectedProduct.category;const next=[cat,...prev.filter(x=>x!==cat)].slice(0,5);LSS('blex_viewed',next);setViewedCats(next);}},[view,selectedProduct?.category]); // eslint-disable-line
@@ -1149,22 +1149,22 @@ export default function App() {
       {/* PROMO BANNER SLIDER */}
       <div className="promo-slider-wrap" style={{margin:"0 26px 16px",position:"relative"}} onMouseEnter={()=>setPromoHover(true)} onMouseLeave={()=>setPromoHover(false)}>
         <div style={{borderRadius:"14px",overflow:"hidden",position:"relative",minHeight:"56px"}}>
-          {[{bg:"#2a7d7b",textColor:"#fff",main:"🚚 شحن مجاني على الطلبات فوق 200 ريال",sub:"تسوق الآن ←",isLink:true},{bg:"#1e5f5d",textColor:"#fff",main:`⚡ خصم 10% — كود BLEX10`,sub:`⏱ ${Math.floor(promoCountdown/3600)}h ${Math.floor((promoCountdown%3600)/60)}m`,isLink:false},{bg:"#f5f0e8",textColor:"#2a7d7b",border:"1px solid #d8d2c8",main:"🎁 برنامج الولاء — اجمع نقاط مع كل طلب",sub:"",isLink:false}].map((sl,i)=>(
+          {[{bg:"#1e5f5d",textColor:"#fff",main:`⚡ خصم 10% — كود BLEX10`,sub:`⏱ ${Math.floor(promoCountdown/3600)}h ${Math.floor((promoCountdown%3600)/60)}m`,isLink:false},{bg:"#f5f0e8",textColor:"#2a7d7b",border:"1px solid #d8d2c8",main:"🎁 برنامج الولاء — اجمع نقاط مع كل طلب",sub:"",isLink:false}].map((sl,i)=>(
             <div key={i} style={{display:promoSlide===i?"flex":"none",alignItems:"center",justifyContent:"center",gap:"12px",padding:"14px 48px",background:sl.bg,border:sl.border||"none",direction:"rtl",flexWrap:"wrap"}}>
               <span style={{color:sl.textColor,fontWeight:700,fontSize:"14px",textAlign:"center"}}>{sl.main}</span>
               {sl.sub&&<span style={{color:sl.isLink?"rgba(255,255,255,0.85)":sl.textColor,fontSize:"12px",fontWeight:600,background:sl.isLink?"rgba(255,255,255,0.15)":"transparent",padding:sl.isLink?"4px 10px":"0",borderRadius:sl.isLink?"20px":"0",cursor:sl.isLink?"pointer":"default",border:sl.isLink?"1px solid rgba(255,255,255,0.3)":"none"}}>{sl.sub}</span>}
             </div>
           ))}
-          <button onClick={()=>setPromoSlide(s=>(s-1+3)%3)} style={{position:"absolute",left:"10px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.2)",border:"none",color:"#fff",borderRadius:"50%",width:"26px",height:"26px",cursor:"pointer",fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2,lineHeight:1}}>‹</button>
-          <button onClick={()=>setPromoSlide(s=>(s+1)%3)} style={{position:"absolute",right:"10px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.2)",border:"none",color:"#fff",borderRadius:"50%",width:"26px",height:"26px",cursor:"pointer",fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2,lineHeight:1}}>›</button>
+          <button onClick={()=>setPromoSlide(s=>(s-1+2)%2)} style={{position:"absolute",left:"10px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.2)",border:"none",color:"#fff",borderRadius:"50%",width:"26px",height:"26px",cursor:"pointer",fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2,lineHeight:1}}>‹</button>
+          <button onClick={()=>setPromoSlide(s=>(s+1)%2)} style={{position:"absolute",right:"10px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.2)",border:"none",color:"#fff",borderRadius:"50%",width:"26px",height:"26px",cursor:"pointer",fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2,lineHeight:1}}>›</button>
         </div>
         <div style={{display:"flex",justifyContent:"center",gap:"5px",marginTop:"7px"}}>
-          {[0,1,2].map(i=><button key={i} onClick={()=>setPromoSlide(i)} style={{width:promoSlide===i?"18px":"6px",height:"6px",borderRadius:"3px",background:promoSlide===i?"#2a7d7b":"#d8d2c8",border:"none",cursor:"pointer",padding:0,transition:"all 0.3s ease"}}/>)}
+          {[0,1].map(i=><button key={i} onClick={()=>setPromoSlide(i)} style={{width:promoSlide===i?"18px":"6px",height:"6px",borderRadius:"3px",background:promoSlide===i?"#2a7d7b":"#d8d2c8",border:"none",cursor:"pointer",padding:0,transition:"all 0.3s ease"}}/>)}
         </div>
       </div>
       {/* PROMO STATIC (mobile only) */}
-      <div className="promo-static" style={{margin:"0 16px 14px",background:"#2a7d7b",borderRadius:"10px",padding:"12px 16px",alignItems:"center",justifyContent:"center",direction:"rtl"}}>
-        <span style={{color:"#fff",fontSize:"12px",fontWeight:700}}>🚚 شحن مجاني على الطلبات فوق 200 ريال</span>
+      <div className="promo-static" style={{margin:"0 16px 14px",background:"#1e5f5d",borderRadius:"10px",padding:"12px 16px",alignItems:"center",justifyContent:"center",direction:"rtl"}}>
+        <span style={{color:"#fff",fontSize:"12px",fontWeight:700}}>⚡ خصم 10% — كود BLEX10</span>
       </div>
 
       {/* FILTERS PANEL */}
