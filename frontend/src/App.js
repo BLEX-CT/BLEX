@@ -1327,9 +1327,9 @@ export default function App() {
                   </div>
                   {p.stock===0&&(p.is_preorder?<div style={{position:"absolute",top:"9px",left:"50%",transform:"translateX(-50%)",background:"rgba(59,130,246,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800",whiteSpace:"nowrap"}}>PRE-ORDER</div>:<div style={{position:"absolute",top:"9px",left:"50%",transform:"translateX(-50%)",background:"rgba(239,68,68,.9)",color:"#fff",padding:"2px 8px",borderRadius:"6px",fontSize:"9px",fontWeight:"800",whiteSpace:"nowrap"}}>{t.outOfStock}</div>)}
                   <button onClick={e=>{e.stopPropagation();toggleWishlist(p.id);}} style={{position:"absolute",top:"8px",right:"8px",background:theme==="light"?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.5)",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",zIndex:4}}>{wishlist.includes(p.id)?"❤️":"🤍"}</button>
-                  {/* PRODUCT BADGES */}
-                  <div style={{position:"absolute",top:"10px",left:"10px",zIndex:5,display:"flex",flexDirection:"column",gap:"4px",pointerEvents:"none"}}>
-                    {(()=>{const spIdx=sp.findIndex(x=>x.id===p.id);const badges=[];if(spIdx>=0&&spIdx<Math.ceil(sp.length*0.2))badges.push({label:"NEW",bg:"#2a7d7b"});if(Number(p.price)<200)badges.push({label:"SALE",bg:"#e05555"});if(p.rating>=4.5||p.id%5===0)badges.push({label:"HOT",bg:"#b5896a"});if(p.stock>0&&p.stock<10)badges.push({label:"LIMITED",bg:"#1a2424"});return badges.slice(0,2).map((b,i)=><span key={i} style={{display:"block",background:b.bg,color:"#fff",fontSize:"9px",fontWeight:700,padding:"3px 8px",borderRadius:"50px",letterSpacing:"1px",whiteSpace:"nowrap"}}>{b.label}</span>);})()}
+                  {/* PRODUCT BADGE - single subtle tag, priority: sale % > new > limited stock */}
+                  <div style={{position:"absolute",top:"10px",left:"10px",zIndex:5,pointerEvents:"none"}}>
+                    {(()=>{const spIdx=sp.findIndex(x=>x.id===p.id);const isSale=p.sale_price&&new Date(p.sale_ends_at)>Date.now();const isNew=spIdx>=0&&spIdx<Math.ceil(sp.length*0.2);const isLimited=p.stock>0&&p.stock<10;if(isSale){const pct=Math.round((1-Number(p.sale_price)/Number(p.price))*100);return<span style={{background:"#e05555",color:"#fff",fontSize:"10px",fontWeight:700,padding:"2px 7px",borderRadius:"4px",whiteSpace:"nowrap"}}>-{pct}%</span>;}if(isNew)return<span style={{background:"rgba(0,0,0,.55)",color:"#fff",fontSize:"9px",fontWeight:600,padding:"2px 7px",borderRadius:"4px",whiteSpace:"nowrap"}}>{t.new||"New"}</span>;if(isLimited)return<span style={{background:"rgba(0,0,0,.55)",color:"#fff",fontSize:"9px",fontWeight:600,padding:"2px 7px",borderRadius:"4px",whiteSpace:"nowrap"}}>{p.stock} left</span>;return null;})()}
                   </div>
                   {hovered===p.id&&p.stock>0&&<div style={{position:"absolute",bottom:"42px",left:"50%",transform:"translateX(-50%)",background:"rgba(0,0,0,.7)",color:"#fff",fontSize:"9px",fontWeight:"700",padding:"2px 8px",borderRadius:"5px",whiteSpace:"nowrap",zIndex:4}}>👁 {(p.id%13)+3} viewing</div>}
                   {/* QUICK ADD + QUICK VIEW */}
@@ -1347,21 +1347,12 @@ export default function App() {
                   </div>}
                 </div>
                 <div style={{padding:"13px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
-                    <span style={{background:"#dff0f0",color:"#2a7d7b",padding:"2px 8px",borderRadius:"20px",fontSize:"9px",fontWeight:"600",letterSpacing:".3px"}}>{t[p.category]||p.category}</span>
-                    {p.stock>0&&<span style={{fontSize:"9px",fontWeight:"700",color:c.success}}>● {t.inStock}</span>}
-                  </div>
-                  <h3 style={{fontWeight:"600",fontSize:"14px",marginBottom:"4px",lineHeight:1.3,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.name}</h3>
-                  <div style={{display:"flex",alignItems:"center",gap:"4px",marginBottom:"6px"}}>
-                    <div style={{display:"flex",gap:"1px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(p.rating||4.5)?"#f59e0b":c.border,fontSize:"12px"}}>★</span>)}</div>
-                    <span style={{fontSize:"12px",color:c.muted}}>({(p.id%50)+12})</span>
-                  </div>
-                  <p style={{color:c.muted,fontSize:"11px",marginBottom:"11px",lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.description?.replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim()}</p>
+                  <h3 style={{fontWeight:"600",fontSize:"13px",marginBottom:"4px",lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</h3>
+                  <p style={{fontSize:"10px",color:c.muted,marginBottom:"8px"}}>★{(p.rating||4.5).toFixed(1)} · {(p.id%20)+2} {t.soldToday||"sold today"}</p>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"800",fontSize:"18px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"700",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span style={{fontWeight:"800",fontSize:"18px",color:c.accent}}>{fmt(p.price)}</span></div>}</div>
                     <button className="btn-t" onClick={e=>{e.stopPropagation();if(p.stock>0||p.is_preorder){addToCart(p);flyToCart(e);}}} style={{background:c.accent,color:"#fff",border:"none",width:"28px",height:"28px",borderRadius:"8px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"16px",fontWeight:"700",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:(p.stock>0||p.is_preorder)?1:.4}}>+</button>
                   </div>
-                  {flags.b2b&&<p style={{fontSize:"8px",color:c.muted,marginTop:"3px",letterSpacing:".3px"}}>★ B2B tiers: 5–9 ▸ 10% off · 10+ ▸ 20% off</p>}
                   {hovered===p.id&&(()=>{const rel=products.filter(x=>x.category===p.category&&x.id!==p.id&&x.stock>0).slice(0,2);return rel.length?<div style={{marginTop:"8px",paddingTop:"8px",borderTop:`1px solid ${c.border}`}}><p style={{fontSize:"9px",color:c.muted,fontWeight:"700",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>You may also like</p>{rel.map(r=><button key={r.id} className="btn-t" onClick={e=>{e.stopPropagation();addToCart(r);}} style={{display:"block",width:"100%",background:c.chip,border:"none",borderRadius:"5px",padding:"4px 7px",marginBottom:"3px",cursor:"pointer",textAlign:"left"}}><span style={{fontSize:"10px",fontWeight:"600",color:c.text}}>{r.name.substring(0,22)}</span><span style={{float:"right",fontSize:"10px",color:c.muted}}>{fmt(r.price)}</span></button>)}</div>:null;})()}
                 </div>
               </div>
