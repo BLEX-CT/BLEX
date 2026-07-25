@@ -2612,10 +2612,7 @@ export default function App() {
                 </div>
                 <div style={{background:c.card,borderRadius:"13px",border:`1px solid ${c.border}`,padding:"16px"}}><p style={{fontWeight:"700",fontSize:"12px",marginBottom:"10px"}}>Orders — 7 Days</p><BarChart data={last7} c={c}/></div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginTop:"14px"}}>
-                <div style={{background:"#22c55e11",border:"1px solid #22c55e33",borderRadius:"9px",padding:"14px",display:"flex",alignItems:"center",gap:"10px"}}>
-                  <span style={{fontSize:"22px"}}>📊</span><div><p style={{fontWeight:"700",fontSize:"12px",color:c.success}}>Accounting</p><p style={{color:c.muted,fontSize:"11px"}}>Sync revenue, expenses, and invoices with Xero or QuickBooks.</p></div>
-                </div>
+              <div style={{marginTop:"14px"}}>
                 <div style={{background:"#a855f711",border:"1px solid #a855f733",borderRadius:"9px",padding:"14px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:priceMonitor.length?"12px":"0"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"8px"}}><span style={{fontSize:"20px"}}>🕵️</span><p style={{fontWeight:"700",fontSize:"12px",color:"#a855f7"}}>Competitor Price Monitor</p></div>
