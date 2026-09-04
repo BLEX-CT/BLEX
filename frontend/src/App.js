@@ -78,14 +78,6 @@ const PROMO_BANNERS=[
   {id:2,layout_template:"panorama",media:{type:"gradient",value:"linear-gradient(135deg,#0a1628 0%,#3d4a6b 50%,#5a6e8f 100%)"},tag:"Tech & Electronics",headline:"The Future, Today.",sub:"Latest devices, best prices, fastest delivery in Saudi Arabia.",cta:"View Electronics →",cat:"electronics"},
   {id:3,layout_template:"oversized",media:{type:"gradient",value:"linear-gradient(135deg,#2a1000 0%,#6b3a1f 50%,#b5896a 100%)"},tag:"Fashion",headline:"Style That Moves With You",sub:"Contemporary cuts, timeless appeal.",points:["New styles added weekly","Free returns on all clothing","Size guide included"],cta:"Shop Fashion →",cat:"clothing"},
 ];
-const STORIES_DATA=[
-  {label:"New",icon:"ti-sparkles",gradient:"linear-gradient(135deg,#2a7d7b,#7ec8c7)",cat:"all"},
-  {label:"Sale",icon:"ti-tag",gradient:"linear-gradient(135deg,#b5896a,#e8c49a)",cat:"sale"},
-  {label:"Electronics",icon:"ti-cpu",gradient:"linear-gradient(135deg,#2a7d7b,#1e5f5d)",cat:"electronics"},
-  {label:"Jewelry",icon:"ti-diamond",gradient:"linear-gradient(135deg,#c4a7f0,#9b7fd4)",cat:"jewelry"},
-  {label:"Fashion",icon:"ti-hanger",gradient:"linear-gradient(135deg,#b5896a,#2a7d7b)",cat:"clothing"},
-  {label:"Today Deals",icon:"ti-flame",gradient:"linear-gradient(135deg,#e05555,#b5896a)",cat:"all",live:true}
-];
 
 let cssReady=false;
 function injectCSS(){
@@ -1050,25 +1042,9 @@ export default function App() {
     </>}
 
     {/* STORE VIEW */}
-    {view==="store"&&<div>
+    {view==="store"&&<div style={{background:"#ffffff",minHeight:"100vh"}}>
       {socialMsg&&<div className="si" style={{position:"fixed",bottom:"90px",left:"18px",zIndex:996,background:c.surface,border:`1px solid ${c.border}`,borderRadius:"12px",padding:"10px 14px",maxWidth:"260px",boxShadow:"0 4px 20px rgba(0,0,0,.3)",fontSize:"12px",display:"flex",gap:"8px",alignItems:"center",pointerEvents:"none"}}><span style={{fontSize:"18px"}}>🛍️</span><span style={{color:c.text,lineHeight:1.4}}>{socialMsg.text}</span></div>}
 
-      {/* IN-APP STORIES */}
-      <div style={{display:"flex",gap:"12px",padding:"14px 26px 6px",overflowX:"auto",scrollbarWidth:"none",msOverflowStyle:"none"}}>
-        {STORIES_DATA.map((story,i)=>(
-          <div key={i} onClick={()=>setStoryOpen(story)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"5px",cursor:"pointer",flexShrink:0}}>
-            <div style={{position:"relative"}}>
-              <div style={{background:story.gradient,padding:"3px",borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
-                <div style={{width:"56px",height:"56px",borderRadius:"50%",background:"#dff0f0",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #f5f2ec"}}>
-                  <i className={`ti ${story.icon}`} style={{fontSize:"22px",color:"#2a7d7b"}}/>
-                </div>
-              </div>
-              {story.live&&<span style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",background:"#e05555",color:"#fff",fontSize:"7px",fontWeight:700,padding:"2px 5px",borderRadius:"4px",whiteSpace:"nowrap",lineHeight:1.4}}>LIVE</span>}
-            </div>
-            <span style={{fontSize:"10px",fontWeight:600,color:"#1a2424",textAlign:"center"}}>{story.label}</span>
-          </div>
-        ))}
-      </div>
       {/* Story modal */}
       {storyOpen&&<>
         <div onClick={()=>setStoryOpen(null)} className="fi" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9000}}/>
