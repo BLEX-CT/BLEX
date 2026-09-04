@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import HeroCanvas from './HeroCanvas';
 import { useScrollReveal, useRipple, confetti, flyToCart, CountUp } from './animations';
+import './homepage.css';
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const LS  = k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}};
@@ -762,6 +763,23 @@ export default function App() {
 
   /* currency */
   const fmt=(price,d)=>{const v=Number(price)*(rates[currCode]||1);const dec=d??(['KRW','JPY'].includes(currCode)?0:2);return`${CURRENCY_SYMS[currCode]||currCode}${v.toFixed(dec)}`;};
+  const renderProductCard=p=>{const onSale=p.sale_price&&Number(p.sale_price)<Number(p.price);const pct=onSale?Math.round((1-Number(p.sale_price)/Number(p.price))*100):0;return(
+    <div key={p.id} className="hp-card" onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}>
+      <div className="hp-card-imgwrap">
+        {onSale&&<span className="hp-card-badge">-{pct}%</span>}
+        <button className="hp-card-wish" onClick={e=>{e.stopPropagation();toggleWishlist(p.id);}}>{wishlist.includes(p.id)?"❤️":"🤍"}</button>
+        {p.image?<img src={p.image} alt={p.name} className="hp-card-img" loading="lazy" onError={e=>{e.target.style.display="none";}}/>:<div className="hp-card-img" style={{display:"flex",alignItems:"center",justifyContent:"center",fontSize:"32px",color:CAT_CLR[p.category]||"#767a99"}}>{CAT_ICONS[p.category]||"◈"}</div>}
+      </div>
+      <div className="hp-card-body">
+        <p className="hp-card-name">{p.name}</p>
+        <div className="hp-card-price-row">
+          <span className="hp-card-price">{fmt(onSale?p.sale_price:p.price)}</span>
+          {onSale&&<span className="hp-card-price-old">{fmt(p.price)}</span>}
+        </div>
+        {p.rating?<span className="hp-card-rating">★ {Number(p.rating).toFixed(1)}</span>:null}
+      </div>
+    </div>
+  );};
   /* style helpers */
   const inp=err=>({width:"100%",padding:"10px 13px",borderRadius:"9px",border:`1.5px solid ${err?c.error:c.inputBorder}`,background:c.input,color:c.text,fontSize:"14px",transition:"border .2s"});
   const btnP=(x={})=>({background:c.accent,color:c.accentTxt,border:"none",padding:"11px 22px",borderRadius:"50px",cursor:"pointer",fontWeight:"600",fontSize:"14px",width:"100%",boxShadow:`0 4px 20px ${c.accent}4D`,...x});
@@ -1063,32 +1081,167 @@ export default function App() {
         </div>
       </>}
 
-      {/* HERO */}
-      <div style={{position:"relative",width:"100%",height:"320px",overflow:"hidden",borderRadius:"0 0 28px 28px",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"24px 24px 20px",...(heroMediaType==="image"&&heroImage?{backgroundImage:`url("${heroImage}")`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:heroMediaType!=="video"?{background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)"}:{background:"#0f0f1a"})}}>
-        {heroMediaType==="video"&&heroVideoUrl&&<video autoPlay muted loop playsInline src={heroVideoUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
-        {heroMediaType==="gradient"&&<div style={{position:"absolute",inset:0,opacity:.5,pointerEvents:"none"}}><HeroCanvas color="#e94560"/></div>}
-        {(heroMediaType==="image"||heroMediaType==="video")&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.35)"}}/>}
-        <div style={{position:"relative",zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"10px",flexWrap:"wrap"}}>
-          <span style={{display:"inline-block",background:"linear-gradient(135deg,#e94560,#ff6b6b)",color:"#fff",padding:"6px 14px",borderRadius:"20px",fontSize:"12px",fontWeight:700,animation:"floatBadge 3s ease-in-out infinite"}}>Summer Collection</span>
-          <div style={{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",borderRadius:"50px",padding:"4px 12px"}}><i className="ti ti-eye" style={{fontSize:"11px",color:"rgba(255,255,255,0.8)"}}/><span style={{fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.8)"}}>{visitCount} viewing</span></div>
-        </div>
-        <div style={{position:"relative",zIndex:2}}>
-          <h1 style={{fontSize:"32px",fontWeight:900,color:"#fff",lineHeight:1.2,margin:"0 0 6px"}}>Discover Your Perfect Style</h1>
-          <p style={{fontSize:"14px",color:"rgba(255,255,255,0.8)",margin:"0 0 16px"}}>AI-curated fashion just for you</p>
-          <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
-            <button className="btn-t" onClick={()=>{document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});trackBClick('hero');}} style={{background:"#fff",color:"#1a1a2e",border:"none",borderRadius:"14px",padding:"14px 28px",fontWeight:700,fontSize:"14px",cursor:"pointer",transition:"transform .2s,box-shadow .2s"}} onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.boxShadow="0 4px 20px rgba(255,255,255,0.3)";}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>{t.shopNow} →</button>
-            {flags.trade_in&&<button className="btn-t" onClick={()=>setView("tradein")} style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"#fff",borderRadius:"14px",padding:"14px 22px",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>Trade-In</button>}
+      {/* CATEGORY CIRCLES */}
+      {(()=>{
+        const goCat=cat=>{setCategory(cat);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        const goNew=()=>{setCategory("all");setFilterSort("newest");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        const goSale=()=>{setCategory("all");setFilterAvailability("on_sale");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        const goToday=()=>document.getElementById("hp-flash-sale")?.scrollIntoView({behavior:"smooth"});
+        const circles=[
+          {key:"jewelry",label:"مجوهرات",icon:CAT_ICONS.jewelry,color:CAT_CLR.jewelry,onClick:()=>goCat("jewelry"),active:category==="jewelry"},
+          {key:"electronics",label:"إلكترونيات",icon:CAT_ICONS.electronics,color:CAT_CLR.electronics,onClick:()=>goCat("electronics"),active:category==="electronics"},
+          {key:"clothing",label:"ملابس",icon:CAT_ICONS.clothing,color:CAT_CLR.clothing,onClick:()=>goCat("clothing"),active:category==="clothing"},
+          {key:"accessories",label:"إكسسوارات",icon:CAT_ICONS.accessories,color:CAT_CLR.accessories,onClick:()=>goCat("accessories"),active:category==="accessories"},
+          {key:"new",label:"جديد",icon:"✦",color:"#3b6cf0",onClick:goNew,active:false,badge:null},
+          {key:"sale",label:"تخفيضات",icon:"◈",color:"#ff2d92",onClick:goSale,active:false,badge:"SALE"},
+          {key:"today",label:"عرض اليوم",icon:"◷",color:"#ffb300",onClick:goToday,active:false,badge:"LIVE"},
+        ];
+        return(
+          <div className="hp-cats">
+            {circles.map(ci=>(
+              <button key={ci.key} className="hp-cat" onClick={ci.onClick}>
+                <span className={`hp-cat-circle${ci.active?" active":""}`} style={{background:`${ci.color}1a`,color:ci.color}}>
+                  {ci.icon}
+                  {ci.badge&&<span className="hp-cat-badge">{ci.badge}</span>}
+                </span>
+                <span className="hp-cat-label">{ci.label}</span>
+              </button>
+            ))}
           </div>
-        </div>
-        <div style={{position:"relative",zIndex:2,display:"flex",paddingTop:"16px",marginTop:"14px",borderTop:"1px solid rgba(255,255,255,0.2)"}}>
-          {[[sp.length,"Products"],[LANGS.length,"Languages"],[6,"AI Agents"]].map(([n,l],i)=>(
-            <div key={l} style={{flex:1,borderLeft:i>0?"1px solid rgba(255,255,255,0.2)":"none",paddingLeft:i>0?"14px":"0"}}>
-              <p style={{fontSize:"20px",fontWeight:700,color:"#fff",margin:0}}>{n}</p>
-              <p style={{fontSize:"9px",fontWeight:600,color:"rgba(255,255,255,0.6)",textTransform:"uppercase",letterSpacing:".5px",marginTop:"2px"}}>{l}</p>
+        );
+      })()}
+
+      {/* HERO */}
+      {(()=>{
+        const heroImgFallback=(sp.find(p=>p.image)||{}).image||"";
+        const jewelryProd=sp.find(p=>p.category==="jewelry"&&p.image);
+        const electronicsProd=sp.find(p=>p.category==="electronics"&&p.image);
+        const doShopNow=()=>{document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"});trackBClick("hero");};
+        const goSide=cat=>{setCategory(cat);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        return(
+          <div className="hp-hero">
+            <div className="hp-hero-main">
+              {heroMediaType==="video"&&heroVideoUrl
+                ?(<>
+                  <video autoPlay muted loop playsInline src={heroVideoUrl} className="hp-hero-main-img" style={{opacity:1,mixBlendMode:"normal"}}/>
+                  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.35)",zIndex:0}}/>
+                </>)
+                :((heroMediaType==="image"&&heroImage)||heroImgFallback)
+                ?<img src={(heroMediaType==="image"&&heroImage)||heroImgFallback} alt="" className="hp-hero-main-img" onError={e=>{e.target.style.display="none";}}/>
+                :null
+              }
+              <div className="hp-hero-main-content">
+                <span className="hp-hero-eyebrow">BLEX 2026</span>
+                <h1 className="hp-hero-title">اكتشف أسلوبك المثالي مع BLEX</h1>
+                <p className="hp-hero-text">تشكيلة مختارة بعناية من أفضل المنتجات — جودة موثوقة وتوصيل سريع لكل أنحاء المملكة</p>
+                <button className="hp-hero-cta" onClick={doShopNow}>تسوق الآن ←</button>
+              </div>
             </div>
-          ))}
-        </div>
+            <div className="hp-hero-side">
+              <div className="hp-hero-side-card cool" onClick={()=>goSide("jewelry")}>
+                {jewelryProd&&<img src={jewelryProd.image} alt="" className="hp-hero-side-img" onError={e=>{e.target.style.display="none";}}/>}
+                <span className="hp-hero-side-label">مجوهرات فاخرة</span>
+              </div>
+              <div className="hp-hero-side-card sale" onClick={()=>goSide("electronics")}>
+                {electronicsProd&&<img src={electronicsProd.image} alt="" className="hp-hero-side-img" onError={e=>{e.target.style.display="none";}}/>}
+                <span className="hp-hero-side-label">إلكترونيات مختارة</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* FLASH SALE */}
+      {(()=>{
+        const realSale=sp.filter(p=>p.sale_price&&Number(p.sale_price)<Number(p.price));
+        const hasRealSale=realSale.length>0;
+        const flashList=(hasRealSale?realSale:[...sp].sort((a,b)=>b.id-a.id)).slice(0,10);
+        const goSeeAll=()=>{setCategory("all");if(hasRealSale)setFilterAvailability("on_sale");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        return(
+          <div className="hp-flash" id="hp-flash-sale">
+            <div className="hp-section-head">
+              <div>
+                <h2 className="hp-section-title">{hasRealSale?"تخفيضات سريعة ⚡":"عروض اليوم ✦"}</h2>
+                <p className="hp-section-sub">{hasRealSale?"عروض لفترة محدودة":"وصل حديثاً"}</p>
+              </div>
+              <button className="hp-section-link" onClick={goSeeAll}>عرض الكل ←</button>
+            </div>
+            <div className="hp-flash-row">{flashList.map(p=>renderProductCard(p))}</div>
+          </div>
+        );
+      })()}
+
+      {/* PROMO GRID */}
+      <div className="hp-promo-grid">
+        <button className="hp-promo-card brand" onClick={()=>{setCategory("all");setFilterSort("newest");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}>
+          <p className="hp-promo-title">أحدث المنتجات</p>
+          <p className="hp-promo-sub">اكتشف كل ما هو جديد في BLEX</p>
+          <span className="hp-promo-arrow">تسوق ←</span>
+        </button>
+        <button className="hp-promo-card sale" onClick={()=>{setCategory("all");setFilterPriceMax("20");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}>
+          <p className="hp-promo-title">أقل من 20</p>
+          <p className="hp-promo-sub">صفقات رائعة بأسعار موفرة</p>
+          <span className="hp-promo-arrow">تسوق ←</span>
+        </button>
+        <button className="hp-promo-card cool" onClick={()=>{setCategory("all");setFilterSort("top_rated");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}>
+          <p className="hp-promo-title">الأعلى تقييماً</p>
+          <p className="hp-promo-sub">المنتجات المفضلة لدى عملائنا</p>
+          <span className="hp-promo-arrow">تسوق ←</span>
+        </button>
       </div>
+
+      {/* BEST SELLERS */}
+      {(()=>{
+        const hasRating=sp.some(p=>p.rating);
+        const bestList=hasRating
+          ?[...sp].sort((a,b)=>(Number(b.rating)||0)-(Number(a.rating)||0)).slice(0,10)
+          :[...sp].sort((a,b)=>b.id-a.id).slice(0,10);
+        const goSeeAll=()=>{setCategory("all");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        return(
+          <div className="hp-section">
+            <div className="hp-section-head">
+              <div>
+                <h2 className="hp-section-title">الأكثر مبيعاً</h2>
+                <p className="hp-section-sub">{hasRating?"الأعلى تقييماً من عملائنا":"مختارات مميزة"}</p>
+              </div>
+              <button className="hp-section-link" onClick={goSeeAll}>عرض الكل ←</button>
+            </div>
+            <div className="hp-best-grid">{bestList.map(p=>renderProductCard(p))}</div>
+          </div>
+        );
+      })()}
+
+      {/* SHOP BY CATEGORY BANNER GRID */}
+      {(()=>{
+        const showcaseCats=[
+          {cat:"jewelry",label:"مجوهرات"},
+          {cat:"electronics",label:"إلكترونيات"},
+          {cat:"clothing",label:"ملابس"},
+          {cat:"accessories",label:"إكسسوارات"},
+        ];
+        const goCat=cat=>{setCategory(cat);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        return(
+          <div className="hp-section">
+            <div className="hp-section-head">
+              <h2 className="hp-section-title">تسوق حسب الفئة</h2>
+            </div>
+            <div className="hp-catbanner-grid">
+              {showcaseCats.map(sc=>{
+                const prod=sp.find(p=>p.category===sc.cat&&p.image);
+                const count=sp.filter(p=>p.category===sc.cat).length;
+                return(
+                  <div key={sc.cat} className="hp-catbanner-card" onClick={()=>goCat(sc.cat)}>
+                    {prod&&<img src={prod.image} alt={sc.label} className="hp-catbanner-img" loading="lazy" onError={e=>{e.target.style.display="none";}}/>}
+                    <div className="hp-catbanner-shade"/>
+                    {count>0&&<span className="hp-catbanner-count">{count} منتج</span>}
+                    <span className="hp-catbanner-label">{sc.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* AI STYLIST BANNER */}
       {flags.style_advisor&&<div onClick={()=>setStyleOpen(true)} className="btn-t" style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",borderRadius:"20px",margin:"16px",padding:"20px",display:"flex",alignItems:"center",gap:"16px",cursor:"pointer"}}>
