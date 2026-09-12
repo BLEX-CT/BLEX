@@ -1200,21 +1200,7 @@ useEffect(()=>{const id=setInterval(()=>setPlaceholderIdx(i=>i+1),2500);return()
                   <div style={{position:"absolute",top:"10px",left:"10px",zIndex:5,pointerEvents:"none"}}>
                     {(()=>{const spIdx=sp.findIndex(x=>x.id===p.id);const isSale=p.sale_price&&new Date(p.sale_ends_at)>Date.now();const isNew=spIdx>=0&&spIdx<Math.ceil(sp.length*0.2);const isLimited=p.stock>0&&p.stock<10;if(isSale){const pct=Math.round((1-Number(p.sale_price)/Number(p.price))*100);return<span style={{background:"#e05555",color:"#fff",fontSize:"10px",fontWeight:700,padding:"2px 7px",borderRadius:"4px",whiteSpace:"nowrap"}}>-{pct}%</span>;}if(isNew)return<span style={{background:"rgba(0,0,0,.55)",color:"#fff",fontSize:"9px",fontWeight:600,padding:"2px 7px",borderRadius:"4px",whiteSpace:"nowrap"}}>{t.new||"New"}</span>;if(isLimited)return<span style={{background:"rgba(0,0,0,.55)",color:"#fff",fontSize:"9px",fontWeight:600,padding:"2px 7px",borderRadius:"4px",whiteSpace:"nowrap"}}>{p.stock} left</span>;return null;})()}
                   </div>
-                  {hovered===p.id&&p.stock>0&&<div style={{position:"absolute",bottom:"42px",left:"50%",transform:"translateX(-50%)",background:"rgba(0,0,0,.7)",color:"#fff",fontSize:"9px",fontWeight:"700",padding:"2px 8px",borderRadius:"5px",whiteSpace:"nowrap",zIndex:4}}>👁 {(p.id%13)+3} viewing</div>}
-                  {/* QUICK ADD + QUICK VIEW */}
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,transform:hovered===p.id?"translateY(0)":"translateY(100%)",transition:"transform .25s ease",zIndex:6}}>
-                    <button onClick={e=>{e.stopPropagation();setQuickAddProd(p.id);setQaColor(0);setQaSize(null);}} style={{width:"100%",background:"rgba(26,36,36,0.88)",color:"#fff",border:"none",fontSize:"11px",fontWeight:600,padding:"8px",cursor:"pointer",letterSpacing:"0.5px",display:"flex",alignItems:"center",justifyContent:"center",gap:"4px"}}><i className="ti ti-plus" style={{fontSize:"12px"}}/>Quick Add</button>
-                    <button onClick={e=>{e.stopPropagation();setQuickViewProd(p);setQvColor(0);setQvSize(null);setQvQty(1);}} style={{width:"100%",background:"rgba(42,125,123,0.9)",color:"#fff",border:"none",fontSize:"11px",fontWeight:600,padding:"8px",cursor:"pointer",letterSpacing:"0.5px",display:"flex",alignItems:"center",justifyContent:"center",gap:"5px"}}><i className="ti ti-eye" style={{fontSize:"13px"}}/>QUICK VIEW</button>
                   </div>
-                  {/* QUICK ADD INLINE PANEL */}
-                  {quickAddProd===p.id&&<div className="si" style={{position:"absolute",inset:0,background:"rgba(245,242,236,0.97)",backdropFilter:"blur(8px)",zIndex:7,display:"flex",flexDirection:"column",padding:"12px 10px",gap:"7px"}} onClick={e=>e.stopPropagation()}>
-                    <button onClick={e=>{e.stopPropagation();setQuickAddProd(null);}} style={{position:"absolute",top:"8px",right:"8px",background:"none",border:"none",cursor:"pointer",color:"#5a6e6e",fontSize:"16px",lineHeight:1,display:"flex",alignItems:"center",zIndex:1}}><i className="ti ti-x"/></button>
-                    <p style={{fontWeight:700,fontSize:"11px",color:"#1a2424",paddingRight:"20px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
-                    <div><p style={{fontSize:"9px",fontWeight:700,color:"#8fa5a5",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>Color</p><div style={{display:"flex",gap:"5px",flexWrap:"wrap"}}>{["#2a7d7b","#1a2424","#f5f0e8","#b5896a","#c4a7f0"].map((clr,i)=><button key={i} onClick={e=>{e.stopPropagation();setQaColor(i);}} style={{width:"18px",height:"18px",borderRadius:"50%",background:clr,border:`1.5px solid ${clr==="#f5f0e8"?"#d8d2c8":clr}`,cursor:"pointer",padding:0,outline:qaColor===i?"2px solid #2a7d7b":"none",outlineOffset:"2px",transform:qaColor===i?"scale(1.15)":"scale(1)",transition:"outline .1s,transform .1s"}}/>)}</div></div>
-                    <div><p style={{fontSize:"9px",fontWeight:700,color:"#8fa5a5",marginBottom:"5px",textTransform:"uppercase",letterSpacing:".5px"}}>Size</p><div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>{["XS","S","M","L","XL"].map(sz=><button key={sz} onClick={e=>{e.stopPropagation();setQaSize(sz);}} style={{width:"30px",height:"30px",borderRadius:"6px",background:qaSize===sz?"#2a7d7b":"#ede9e1",color:qaSize===sz?"#fff":"#1a2424",border:`1px solid ${qaSize===sz?"#2a7d7b":"#d8d2c8"}`,cursor:"pointer",fontWeight:600,fontSize:"10px",transition:"all .1s"}}>{sz}</button>)}</div></div>
-                    <button className="btn-t" onClick={e=>{e.stopPropagation();addToCart(p);flyToCart(e);setQuickAddProd(null);}} style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"9px",cursor:"pointer",fontWeight:700,fontSize:"12px",width:"100%",marginTop:"auto"}}>{p.is_preorder?"Pre-Order":t.addToCart}</button>
-                  </div>}
-                </div>
                 <div style={{padding:"13px"}}>
                   <h3 style={{fontWeight:"600",fontSize:"13px",marginBottom:"4px",lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</h3>
                   <p style={{fontSize:"10px",color:c.muted,marginBottom:"8px"}}>{p.review_count>0?`★${Number(p.rating).toFixed(1)} · `:""}{p.sold_count>0?`${p.sold_count} ${t.soldTotal||"sold"}`:(t.newArrival||"جديد")}</p>
@@ -2938,39 +2924,7 @@ useEffect(()=>{const id=setInterval(()=>setPlaceholderIdx(i=>i+1),2500);return()
         </div>}
       </div>
     </div>}
-    {/* QUICK VIEW MODAL */}
-    {quickViewProd&&<>
-      <div onClick={()=>setQuickViewProd(null)} className="fi" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:8000}}/>
-      <div className="qv-modal" style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",zIndex:8001,width:"min(700px,94vw)",maxHeight:"90vh",overflowY:"auto",background:"#f5f2ec",borderRadius:"20px",overflow:"hidden"}}>
-        <button onClick={()=>setQuickViewProd(null)} style={{position:"absolute",top:"14px",right:"14px",background:"rgba(0,0,0,0.1)",border:"none",borderRadius:"50%",width:"32px",height:"32px",cursor:"pointer",zIndex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"#1a2424"}}><i className="ti ti-x" style={{fontSize:"15px"}}/></button>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr"}}>
-          <div style={{background:quickViewProd.image?c.chip:"#dff0f0",minHeight:"340px",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
-            {quickViewProd.image?<img src={quickViewProd.image} alt={quickViewProd.name} style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}} onError={e=>e.target.style.display="none"}/>:<span style={{fontSize:"72px",color:"#2a7d7b",opacity:.5}}>{CAT_ICONS[quickViewProd.category]||"◈"}</span>}
-          </div>
-          <div style={{padding:"28px 24px",display:"flex",flexDirection:"column",gap:"12px"}}>
-            <span style={{background:"#dff0f0",color:"#2a7d7b",fontSize:"10px",fontWeight:700,padding:"3px 9px",borderRadius:"20px",alignSelf:"flex-start"}}>{t[quickViewProd.category]||quickViewProd.category}</span>
-            <h2 style={{fontWeight:700,fontSize:"20px",lineHeight:1.3,color:"#1a2424",margin:0}}>{quickViewProd.name}</h2>
-            <div style={{display:"flex",alignItems:"center",gap:"5px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(quickViewProd.rating||0)?"#f59e0b":"#d8d2c8",fontSize:"13px"}}>★</span>)}{quickViewProd.review_count>0&&<span style={{fontSize:"11px",color:"#8fa5a5",marginInlineStart:"4px"}}>({quickViewProd.review_count})</span>}</div>
-            <p style={{fontWeight:800,fontSize:"24px",color:"#2a7d7b",margin:0}}>{fmt(quickViewProd.price)}</p>
-            <div>
-              <p style={{fontSize:"11px",fontWeight:600,color:"#5a6e6e",marginBottom:"7px"}}>اللون</p>
-              <div style={{display:"flex",gap:"7px"}}>{["#2a7d7b","#1a2424","#f5f0e8","#b5896a","#c4a7f0"].map((clr,i)=><button key={i} onClick={()=>setQvColor(i)} style={{width:"24px",height:"24px",borderRadius:"50%",background:clr,border:`1.5px solid ${clr==="#f5f0e8"?"#d8d2c8":clr}`,cursor:"pointer",padding:0,outline:qvColor===i?"2px solid #2a7d7b":"none",outlineOffset:"2px",transition:"transform .15s",transform:qvColor===i?"scale(1.15)":"scale(1)"}}/>)}</div>
-            </div>
-            <div>
-              <p style={{fontSize:"11px",fontWeight:600,color:"#5a6e6e",marginBottom:"7px"}}>المقاس</p>
-              <div style={{display:"flex",gap:"6px"}}>{["XS","S","M","L","XL"].map(sz=><button key={sz} onClick={()=>setQvSize(sz)} style={{width:"36px",height:"36px",borderRadius:"8px",background:qvSize===sz?"#2a7d7b":"#f5f0e8",color:qvSize===sz?"#fff":"#1a2424",border:`1px solid ${qvSize===sz?"#2a7d7b":"#d8d2c8"}`,cursor:"pointer",fontWeight:600,fontSize:"12px",transition:"all .15s"}}>{sz}</button>)}</div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:"6px",background:"#e2eeee",borderRadius:"8px",padding:"4px",width:"fit-content"}}>
-              <button onClick={()=>setQvQty(q=>Math.max(1,q-1))} style={{background:"none",border:"none",color:"#2a7d7b",width:"28px",height:"28px",borderRadius:"6px",cursor:"pointer",fontWeight:800,fontSize:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-              <span style={{fontWeight:800,minWidth:"24px",textAlign:"center",fontSize:"14px",color:"#1a2424"}}>{qvQty}</span>
-              <button onClick={()=>setQvQty(q=>q+1)} style={{background:"none",border:"none",color:"#2a7d7b",width:"28px",height:"28px",borderRadius:"6px",cursor:"pointer",fontWeight:800,fontSize:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-            </div>
-            <button className="btn-t" onClick={()=>{if(quickViewProd.stock>0||quickViewProd.is_preorder){setCart(pv=>{const ex=pv.find(i=>i.id===quickViewProd.id);return ex?pv.map(i=>i.id===quickViewProd.id?{...i,qty:i.qty+qvQty}:i):[...pv,{...quickViewProd,qty:qvQty}];});addToast(quickViewProd.name.substring(0,22)+" added","success");}setQuickViewProd(null);}} style={{background:"#2a7d7b",color:"#fff",border:"none",borderRadius:"50px",padding:"13px",fontWeight:700,fontSize:"14px",cursor:"pointer",width:"100%"}}>أضف للسلة</button>
-            <button onClick={()=>{setSelectedProduct(quickViewProd);setPdQty(1);setView("product");setQuickViewProd(null);}} style={{background:"none",border:"none",color:"#5a6e6e",fontSize:"12px",cursor:"pointer",textDecoration:"underline",padding:0,textAlign:"center"}}>View Full Product →</button>
-          </div>
-        </div>
-      </div>
-    </>}
+    
 
     {/* WISHLIST TOAST */}
     {wishlistToast&&<div key={wishlistToast.key} className="wl-toast-in" style={{position:"fixed",bottom:"24px",right:"24px",zIndex:9999,background:"#1a2424",color:"#fff",borderRadius:"12px",padding:"12px 18px",display:"flex",alignItems:"center",gap:"10px",minWidth:"220px",boxShadow:"0 4px 20px rgba(0,0,0,0.35)"}}>
