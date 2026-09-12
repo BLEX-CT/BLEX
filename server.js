@@ -51,6 +51,17 @@ async function initDB() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+      customer_name VARCHAR(255) NOT NULL,
+      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,
       customer VARCHAR(255) NOT NULL,
@@ -454,9 +465,31 @@ app.get('/auth/me', authenticate, async (req, res) => {
 
 app.get('/products', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM products ORDER BY id DESC');
+    const result = await pool.query(`
+      SELECT p.*,
+        r.avg_rating AS rating,
+        COALESCE(r.review_count, 0)::int AS review_count,
+        COALESCE(s.sold_count, 0)::int AS sold_count
+      FROM products p
+      LEFT JOIN (
+        SELECT product_id, ROUND(AVG(rating)::numeric, 1) AS avg_rating, COUNT(*) AS review_count
+        FROM reviews
+        GROUP BY product_id
+      ) r ON r.product_id = p.id
+      LEFT JOIN (
+        SELECT (item->>'id')::int AS product_id, SUM(COALESCE((item->>'qty')::int, 1)) AS sold_count
+        FROM orders, jsonb_array_elements(items) AS item
+        WHERE item->>'id' ~ '^[0-9]+$'
+        GROUP BY (item->>'id')::int
+      ) s ON s.product_id = p.id
+      ORDER BY p.id DESC
+    `);
     const stripHtml = s => s ? s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : s;
-    const rows = result.rows.map(p => ({ ...p, description: stripHtml(p.description) }));
+    const rows = result.rows.map(p => ({
+      ...p,
+      description: stripHtml(p.description),
+      rating: p.rating !== null ? Number(p.rating) : null
+    }));
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -496,6 +529,39 @@ app.delete('/products/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM products WHERE id = $1', [req.params.id]);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+app.post('/products/:id/reviews', async (req, res) => {
+  try {
+    const { customer_name, rating, comment } = req.body;
+    const productId = req.params.id;
+    if (!customer_name || !String(customer_name).trim()) return res.status(400).json({ error: 'customer_name is required' });
+    const r = Number(rating);
+    if (!Number.isInteger(r) || r < 1 || r > 5) return res.status(400).json({ error: 'rating must be an integer between 1 and 5' });
+    const prod = await pool.query('SELECT id FROM products WHERE id = $1', [productId]);
+    if (!prod.rows[0]) return res.status(404).json({ error: 'Product not found' });
+    const result = await pool.query(
+      'INSERT INTO reviews (product_id, customer_name, rating, comment) VALUES ($1, $2, $3, $4) RETURNING *',
+      [productId, String(customer_name).trim(), r, comment || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/products/:id/reviews', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
