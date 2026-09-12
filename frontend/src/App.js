@@ -368,6 +368,8 @@ export default function App() {
   const [hp2ReviewSubmitting,setHp2ReviewSubmitting]=useState(false);
   const [realOrders,setRealOrders]=useState([]);
   const [trendingReal,setTrendingReal]=useState([]);
+const [realCoupon,setRealCoupon]=useState(null);
+const [placeholderIdx,setPlaceholderIdx]=useState(0);
   const [megaMenuCat,setMegaMenuCat]=useState(null);
   const [storyOpen,setStoryOpen]=useState(null);
   const [quickViewProd,setQuickViewProd]=useState(null);
@@ -460,6 +462,8 @@ export default function App() {
   useEffect(()=>{setPdColor(0);setPdSize(null);setPdGalIdx(0);setPdAcc("description");},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{if(!selectedProduct?.id){setHp2Reviews([]);return;}let active=true;fetch(`${API}/products/${selectedProduct.id}/reviews`).then(r=>r.json()).then(d=>{if(active)setHp2Reviews(Array.isArray(d)?d:[]);}).catch(()=>{if(active)setHp2Reviews([]);});return()=>{active=false;};},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{fetch(`${API}/search-logs/trending`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setTrendingReal(d);}).catch(()=>{});},[]); // eslint-disable-line
+useEffect(()=>{const codes=['BLEX10','SAVE50'];let active=true;(async()=>{for(const code of codes){try{const r=await fetch(`${API}/coupons/${code}`);if(r.ok){const d=await r.json();if(active)setRealCoupon(d);return;}}catch{}}})();return()=>{active=false;};},[]); // eslint-disable-line
+useEffect(()=>{const id=setInterval(()=>setPlaceholderIdx(i=>i+1),2500);return()=>clearInterval(id);},[]); // eslint-disable-line
   useEffect(()=>{if(!user?.email){setRealOrders([]);return;}let active=true;fetch(`${API}/orders/mine`,{headers:authH()}).then(r=>r.json()).then(d=>{if(active)setRealOrders(Array.isArray(d)?d:[]);}).catch(()=>{if(active)setRealOrders([]);});return()=>{active=false;};},[user?.email]); // eslint-disable-line
   useEffect(()=>{if(view==="product"&&selectedProduct?.category){const prev=LS('blex_viewed')||[];const cat=selectedProduct.category;const next=[cat,...prev.filter(x=>x!==cat)].slice(0,5);LSS('blex_viewed',next);setViewedCats(next);}},[view,selectedProduct?.category]); // eslint-disable-line
   useEffect(()=>{const iv=setInterval(()=>setVisitCount(Math.floor(180+Math.random()*140)),9000);return()=>clearInterval(iv);},[]);
@@ -897,7 +901,7 @@ export default function App() {
             onFocus={e=>{if(window.innerWidth<=700){e.target.blur();setView("search");}else{setSearchFocused(true);}}}
             onBlur={()=>setTimeout(()=>setSearchFocused(false),150)}
             onKeyDown={e=>{if(e.key==="Enter"&&searchRaw.trim()){saveSearch(searchRaw.trim());setSearchFocused(false);}}}
-            placeholder={t.search} style={{...inp(false),borderRadius:"20px",[isRtl?"paddingRight":"paddingLeft"]:"33px",[isRtl?"paddingLeft":"paddingRight"]:"33px",paddingTop:"7px",paddingBottom:"7px",fontSize:"13px",...(navTransparent?{background:"rgba(255,255,255,0.12)",color:"#fff",borderColor:"rgba(255,255,255,0.2)"}:{}),transition:"background 0.3s ease,border-color 0.3s ease,color 0.3s ease"}}/>
+            placeholder={(trendingReal.length?trendingReal.map(x=>x.term):["مجوهرات","إلكترونيات","ملابس","إكسسوارات"])[placeholderIdx%(trendingReal.length||4)]+" 🔥"} style={{...inp(false),borderRadius:"20px",[isRtl?"paddingRight":"paddingLeft"]:"33px",[isRtl?"paddingLeft":"paddingRight"]:"33px",paddingTop:"7px",paddingBottom:"7px",fontSize:"13px",...(navTransparent?{background:"rgba(255,255,255,0.12)",color:"#fff",borderColor:"rgba(255,255,255,0.2)"}:{}),transition:"background 0.3s ease,border-color 0.3s ease,color 0.3s ease"}}/>
           <button onClick={startVoice} title="Voice search" style={{position:"absolute",[isRtl?"left":"right"]:"9px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:"13px",color:voiceActive?c.error:navMutedC,padding:0,lineHeight:1,animation:voiceActive?"pulse 1s infinite":undefined,transition:"color 0.3s ease"}}>🎤</button>
           {searchFocused&&(recentSearches.length>0||searchRaw.trim()||true)&&<div className="srch-drop" style={{position:"absolute",top:"calc(100% + 6px)",left:0,width:"100%",background:"#ffffff",border:"1px solid #d8d2c8",borderRadius:"12px",boxShadow:"0 8px 20px rgba(26,36,36,0.08)",zIndex:200,maxHeight:"320px",overflowY:"auto",padding:"8px 0"}}>
             {recentSearches.length>0&&<div style={{padding:"0 12px 6px"}}>
@@ -1068,7 +1072,84 @@ export default function App() {
         </div>
       </>}
 
-      {/* FILTERS PANEL */}
+      
+{/* HP3: NEW HOMEPAGE (concept هـ, real data) */}
+{(()=>{
+  const heroImgFallback=(sp.find(p=>p.image)||{}).image||"";
+  const catLabels={jewelry:"المجوهرات",electronics:"الإلكترونيات",clothing:"الملابس",accessories:"الإكسسوارات",home:"المنزل",beauty:"الجمال",sports:"الرياضة",baby:"الأطفال",kitchen:"المطبخ",stationery:"القرطاسية"};
+  const cats=["jewelry","electronics","clothing","accessories"];
+  const catImgs={};
+  cats.forEach(c=>{const p=sp.find(x=>x.category===c&&x.image);if(p)catImgs[c]=p.image;});
+  const disc=sp.filter(p=>p.image&&p.sale_price&&Number(p.sale_price)<Number(p.price)).map(p=>({...p,pct:Math.round((1-Number(p.sale_price)/Number(p.price))*100)})).sort((a,b)=>b.pct-a.pct).slice(0,10);
+  const newest=[...sp].filter(p=>p.image).sort((a,b)=>b.id-a.id).slice(0,10);
+  const bestByCat={};
+  cats.forEach(c=>{bestByCat[c]=sp.filter(p=>p.category===c&&Number(p.sold_count)>0).sort((a,b)=>Number(b.sold_count)-Number(a.sold_count)).slice(0,5).map(p=>p.id);});
+  const bestsellers=cats.flatMap(c=>sp.filter(p=>bestByCat[c].includes(p.id))).sort((a,b)=>bestByCat[a.category].indexOf(a.id)-bestByCat[b.category].indexOf(b.id));
+  const goCat=cat=>{setCategory(cat);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+  return(
+    <div style={{background:"#f4f4f6",paddingBottom:"6px"}}>
+      <div style={{position:"relative",margin:"10px",borderRadius:"14px",overflow:"hidden",height:"170px"}}>
+        {heroMediaType==="video"&&heroVideoUrl
+          ?<video autoPlay muted loop playsInline src={heroVideoUrl} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+          :((heroMediaType==="image"&&heroImage)||heroImgFallback)
+          ?<img src={(heroMediaType==="image"&&heroImage)||heroImgFallback} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none";}}/>
+          :<div style={{position:"absolute",inset:0,background:"#161629"}}/>
+        }
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0) 60%)"}}/>
+        <div style={{position:"absolute",bottom:"12px",insetInline:"14px",color:"#fff"}}>
+          <div style={{fontSize:"11px",opacity:.9,letterSpacing:"1px"}}>BLEX 2026</div>
+          <div style={{fontSize:"19px",fontWeight:900}}>اكتشف أسلوبك المثالي مع BLEX</div>
+        </div>
+      </div>
+      {realCoupon&&<div onClick={()=>{setCouponInput(realCoupon.code);setView("cart");}} style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"0 10px 12px",background:"linear-gradient(90deg,#fff0f0,#fff)",border:"1px dashed #ff2442",borderRadius:"8px",padding:"10px 14px",cursor:"pointer"}}>
+        <span style={{fontSize:"12px",color:"#ff2442",fontWeight:800}}>🎁 كود {realCoupon.code} — خصم {realCoupon.type==="pct"?`${Number(realCoupon.val)}%`:fmt(realCoupon.val)}</span>
+        <span style={{background:"#ff2442",color:"#fff",fontSize:"11px",padding:"6px 14px",borderRadius:"16px",fontWeight:800}}>استخدمه</span>
+      </div>}
+      <div className="hp2-icon-grid" style={{background:"#fff",margin:"0 10px 12px",borderRadius:"10px"}}>
+        {cats.filter(c=>sp.some(p=>p.category===c)).map(c=>(
+          <button key={c} className="hp2-icon-cell" onClick={()=>goCat(c)}>
+            <span className="hp2-icon-circle">{catImgs[c]?<img src={catImgs[c]} alt={catLabels[c]}/>:<span style={{fontSize:"20px"}}>{CAT_ICONS[c]||"◈"}</span>}</span>
+            <span className="hp2-icon-label">{catLabels[c]||c}</span>
+          </button>
+        ))}
+      </div>
+      {disc.length>0&&<div className="hp2-section">
+        <div className="hp2-section-head"><h2 className="hp2-section-title">🏷 أعلى الخصومات</h2><button className="hp2-section-link" onClick={()=>{setCategory("all");setFilterAvailability("on_sale");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}>عرض الكل ←</button></div>
+        <div className="hp2-row">{disc.map(p=>renderProductCard(p))}</div>
+      </div>}
+      {bestsellers.length>0&&<div className="hp2-section">
+        <div className="hp2-section-head"><h2 className="hp2-section-title">🔥 الأكثر مبيعاً</h2><button className="hp2-section-link" onClick={()=>{setCategory("all");setFilterSort("top_rated");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}>عرض الكل ←</button></div>
+        <div className="hp2-row">
+          {bestsellers.map(p=>{
+            const rank=bestByCat[p.category].indexOf(p.id)+1;
+            const onSale=p.sale_price&&Number(p.sale_price)<Number(p.price);
+            return(
+              <div key={p.id} className="hp2-mcard" style={{minWidth:"150px",maxWidth:"150px",flexShrink:0}} onClick={()=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);}}>
+                <div className="hp2-mcard-imgwrap">
+                  {p.image&&<img src={p.image} alt={p.name} className="hp2-mcard-img" loading="lazy" onError={e=>{e.target.style.display="none";}}/>}
+                  <div className="hp2-mcard-badges"><span className="hp2-badge hp2-badge-best">#{rank} في {catLabels[p.category]}</span></div>
+                </div>
+                <div className="hp2-mcard-body">
+                  <p className="hp2-mcard-name">{p.name}</p>
+                  <p className="hp2-mcard-sold">تم بيع {p.sold_count}</p>
+                  <div className="hp2-mcard-price-row">
+                    <span className="hp2-mcard-price">{fmt(onSale?p.sale_price:p.price)}</span>
+                    {onSale&&<span className="hp2-mcard-price-old">{fmt(p.price)}</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>}
+      <div className="hp2-section">
+        <div className="hp2-section-head"><h2 className="hp2-section-title">🆕 وصل حديثاً</h2><button className="hp2-section-link" onClick={()=>{setCategory("all");setFilterSort("newest");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}>عرض الكل ←</button></div>
+        <div className="hp2-row">{newest.map(p=>renderProductCard(p))}</div>
+      </div>
+    </div>
+  );
+})()}
+{/* FILTERS PANEL */}
       {filtersOpen&&<>
         <div onClick={()=>setFiltersOpen(false)} className="fi" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",zIndex:150}}/>
         <div className="filter-panel" style={{position:"fixed",left:0,top:0,height:"100vh",width:"280px",background:"#f5f2ec",borderRight:"1px solid #d8d2c8",zIndex:151,overflowY:"auto",padding:"20px 18px"}}>
@@ -1383,7 +1464,7 @@ export default function App() {
             <button onClick={()=>setView("store")} style={{background:"none",border:"none",color:"#fff",cursor:"pointer",fontSize:"20px",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><i className={`ti ${isRtl?"ti-arrow-right":"ti-arrow-left"}`}/></button>
             <div style={{flex:1,position:"relative",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",borderRadius:"16px",padding:"14px 16px",display:"flex",alignItems:"center",gap:"10px"}}>
               <i className="ti ti-search" style={{color:"rgba(255,255,255,0.7)",fontSize:"18px",flexShrink:0}}/>
-              <input autoFocus value={searchRaw} onChange={e=>setSearchRaw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&searchRaw.trim())saveSearch(searchRaw.trim());}} placeholder={t.search} style={{flex:1,minWidth:0,background:"none",border:"none",outline:"none",color:"#fff",fontSize:"16px"}}/>
+              <input autoFocus value={searchRaw} onChange={e=>setSearchRaw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&searchRaw.trim())saveSearch(searchRaw.trim());}} placeholder={(trendingReal.length?trendingReal.map(x=>x.term):["مجوهرات","إلكترونيات","ملابس","إكسسوارات"])[placeholderIdx%(trendingReal.length||4)]+" 🔥"} style={{flex:1,minWidth:0,background:"none",border:"none",outline:"none",color:"#fff",fontSize:"16px"}}/>
               {searchRaw&&<button onClick={()=>setSearchRaw("")} style={{background:"none",border:"none",color:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"14px",padding:0,display:"flex",flexShrink:0}}><i className="ti ti-x"/></button>}
               <button onClick={()=>addToast("Visual Search coming soon","info")} style={{background:"none",border:"none",color:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"18px",padding:0,display:"flex",flexShrink:0}}><i className="ti ti-camera"/></button>
               <button onClick={startVoice} style={{background:"none",border:"none",color:voiceActive?"#ff6b6b":"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"18px",padding:0,display:"flex",flexShrink:0,animation:voiceActive?"pulse 1s infinite":undefined}}><i className="ti ti-microphone"/></button>
