@@ -62,6 +62,25 @@ async function initDB() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS search_logs (
+      id SERIAL PRIMARY KEY,
+      term VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS coupons (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      type VARCHAR(10) NOT NULL CHECK (type IN ('pct','fix')),
+      val NUMERIC(10,2) NOT NULL,
+      active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,
       customer VARCHAR(255) NOT NULL,
@@ -333,6 +352,8 @@ async function initDB() {
   }
   await pool.query(`INSERT INTO feature_flags (name, enabled, description) VALUES ('maintenance_mode', false, 'Store maintenance / coming soon mode') ON CONFLICT (name) DO NOTHING`);
   await pool.query(`UPDATE products SET price=99 WHERE price::text='NaN' OR price IS NULL`);
+  await pool.query(`INSERT INTO coupons (code, type, val) VALUES ('BLEX10','pct',10) ON CONFLICT (code) DO NOTHING`);
+  await pool.query(`INSERT INTO coupons (code, type, val) VALUES ('SAVE50','fix',50) ON CONFLICT (code) DO NOTHING`);
 }
 
 initDB().catch(console.error);
@@ -567,14 +588,70 @@ app.get('/products/:id/reviews', async (req, res) => {
   }
 });
 
+// ─── Search Logs ──────────────────────────────────────────────────────────────
+
+app.post('/search-logs', async (req, res) => {
+  try {
+    const { term } = req.body;
+    const clean = (term || '').trim().toLowerCase();
+    if (clean) {
+      await pool.query('INSERT INTO search_logs (term) VALUES ($1)', [clean]);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/search-logs/trending', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT term, COUNT(*)::int AS count FROM search_logs WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY term ORDER BY count DESC LIMIT 5`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/coupons/:code', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM coupons WHERE UPPER(code)=UPPER($1) AND active=true',
+      [req.params.code]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Invalid or expired coupon' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Orders (existing, kept intact) ──────────────────────────────────────────
 
 app.post('/orders', async (req, res) => {
   try {
-    const { customer, email, phone, address, items, total, order_ref } = req.body;
+    const { customer, email, phone, address, items, total, order_ref, coupon_code } = req.body;
+    let finalTotal = total;
+    if (coupon_code) {
+      const cRes = await pool.query(
+        'SELECT * FROM coupons WHERE UPPER(code)=UPPER($1) AND active=true',
+        [coupon_code]
+      );
+      const coupon = cRes.rows[0];
+      if (!coupon) return res.status(400).json({ error: 'Invalid or expired coupon' });
+      const subtotal = (items || []).reduce((sum, item) => {
+        const price = item.sale_price != null ? Number(item.sale_price) : (Number(item.price) || 0);
+        const qty = Number(item.qty) || 1;
+        return sum + price * qty;
+      }, 0);
+      finalTotal = coupon.type === 'pct'
+        ? subtotal - (subtotal * Number(coupon.val) / 100)
+        : Math.max(0, subtotal - Number(coupon.val));
+    }
     const result = await pool.query(
       'INSERT INTO orders (customer, email, phone, address, items, total, order_ref) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [customer, email || null, phone, address, JSON.stringify(items), total, order_ref || null]
+      [customer, email || null, phone, address, JSON.stringify(items), finalTotal, order_ref || null]
     );
     sendOrderEmail(result.rows[0]).catch(() => {});
     res.json(result.rows[0]);
@@ -586,6 +663,15 @@ app.post('/orders', async (req, res) => {
 app.get('/orders', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/orders/mine', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM orders WHERE email = $1 ORDER BY created_at DESC', [req.user.email]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
