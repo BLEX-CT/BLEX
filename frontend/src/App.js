@@ -366,6 +366,8 @@ export default function App() {
   const [hp2ReviewRating,setHp2ReviewRating]=useState(5);
   const [hp2ReviewComment,setHp2ReviewComment]=useState("");
   const [hp2ReviewSubmitting,setHp2ReviewSubmitting]=useState(false);
+  const [realOrders,setRealOrders]=useState([]);
+  const [trendingReal,setTrendingReal]=useState([]);
   const [megaMenuCat,setMegaMenuCat]=useState(null);
   const [storyOpen,setStoryOpen]=useState(null);
   const [quickViewProd,setQuickViewProd]=useState(null);
@@ -457,6 +459,8 @@ export default function App() {
   useEffect(()=>{const iv=setInterval(()=>setPromoCountdown(s=>s>0?s-1:0),1000);return()=>clearInterval(iv);},[]);
   useEffect(()=>{setPdColor(0);setPdSize(null);setPdGalIdx(0);setPdAcc("description");},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{if(!selectedProduct?.id){setHp2Reviews([]);return;}let active=true;fetch(`${API}/products/${selectedProduct.id}/reviews`).then(r=>r.json()).then(d=>{if(active)setHp2Reviews(Array.isArray(d)?d:[]);}).catch(()=>{if(active)setHp2Reviews([]);});return()=>{active=false;};},[selectedProduct?.id]); // eslint-disable-line
+  useEffect(()=>{fetch(`${API}/search-logs/trending`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setTrendingReal(d);}).catch(()=>{});},[]); // eslint-disable-line
+  useEffect(()=>{if(!user?.email){setRealOrders([]);return;}let active=true;fetch(`${API}/orders/mine`,{headers:authH()}).then(r=>r.json()).then(d=>{if(active)setRealOrders(Array.isArray(d)?d:[]);}).catch(()=>{if(active)setRealOrders([]);});return()=>{active=false;};},[user?.email]); // eslint-disable-line
   useEffect(()=>{if(view==="product"&&selectedProduct?.category){const prev=LS('blex_viewed')||[];const cat=selectedProduct.category;const next=[cat,...prev.filter(x=>x!==cat)].slice(0,5);LSS('blex_viewed',next);setViewedCats(next);}},[view,selectedProduct?.category]); // eslint-disable-line
   useEffect(()=>{const iv=setInterval(()=>setVisitCount(Math.floor(180+Math.random()*140)),9000);return()=>clearInterval(iv);},[]);
   useEffect(()=>{if(!sp.length)return;const NS=["Ahmed","Sara","Mohammed","Fatima","Omar","Layla","Khalid","Nora"],CS=["Riyadh","Jeddah","Dammam","Mecca","Khobar"];let tid;const show=()=>{const prod=sp[Math.floor(Math.random()*sp.length)];setRecentPurchaseMsg({name:NS[~~(Math.random()*NS.length)],city:CS[~~(Math.random()*CS.length)],product:prod.name.substring(0,28)});tid=setTimeout(()=>{setRecentPurchaseMsg(null);tid=setTimeout(show,30000+Math.random()*15000);},5000);};tid=setTimeout(show,30000+Math.random()*15000);return()=>clearTimeout(tid);},[sp.length]); // eslint-disable-line
@@ -470,7 +474,7 @@ export default function App() {
   useEffect(()=>{if(annVisible)trackBView('announcement');},[annVisible]);// eslint-disable-line
   useEffect(()=>{if(view==='store'){trackBView('promo_tabby');trackBView('promo_fashion');trackBView('promo_gifts');}},[view]);// eslint-disable-line
   const dismissAnn=()=>{setAnnHiding(true);setTimeout(()=>{setAnnVisible(false);localStorage.setItem('blex_ann_dismissed','1');},300);};
-  const saveSearch=term=>{if(!term.trim())return;const prev=LS('blex_searches')||[];const next=[term,...prev.filter(s=>s!==term)].slice(0,5);LSS('blex_searches',next);setRecentSearches(next);};
+  const saveSearch=term=>{if(!term.trim())return;const prev=LS('blex_searches')||[];const next=[term,...prev.filter(s=>s!==term)].slice(0,5);LSS('blex_searches',next);setRecentSearches(next);fetch(`${API}/search-logs`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({term})}).catch(()=>{});};
   const removeRecentSearch=term=>{const next=recentSearches.filter(s=>s!==term);LSS('blex_searches',next);setRecentSearches(next);};
   const userPts=user?(user.wallet_balance||user.points||0):0;
   useEffect(()=>{if(!user||!userPts)return;const tier=getTier(userPts);const prev=LS('bx_ltier');if(prev&&prev!==tier){addToast(`🎉 You've reached ${TIER[tier].label} status! New perks unlocked.`,"success");}LSS('bx_ltier',tier);},[userPts]); // eslint-disable-line
@@ -489,7 +493,7 @@ export default function App() {
   const addToCart=p=>{setCart(prev=>{const ex=prev.find(i=>i.id===p.id);return ex?prev.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i):[...prev,{...p,qty:1}];});setCartOpen(true);addToast(`${p.name.substring(0,24)} added`,"success");trackBeh(p.category);};
   const updQty=(id,d)=>setCart(prev=>prev.map(i=>i.id===id?{...i,qty:Math.max(1,i.qty+d)}:i));
   const remItem=id=>setCart(prev=>prev.filter(i=>i.id!==id));
-  const applyCP=()=>{const cp=getCoupons().find(c=>c.code===couponInput.trim().toUpperCase()&&c.active);if(cp){setAppliedCoupon(cp);}else{setAErr(t.invalidCoupon);setTimeout(()=>setAErr(""),2000);}};
+  const applyCP=async()=>{const code=couponInput.trim().toUpperCase();if(!code)return;try{const r=await fetch(`${API}/coupons/${encodeURIComponent(code)}`);if(!r.ok){setAErr(t.invalidCoupon);setTimeout(()=>setAErr(""),2000);return;}const cp=await r.json();setAppliedCoupon(cp);}catch{setAErr(t.invalidCoupon);setTimeout(()=>setAErr(""),2000);}};
   const toggleWishlist=id=>{const wasIn=wishlist.includes(id);setWishlist(p=>{const n=wasIn?p.filter(x=>x!==id):[...p,id];LSS('bx_wl',n);return n;});const prod=sp.find(x=>x.id===id);setWishlistToast({name:prod?.name||'',removed:wasIn,key:Date.now()});if(wishlistToastTimer.current)clearTimeout(wishlistToastTimer.current);wishlistToastTimer.current=setTimeout(()=>setWishlistToast(null),3000);};
   const hp2SubmitReview=async()=>{if(!selectedProduct?.id||!hp2ReviewName.trim()||!hp2ReviewComment.trim())return;setHp2ReviewSubmitting(true);try{await fetch(`${API}/products/${selectedProduct.id}/reviews`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({customer_name:hp2ReviewName.trim(),rating:hp2ReviewRating,comment:hp2ReviewComment.trim()})});const rr=await fetch(`${API}/products/${selectedProduct.id}/reviews`).then(r=>r.json());setHp2Reviews(Array.isArray(rr)?rr:[]);setHp2ReviewName("");setHp2ReviewComment("");setHp2ReviewRating(5);}catch{}finally{setHp2ReviewSubmitting(false);}};
   const reorder=items=>{items.forEach(it=>{const p=sp.find(x=>x.id===it.id)||it;setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+(it.qty||1)}:i):[...pv,{...p,qty:it.qty||1}];});});setCartOpen(true);addToast("Items added to cart","success");};
@@ -649,7 +653,7 @@ export default function App() {
     const e=validate(); if(Object.keys(e).length){setErrors(e);return;}
     const num=nextNum();
     try{
-      await fetch(API+"/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,items:cart,total:cartTotal.toFixed(2),order_ref:num})});
+      await fetch(API+"/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,items:cart,total:cartTotal.toFixed(2),order_ref:num,coupon_code:appliedCoupon?.code||undefined})});
       const rec={orderNum:num,customerId:user?.id,customerEmail:form.email,items:cart,subtotal:cartSub,discount,total:cartTotal,date:new Date().toISOString()};
       setLocalOrders([rec,...getLocalOrders()]);
       setOrderNum(num); setOrdered(true); setCart([]); setAppliedCoupon(null); setCouponInput(""); addToast(t.orderSuccess,"success"); confetti();
@@ -1591,7 +1595,7 @@ export default function App() {
                 </div>
                 <div style={{padding:"13px"}}>
                   <h3 style={{fontWeight:"600",fontSize:"13px",marginBottom:"4px",lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</h3>
-                  <p style={{fontSize:"10px",color:c.muted,marginBottom:"8px"}}>★{(p.rating||4.5).toFixed(1)} · {(p.id%20)+2} {t.soldToday||"sold today"}</p>
+                  <p style={{fontSize:"10px",color:c.muted,marginBottom:"8px"}}>{p.review_count>0?`★${Number(p.rating).toFixed(1)} · `:""}{p.sold_count>0?`${p.sold_count} ${t.soldTotal||"sold"}`:(t.newArrival||"جديد")}</p>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>{p.sale_price&&new Date(p.sale_ends_at)>Date.now()?<><div><span style={{fontWeight:"800",fontSize:"18px",color:c.error}}>{fmt(p.sale_price)}</span></div><span style={{textDecoration:"line-through",color:c.muted,fontSize:"11px",marginRight:"3px"}}>{fmt(p.price)}</span><span style={{background:"#ef444422",color:c.error,fontSize:"8px",fontWeight:"700",padding:"1px 4px",borderRadius:"4px"}}>{countdown(p.sale_ends_at)}</span></>:<div><span style={{fontWeight:"800",fontSize:"18px",color:c.accent}}>{fmt(p.price)}</span></div>}</div>
                     <button className="btn-t" onClick={e=>{e.stopPropagation();if(p.stock>0||p.is_preorder){addToCart(p);flyToCart(e);}}} style={{background:c.accent,color:"#fff",border:"none",width:"28px",height:"28px",borderRadius:"8px",cursor:(p.stock>0||p.is_preorder)?"pointer":"default",fontSize:"16px",fontWeight:"700",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:(p.stock>0||p.is_preorder)?1:.4}}>+</button>
@@ -1736,7 +1740,7 @@ export default function App() {
     {view==="search"&&(()=>{
       const pillCats=["all","electronics","jewelry","clothing","accessories"];
       const liveResults=searchRaw.trim()?filtered.slice(0,20):[];
-      const trendingList=[{term:"Wireless Earbuds",count:"2.4k searches"},{term:"Summer Dresses",count:"1.8k searches"},{term:"Smart Watch",count:"1.5k searches"},{term:"Leather Bags",count:"980 searches"},{term:"Gold Necklace",count:"760 searches"}];
+      const trendingList=trendingReal.length?trendingReal.map(x=>({term:x.term,count:`${x.count} ${isRtl?"عملية بحث":"searches"}`})):[...sp].filter(p=>Number(p.sold_count)>0).sort((a,b)=>Number(b.sold_count)-Number(a.sold_count)).slice(0,5).map(p=>({term:p.name.length>28?p.name.slice(0,28)+"…":p.name,count:`${p.sold_count} ${isRtl?"مباع":"sold"}`}));
       const inspoImgs=[{url:"https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80",label:"Streetwear"},{url:"https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&q=80",label:"Minimalist"},{url:"https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=400&q=80",label:"Boho Chic"},{url:"https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&q=80",label:"Formal Wear"}];
       const browseCats=CATS.filter(cat=>cat!=="all");
       const runSearch=term=>{setSearchRaw(term);saveSearch(term);};
@@ -1911,7 +1915,7 @@ export default function App() {
           <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap",marginBottom:"16px"}}>
             {geoSupplier?.available&&<span style={{fontSize:"10px",fontWeight:"600",color:c.muted}}>🌍 Ships from {geoSupplier.ships_from} · Est. {geoSupplier.estimated_days} days</span>}
             <span style={{fontSize:"10px",fontWeight:"500",color:"#e05555"}}>🔥 {pdViewers} viewing now</span>
-            <span style={{fontSize:"10px",color:c.muted}}>✓ {(p.id%7)+2} sold today</span>
+            {p.sold_count>0&&<span style={{fontSize:"10px",color:c.muted}}>✓ {p.sold_count} sold</span>}
           </div>
 
           {/* PRICE BLOCK */}
@@ -2199,7 +2203,7 @@ export default function App() {
       const prev={bronze:0,silver:500,gold:2000,platinum:5000,diamond:10000}[tier]||0;
       const pct=ti.next?Math.min(100,((userPts-prev)/(ti.next-prev))*100):100;
       const nextLabel={bronze:"Silver",silver:"Gold",gold:"Platinum",platinum:"Diamond"}[tier];
-      const profileOrders=getLocalOrders().filter(o=>o.customerEmail===user.email);
+      const profileOrders=realOrders.length?realOrders:getLocalOrders().filter(o=>o.customerEmail===user.email);
       const activeCoupons=getCoupons().filter(cp=>cp.active).length;
       const scrollToId=id=>document.getElementById(id)?.scrollIntoView({behavior:"smooth",block:"start"});
       const sectionTitle={fontSize:"12px",fontWeight:"700",color:c.muted,textTransform:"uppercase",letterSpacing:"1px",padding:"16px 20px 8px"};
@@ -3324,7 +3328,7 @@ export default function App() {
           <div style={{padding:"28px 24px",display:"flex",flexDirection:"column",gap:"12px"}}>
             <span style={{background:"#dff0f0",color:"#2a7d7b",fontSize:"10px",fontWeight:700,padding:"3px 9px",borderRadius:"20px",alignSelf:"flex-start"}}>{t[quickViewProd.category]||quickViewProd.category}</span>
             <h2 style={{fontWeight:700,fontSize:"20px",lineHeight:1.3,color:"#1a2424",margin:0}}>{quickViewProd.name}</h2>
-            <div style={{display:"flex",alignItems:"center",gap:"5px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(quickViewProd.rating||4.5)?"#f59e0b":"#d8d2c8",fontSize:"13px"}}>★</span>)}<span style={{fontSize:"11px",color:"#8fa5a5",marginInlineStart:"4px"}}>({(quickViewProd.id%50)+12})</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:"5px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(quickViewProd.rating||0)?"#f59e0b":"#d8d2c8",fontSize:"13px"}}>★</span>)}{quickViewProd.review_count>0&&<span style={{fontSize:"11px",color:"#8fa5a5",marginInlineStart:"4px"}}>({quickViewProd.review_count})</span>}</div>
             <p style={{fontWeight:800,fontSize:"24px",color:"#2a7d7b",margin:0}}>{fmt(quickViewProd.price)}</p>
             <div>
               <p style={{fontSize:"11px",fontWeight:600,color:"#5a6e6e",marginBottom:"7px"}}>اللون</p>
