@@ -1068,36 +1068,6 @@ export default function App() {
         </div>
       </>}
 
-      {/* CATEGORY CIRCLES */}
-      {(()=>{
-        const goCat=cat=>{setCategory(cat);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
-        const goNew=()=>{setCategory("all");setFilterSort("newest");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
-        const goSale=()=>{setCategory("all");setFilterAvailability("on_sale");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
-        const goToday=()=>document.getElementById("hp-flash-sale")?.scrollIntoView({behavior:"smooth"});
-        const circles=[
-          {key:"jewelry",label:"مجوهرات",icon:CAT_ICONS.jewelry,color:CAT_CLR.jewelry,onClick:()=>goCat("jewelry"),active:category==="jewelry"},
-          {key:"electronics",label:"إلكترونيات",icon:CAT_ICONS.electronics,color:CAT_CLR.electronics,onClick:()=>goCat("electronics"),active:category==="electronics"},
-          {key:"clothing",label:"ملابس",icon:CAT_ICONS.clothing,color:CAT_CLR.clothing,onClick:()=>goCat("clothing"),active:category==="clothing"},
-          {key:"accessories",label:"إكسسوارات",icon:CAT_ICONS.accessories,color:CAT_CLR.accessories,onClick:()=>goCat("accessories"),active:category==="accessories"},
-          {key:"new",label:"جديد",icon:"✦",color:"#3b6cf0",onClick:goNew,active:false,badge:null},
-          {key:"sale",label:"تخفيضات",icon:"◈",color:"#ff2d92",onClick:goSale,active:false,badge:"SALE"},
-          {key:"today",label:"عرض اليوم",icon:"◷",color:"#ffb300",onClick:goToday,active:false,badge:"LIVE"},
-        ];
-        return(
-          <div className="hp-cats">
-            {circles.map(ci=>(
-              <button key={ci.key} className="hp-cat" onClick={ci.onClick}>
-                <span className={`hp-cat-circle${ci.active?" active":""}`} style={{background:`${ci.color}1a`,color:ci.color}}>
-                  {ci.icon}
-                  {ci.badge&&<span className="hp-cat-badge">{ci.badge}</span>}
-                </span>
-                <span className="hp-cat-label">{ci.label}</span>
-              </button>
-            ))}
-          </div>
-        );
-      })()}
-
       {/* HERO */}
       {(()=>{
         const heroImgFallback=(sp.find(p=>p.image)||{}).image||"";
