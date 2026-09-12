@@ -2668,32 +2668,7 @@ useEffect(()=>{const id=setInterval(()=>setPlaceholderIdx(i=>i+1),2500);return()
     {toasts.length>0&&<div style={{position:"fixed",bottom:"22px",[isRtl?"right":"left"]:"22px",zIndex:999,display:"flex",flexDirection:"column-reverse",gap:"7px",pointerEvents:"none"}}>
       {toasts.map(to=><div key={to.id} className="si" style={{background:to.type==="success"?c.success:to.type==="error"?c.error:c.surface,color:"#fff",padding:"10px 16px",borderRadius:"10px",fontSize:"13px",fontWeight:"600",boxShadow:"0 4px 20px rgba(0,0,0,.3)",maxWidth:"280px"}}>{to.type==="success"?"✓ ":to.type==="error"?"✕ ":""}{to.msg}</div>)}
     </div>}
-    {/* FAQ SECTION */}
-    <div style={{background:"#f5f2ec",padding:"40px 26px",borderTop:"1px solid #d8d2c8"}}>
-      <div style={{maxWidth:"720px",margin:"0 auto"}}>
-        <h2 style={{fontSize:"24px",fontWeight:700,color:"#1a2424",marginBottom:"8px",textAlign:"center"}}>Frequently Asked Questions</h2>
-        <p style={{fontSize:"13px",color:"#5a6e6e",textAlign:"center",marginBottom:"32px"}}>Everything you need to know about shopping at BLEX</p>
-        {[["How long does shipping take?","We deliver within 3-5 business days across Saudi Arabia. Express delivery available."],
-          ["What is your return policy?","Free returns within 30 days of purchase. Item must be unused and in original packaging."],
-          ["Do you ship internationally?","Currently we ship within Saudi Arabia. International shipping coming soon."],
-          ["How do I track my order?","After placing your order, you will receive a tracking number via email and SMS."],
-          ["What payment methods do you accept?","We accept Visa, Mastercard, Apple Pay, Cash on Delivery, and Tabby installments."],
-          ["How does the loyalty program work?","Earn points with every purchase. Bronze starts at 0, Silver at 500, Gold at 2000, Platinum at 5000, Diamond at 10000 points."],
-          ["Can I cancel my order?","Orders can be cancelled within 2 hours of placement. Contact support for assistance."],
-          ["Is my payment information secure?","Yes, all transactions are encrypted with SSL and we never store card details."]
-        ].map(([q,a],i)=>(
-          <div key={i} onClick={()=>setFaqOpen(faqOpen===i?null:i)} style={{background:faqOpen===i?"#f9fffe":"#ffffff",border:`1px solid ${faqOpen===i?"#2a7d7b":"#d8d2c8"}`,borderRadius:"12px",marginBottom:"8px",cursor:"pointer",transition:"border-color .2s,background .2s",overflow:"hidden"}}>
-            <div style={{padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:"12px"}}>
-              <p style={{fontSize:"14px",fontWeight:600,color:"#1a2424",margin:0}}>{q}</p>
-              <i className={`ti ${faqOpen===i?"ti-minus":"ti-plus"}`} style={{fontSize:"16px",color:"#2a7d7b",flexShrink:0}}/>
-            </div>
-            <div className="faq-answer" style={{maxHeight:faqOpen===i?"200px":"0",paddingBottom:faqOpen===i?"16px":"0"}}>
-              <p style={{padding:"0 20px",fontSize:"13px",color:"#5a6e6e",lineHeight:1.8}}>{a}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    
 
     {/* FOOTER */}
     <footer style={{background:"#0a0a12",color:"rgba(255,255,255,0.7)",padding:"48px 26px 0",marginTop:"auto"}}>
