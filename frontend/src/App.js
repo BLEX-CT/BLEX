@@ -361,6 +361,11 @@ export default function App() {
   const [pdSize,setPdSize]=useState(null);
   const [pdGalIdx,setPdGalIdx]=useState(0);
   const [pdAcc,setPdAcc]=useState("description");
+  const [hp2Reviews,setHp2Reviews]=useState([]);
+  const [hp2ReviewName,setHp2ReviewName]=useState("");
+  const [hp2ReviewRating,setHp2ReviewRating]=useState(5);
+  const [hp2ReviewComment,setHp2ReviewComment]=useState("");
+  const [hp2ReviewSubmitting,setHp2ReviewSubmitting]=useState(false);
   const [megaMenuCat,setMegaMenuCat]=useState(null);
   const [storyOpen,setStoryOpen]=useState(null);
   const [quickViewProd,setQuickViewProd]=useState(null);
@@ -451,6 +456,7 @@ export default function App() {
   useEffect(()=>{if(promoHover)return;const iv=setInterval(()=>setPromoSlide(s=>(s+1)%2),4000);return()=>clearInterval(iv);},[promoHover]);
   useEffect(()=>{const iv=setInterval(()=>setPromoCountdown(s=>s>0?s-1:0),1000);return()=>clearInterval(iv);},[]);
   useEffect(()=>{setPdColor(0);setPdSize(null);setPdGalIdx(0);setPdAcc("description");},[selectedProduct?.id]); // eslint-disable-line
+  useEffect(()=>{if(!selectedProduct?.id){setHp2Reviews([]);return;}let active=true;fetch(`${API}/products/${selectedProduct.id}/reviews`).then(r=>r.json()).then(d=>{if(active)setHp2Reviews(Array.isArray(d)?d:[]);}).catch(()=>{if(active)setHp2Reviews([]);});return()=>{active=false;};},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{if(view==="product"&&selectedProduct?.category){const prev=LS('blex_viewed')||[];const cat=selectedProduct.category;const next=[cat,...prev.filter(x=>x!==cat)].slice(0,5);LSS('blex_viewed',next);setViewedCats(next);}},[view,selectedProduct?.category]); // eslint-disable-line
   useEffect(()=>{const iv=setInterval(()=>setVisitCount(Math.floor(180+Math.random()*140)),9000);return()=>clearInterval(iv);},[]);
   useEffect(()=>{if(!sp.length)return;const NS=["Ahmed","Sara","Mohammed","Fatima","Omar","Layla","Khalid","Nora"],CS=["Riyadh","Jeddah","Dammam","Mecca","Khobar"];let tid;const show=()=>{const prod=sp[Math.floor(Math.random()*sp.length)];setRecentPurchaseMsg({name:NS[~~(Math.random()*NS.length)],city:CS[~~(Math.random()*CS.length)],product:prod.name.substring(0,28)});tid=setTimeout(()=>{setRecentPurchaseMsg(null);tid=setTimeout(show,30000+Math.random()*15000);},5000);};tid=setTimeout(show,30000+Math.random()*15000);return()=>clearTimeout(tid);},[sp.length]); // eslint-disable-line
@@ -485,6 +491,7 @@ export default function App() {
   const remItem=id=>setCart(prev=>prev.filter(i=>i.id!==id));
   const applyCP=()=>{const cp=getCoupons().find(c=>c.code===couponInput.trim().toUpperCase()&&c.active);if(cp){setAppliedCoupon(cp);}else{setAErr(t.invalidCoupon);setTimeout(()=>setAErr(""),2000);}};
   const toggleWishlist=id=>{const wasIn=wishlist.includes(id);setWishlist(p=>{const n=wasIn?p.filter(x=>x!==id):[...p,id];LSS('bx_wl',n);return n;});const prod=sp.find(x=>x.id===id);setWishlistToast({name:prod?.name||'',removed:wasIn,key:Date.now()});if(wishlistToastTimer.current)clearTimeout(wishlistToastTimer.current);wishlistToastTimer.current=setTimeout(()=>setWishlistToast(null),3000);};
+  const hp2SubmitReview=async()=>{if(!selectedProduct?.id||!hp2ReviewName.trim()||!hp2ReviewComment.trim())return;setHp2ReviewSubmitting(true);try{await fetch(`${API}/products/${selectedProduct.id}/reviews`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({customer_name:hp2ReviewName.trim(),rating:hp2ReviewRating,comment:hp2ReviewComment.trim()})});const rr=await fetch(`${API}/products/${selectedProduct.id}/reviews`).then(r=>r.json());setHp2Reviews(Array.isArray(rr)?rr:[]);setHp2ReviewName("");setHp2ReviewComment("");setHp2ReviewRating(5);}catch{}finally{setHp2ReviewSubmitting(false);}};
   const reorder=items=>{items.forEach(it=>{const p=sp.find(x=>x.id===it.id)||it;setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+(it.qty||1)}:i):[...pv,{...p,qty:it.qty||1}];});});setCartOpen(true);addToast("Items added to cart","success");};
   const handleVisualSearch=async e=>{const f=e.target.files?.[0];if(!f)return;setVsLoading(true);try{const b64=await new Promise(rs=>{const r=new FileReader();r.onload=()=>rs(r.result.split(",")[1]);r.readAsDataURL(f);});const r=await fetch(`${API}/ai/visual-search`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:b64})});const d=await r.json();if(d.query){setSearchRaw(d.query);setView("store");}}catch{}finally{setVsLoading(false);e.target.value="";}};
   const startVoice=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return addToast("Voice search not supported","error");const r=new SR();setVoiceActive(true);r.onresult=e=>{setSearchRaw(e.results[0][0].transcript);setView("store");};r.onend=()=>setVoiceActive(false);r.start();};
@@ -1219,6 +1226,125 @@ export default function App() {
         );
       })()}
 
+      {/* HP2: CATEGORY CHIP ROW */}
+      {(()=>{
+        const CAT_LABELS_AR={electronics:"الإلكترونيات",clothing:"الملابس",accessories:"الإكسسوارات",jewelry:"المجوهرات",home:"المنزل",beauty:"الجمال",sports:"الرياضة",baby:"الأطفال",kitchen:"المطبخ",stationery:"القرطاسية"};
+        const cats=Object.keys(CAT_LABELS_AR).filter(k=>sp.filter(p=>p.category===k).length>0);
+        if(!cats.length)return null;
+        const goCat=cat=>{setCategory(cat);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        return(
+          <div className="hp2-chip-row">
+            <button className={`hp2-chip${category==="all"?" active":""}`} onClick={()=>goCat("all")}>الكل</button>
+            {cats.map(cat=>(
+              <button key={cat} className={`hp2-chip${category===cat?" active":""}`} onClick={()=>goCat(cat)}>{CAT_LABELS_AR[cat]}</button>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* HP2: CATEGORY ICON GRID */}
+      {(()=>{
+        const CAT_LABELS_AR={electronics:"الإلكترونيات",clothing:"الملابس",accessories:"الإكسسوارات",jewelry:"المجوهرات",home:"المنزل",beauty:"الجمال",sports:"الرياضة",baby:"الأطفال",kitchen:"المطبخ",stationery:"القرطاسية"};
+        const cats=Object.keys(CAT_LABELS_AR).filter(k=>sp.filter(p=>p.category===k).length>0);
+        if(!cats.length)return null;
+        const goCat=cat=>{setCategory(cat);setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);};
+        return(
+          <div className="hp2-icon-grid">
+            {cats.map(cat=>{
+              const prod=sp.find(p=>p.category===cat&&p.image);
+              return(
+                <button key={cat} className="hp2-icon-cell" onClick={()=>goCat(cat)}>
+                  <span className="hp2-icon-circle">
+                    {prod?<img src={prod.image} alt={CAT_LABELS_AR[cat]} loading="lazy" onError={e=>{e.target.style.display="none";}}/>:<span style={{fontSize:"22px",color:CAT_CLR[cat]||"var(--sub)"}}>{CAT_ICONS[cat]||"◈"}</span>}
+                  </span>
+                  <span className="hp2-icon-label">{CAT_LABELS_AR[cat]}</span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* HP2: TOP DISCOUNTS */}
+      {(()=>{
+        const disc=sp.filter(p=>p.sale_price&&Number(p.sale_price)<Number(p.price)).map(p=>({...p,_disc:(Number(p.price)-Number(p.sale_price))/Number(p.price)})).sort((a,b)=>b._disc-a._disc).slice(0,8);
+        if(!disc.length)return null;
+        return(
+          <div className="hp2-section">
+            <div className="hp2-section-head">
+              <h2 className="hp2-section-title">أعلى الخصومات</h2>
+              <button className="hp2-section-link" onClick={()=>{setCategory("all");setFilterAvailability("on_sale");setView("store");setTimeout(()=>document.getElementById("grid-a")?.scrollIntoView({behavior:"smooth"}),50);}}>عرض الكل ←</button>
+            </div>
+            <div className="hp2-row">{disc.map(p=>renderProductCard(p))}</div>
+          </div>
+        );
+      })()}
+
+      {/* HP2: NEWEST VS TOP DISCOUNT COMPARISON */}
+      {(()=>{
+        const newest=[...sp].sort((a,b)=>b.id-a.id).slice(0,2);
+        const topDisc=sp.filter(p=>p.sale_price&&Number(p.sale_price)<Number(p.price)).map(p=>({...p,_disc:(Number(p.price)-Number(p.sale_price))/Number(p.price)})).sort((a,b)=>b._disc-a._disc).slice(0,2);
+        if(!newest.length&&!topDisc.length)return null;
+        return(
+          <div className="hp2-section">
+            <div className="hp2-compare-grid">
+              <div className="hp2-compare-col">
+                <h3 className="hp2-compare-title">الأحدث</h3>
+                <div className="hp2-compare-cards">{newest.map(p=>renderProductCard(p))}</div>
+              </div>
+              <div className="hp2-compare-col">
+                <h3 className="hp2-compare-title">الأعلى خصم</h3>
+                <div className="hp2-compare-cards">{topDisc.length?topDisc.map(p=>renderProductCard(p)):<p className="hp2-compare-empty">لا توجد خصومات حالياً</p>}</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* HP2: PICKS FOR YOU MASONRY */}
+      {(()=>{
+        const top5Sold=[...sp].filter(p=>Number(p.sold_count)>0).sort((a,b)=>Number(b.sold_count)-Number(a.sold_count)).slice(0,5).map(p=>p.id);
+        const picks=[...sp].sort((a,b)=>b.id-a.id).slice(0,20);
+        if(!picks.length)return null;
+        const openProd=p=>{setSelectedProduct(p);setPdQty(1);setView("product");trackBeh(p.category);};
+        return(
+          <div className="hp2-section">
+            <div className="hp2-section-head">
+              <h2 className="hp2-section-title">مختارات لك</h2>
+            </div>
+            <div className="hp2-masonry">
+              {picks.map(p=>{
+                const onSale=p.sale_price&&Number(p.sale_price)<Number(p.price);
+                const pct=onSale?Math.round((1-Number(p.sale_price)/Number(p.price))*100):0;
+                const isBestSeller=top5Sold.includes(p.id);
+                return(
+                  <div key={p.id} className="hp2-mcard" onClick={()=>openProd(p)}>
+                    <div className="hp2-mcard-imgwrap">
+                      {p.image?<img src={p.image} alt={p.name} className="hp2-mcard-img" loading="lazy" onError={e=>{e.target.style.display="none";}}/>:<div className="hp2-mcard-img" style={{display:"flex",alignItems:"center",justifyContent:"center",fontSize:"30px",color:CAT_CLR[p.category]||"var(--sub)"}}>{CAT_ICONS[p.category]||"◈"}</div>}
+                      <button className="hp2-mcard-wish" onClick={e=>{e.stopPropagation();toggleWishlist(p.id);}}>{wishlist.includes(p.id)?"❤️":"🤍"}</button>
+                      <div className="hp2-mcard-badges">
+                        {onSale&&<span className="hp2-badge hp2-badge-sale">-{pct}%</span>}
+                        {p.source==="manual"&&<span className="hp2-badge hp2-badge-local">محلي</span>}
+                        {isBestSeller&&<span className="hp2-badge hp2-badge-best">الأكثر مبيعاً</span>}
+                      </div>
+                    </div>
+                    <div className="hp2-mcard-body">
+                      <p className="hp2-mcard-name">{p.name}</p>
+                      {Number(p.review_count)>0&&<div className="hp2-mcard-rating"><span className="hp2-mcard-star">★</span>{Number(p.rating||0).toFixed(1)}<span className="hp2-mcard-rc">({p.review_count})</span></div>}
+                      {Number(p.sold_count)>0&&<p className="hp2-mcard-sold">تم بيع {p.sold_count}</p>}
+                      <div className="hp2-mcard-price-row">
+                        <span className="hp2-mcard-price">{fmt(onSale?p.sale_price:p.price)}</span>
+                        {onSale&&<span className="hp2-mcard-price-old">{fmt(p.price)}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* AI STYLIST BANNER */}
       {flags.style_advisor&&<div onClick={()=>setStyleOpen(true)} className="btn-t" style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",borderRadius:"20px",margin:"16px",padding:"20px",display:"flex",alignItems:"center",gap:"16px",cursor:"pointer"}}>
         <div style={{width:"56px",height:"56px",borderRadius:"16px",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",flexShrink:0}}>🤖</div>
@@ -1738,9 +1864,10 @@ export default function App() {
       const aiSize="M";
       const sizes=["XS","S","M","L","XL"];
       const colors=["#2a7d7b","#1a2424","#f5f0e8","#b5896a","#c4a7f0"];
-      const reviews=[{name:"أحمد الشمري",date:"12 يونيو 2026",stars:5,text:"منتج رائع جداً، التوصيل كان سريعاً والتغليف ممتاز. سأطلب مرة أخرى بالتأكيد!"},{name:"فاطمة العمري",date:"8 يونيو 2026",stars:5,text:"جودة عالية وسعر مناسب، تجربة تسوق ممتعة من البداية للنهاية."}];
-      const avgRating=reviews.length?reviews.reduce((s,r)=>s+r.stars,0)/reviews.length:0;
-      const starDist=[5,4,3,2,1].map(st=>({stars:st,pct:reviews.length?Math.round(reviews.filter(r=>r.stars===st).length/reviews.length*100):0}));
+      const reviews=hp2Reviews;
+      const reviewCount=Number(p.review_count)||reviews.length;
+      const avgRating=Number(p.rating)||0;
+      const starDist=[5,4,3,2,1].map(st=>({stars:st,pct:reviews.length?Math.round(reviews.filter(r=>Math.round(Number(r.rating))===st).length/reviews.length*100):0}));
       const addPdToCart=()=>{if(!(p.stock>0||p.is_preorder))return;setCart(pv=>{const ex=pv.find(i=>i.id===p.id);return ex?pv.map(i=>i.id===p.id?{...i,qty:i.qty+pdQty}:i):[...pv,{...p,qty:pdQty}];});addToast(p.name.substring(0,22)+" added","success");};
       const buyNow=()=>{addPdToCart();setCartOpen(false);setOrdered(false);setView("checkout");};
       const ACC=[
@@ -1774,10 +1901,10 @@ export default function App() {
           {/* META ROW */}
           <div style={{display:"flex",alignItems:"center",gap:"14px",flexWrap:"wrap",marginBottom:"6px"}}>
             <span style={{background:c.chip,color:CAT_CLR[p.category]||c.muted,padding:"3px 10px",borderRadius:"9px",fontSize:"10px",fontWeight:"800",textTransform:"uppercase",border:`1px solid ${c.border}`}}>{t[p.category]||p.category}</span>
-            <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
+            {avgRating>0&&<div style={{display:"flex",alignItems:"center",gap:"4px"}}>
               <div style={{display:"flex",gap:"1px"}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Math.round(avgRating)?"#f59e0b":c.border,fontSize:"13px"}}>★</span>)}</div>
-              <span style={{fontSize:"12px",color:c.muted,fontWeight:600}}>({reviews.length})</span>
-            </div>
+              <span style={{fontSize:"12px",color:c.muted,fontWeight:600}}>({reviewCount})</span>
+            </div>}
             {p.stock>0&&<span style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"12px",fontWeight:700,color:"#00d9a5"}}><i className="ti ti-circle-check" style={{fontSize:"14px"}}/>In Stock</span>}
             <span style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"12px",fontWeight:700,color:c.accent}}><i className="ti ti-truck" style={{fontSize:"14px"}}/>Free Shipping</span>
           </div>
@@ -1928,14 +2055,13 @@ export default function App() {
           {/* REVIEWS */}
           <div style={{marginBottom:"20px"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",marginBottom:"18px"}}>
-              <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,margin:0}}>Customer Reviews <span style={{fontWeight:600,color:c.muted,fontSize:"14px"}}>({reviews.length})</span></h2>
-              <button style={{border:`1px solid ${c.accent}`,color:c.accent,background:"none",borderRadius:"50px",padding:"8px 18px",cursor:"pointer",fontWeight:700,fontSize:"12px"}}>Write a Review</button>
+              <h2 style={{fontSize:"18px",fontWeight:800,color:c.text,margin:0}}>التقييمات {reviewCount>0&&<span style={{fontWeight:600,color:c.muted,fontSize:"14px"}}>({reviewCount})</span>}</h2>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:"18px",marginBottom:"20px"}}>
+            {avgRating>0&&<div style={{display:"flex",alignItems:"center",gap:"18px",marginBottom:"20px"}}>
               <div style={{textAlign:"center",flexShrink:0}}>
                 <p style={{fontSize:"44px",fontWeight:900,lineHeight:1,color:c.text}}>{avgRating.toFixed(1)}</p>
                 <div style={{display:"flex",gap:"2px",justifyContent:"center",margin:"5px 0"}}>{[1,2,3,4,5].map(i=><span key={i} style={{color:i<=Math.round(avgRating)?"#f59e0b":c.border,fontSize:"14px"}}>★</span>)}</div>
-                <p style={{fontSize:"11px",color:c.muted}}>{reviews.length} reviews</p>
+                <p style={{fontSize:"11px",color:c.muted}}>{reviewCount} تقييم</p>
               </div>
               <div style={{flex:1}}>
                 {starDist.map(({stars,pct})=>(
@@ -1947,24 +2073,35 @@ export default function App() {
                   </div>
                 ))}
               </div>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-              {reviews.map((rev,i)=>(
-                <div key={i} style={{background:c.bg,borderRadius:"12px",padding:"14px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}}>
-                    <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`hsl(${i*60+160},40%,55%)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:"13px",color:"#fff",flexShrink:0}}>{rev.name[0]}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
-                        <p style={{fontWeight:700,fontSize:"13px",color:c.text,margin:0}}>{rev.name}</p>
-                        <span style={{background:"#00d9a520",color:"#00d9a5",fontSize:"9px",fontWeight:800,padding:"2px 6px",borderRadius:"5px"}}>Verified</span>
+            </div>}
+            <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"18px"}}>
+              {reviews.length===0&&<p style={{fontSize:"13px",color:c.muted}}>لا توجد تقييمات بعد. كن أول من يقيّم هذا المنتج.</p>}
+              {reviews.map((rev,i)=>{
+                const rd=rev.created_at?new Date(rev.created_at):null;
+                const rel=rd?(()=>{const diff=Math.floor((Date.now()-rd.getTime())/86400000);return diff<=0?"اليوم":diff===1?"منذ يوم":diff<30?`منذ ${diff} أيام`:rd.toLocaleDateString("ar");})():"";
+                return(
+                  <div key={rev.id||i} style={{background:c.bg,borderRadius:"12px",padding:"14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}}>
+                      <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`hsl(${i*60+160},40%,55%)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:"13px",color:"#fff",flexShrink:0}}>{(rev.customer_name||"?")[0]}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <p style={{fontWeight:700,fontSize:"13px",color:c.text,margin:0}}>{rev.customer_name}</p>
+                        <p style={{fontSize:"10px",color:c.muted}}>{rel}</p>
                       </div>
-                      <p style={{fontSize:"10px",color:c.muted}}>{rev.date}</p>
+                      <div style={{display:"flex",gap:"1px",flexShrink:0}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=Number(rev.rating)?"#f59e0b":c.border,fontSize:"11px"}}>★</span>)}</div>
                     </div>
-                    <div style={{display:"flex",gap:"1px",flexShrink:0}}>{[1,2,3,4,5].map(s=><span key={s} style={{color:s<=rev.stars?"#f59e0b":c.border,fontSize:"11px"}}>★</span>)}</div>
+                    <p style={{fontSize:"14px",color:c.muted,lineHeight:1.8,margin:0}}>{rev.comment}</p>
                   </div>
-                  <p style={{fontSize:"14px",color:c.muted,lineHeight:1.8,margin:0}}>{rev.text}</p>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+            <div className="hp2-review-form">
+              <h3 className="hp2-review-form-title">اكتب تقييمك</h3>
+              <input className="hp2-review-input" placeholder="اسمك" value={hp2ReviewName} onChange={e=>setHp2ReviewName(e.target.value)}/>
+              <div className="hp2-review-stars">
+                {[1,2,3,4,5].map(s=><button key={s} type="button" className="hp2-review-star-btn" onClick={()=>setHp2ReviewRating(s)}><span style={{color:s<=hp2ReviewRating?"#ffb300":c.border,fontSize:"22px"}}>★</span></button>)}
+              </div>
+              <textarea className="hp2-review-textarea" placeholder="اكتب تعليقك عن المنتج" value={hp2ReviewComment} onChange={e=>setHp2ReviewComment(e.target.value)} rows={3}/>
+              <button type="button" className="hp2-review-submit" disabled={hp2ReviewSubmitting||!hp2ReviewName.trim()||!hp2ReviewComment.trim()} onClick={hp2SubmitReview}>{hp2ReviewSubmitting?"...":"إرسال التقييم"}</button>
             </div>
           </div>
         </div>
