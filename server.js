@@ -631,8 +631,26 @@ app.get('/coupons/:code', async (req, res) => {
 
 app.post('/orders', async (req, res) => {
   try {
-    const { customer, email, phone, address, items, total, order_ref, coupon_code } = req.body;
-    let finalTotal = total;
+    const { customer, email, phone, address, items, order_ref, coupon_code } = req.body;
+    const cleanItems = Array.isArray(items) ? items : [];
+    const ids = cleanItems.map(item => Number(item.id)).filter(id => Number.isInteger(id));
+    let priceById = {};
+    if (ids.length) {
+      const prodRes = await pool.query('SELECT id, price, sale_price FROM products WHERE id = ANY($1::int[])', [ids]);
+      prodRes.rows.forEach(p => {
+        const price = Number(p.price) || 0;
+        const salePrice = p.sale_price != null ? Number(p.sale_price) : null;
+        priceById[p.id] = (salePrice != null && salePrice < price) ? salePrice : price;
+      });
+    }
+    const verifiedItems = cleanItems.map(item => {
+      const id = Number(item.id);
+      const qty = Math.max(1, Number(item.qty) || 1);
+      const realPrice = priceById[id];
+      return { ...item, qty, price: realPrice != null ? realPrice : (Number(item.price) || 0) };
+    });
+    const subtotal = verifiedItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+    let finalTotal = subtotal;
     if (coupon_code) {
       const cRes = await pool.query(
         'SELECT * FROM coupons WHERE UPPER(code)=UPPER($1) AND active=true',
@@ -640,18 +658,13 @@ app.post('/orders', async (req, res) => {
       );
       const coupon = cRes.rows[0];
       if (!coupon) return res.status(400).json({ error: 'Invalid or expired coupon' });
-      const subtotal = (items || []).reduce((sum, item) => {
-        const price = item.sale_price != null ? Number(item.sale_price) : (Number(item.price) || 0);
-        const qty = Number(item.qty) || 1;
-        return sum + price * qty;
-      }, 0);
       finalTotal = coupon.type === 'pct'
         ? subtotal - (subtotal * Number(coupon.val) / 100)
         : Math.max(0, subtotal - Number(coupon.val));
     }
     const result = await pool.query(
       'INSERT INTO orders (customer, email, phone, address, items, total, order_ref) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [customer, email || null, phone, address, JSON.stringify(items), finalTotal, order_ref || null]
+      [customer, email || null, phone, address, JSON.stringify(verifiedItems), finalTotal, order_ref || null]
     );
     sendOrderEmail(result.rows[0]).catch(() => {});
     res.json(result.rows[0]);
