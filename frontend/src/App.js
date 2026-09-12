@@ -464,9 +464,6 @@ useEffect(()=>{const codes=['BLEX10','SAVE50'];let active=true;(async()=>{for(co
 useEffect(()=>{const id=setInterval(()=>setPlaceholderIdx(i=>i+1),2500);return()=>clearInterval(id);},[]); // eslint-disable-line
   useEffect(()=>{if(!user?.email){setRealOrders([]);return;}let active=true;fetch(`${API}/orders/mine`,{headers:authH()}).then(r=>r.json()).then(d=>{if(active)setRealOrders(Array.isArray(d)?d:[]);}).catch(()=>{if(active)setRealOrders([]);});return()=>{active=false;};},[user?.email]); // eslint-disable-line
   useEffect(()=>{if(view==="product"&&selectedProduct?.category){const prev=LS('blex_viewed')||[];const cat=selectedProduct.category;const next=[cat,...prev.filter(x=>x!==cat)].slice(0,5);LSS('blex_viewed',next);setViewedCats(next);}},[view,selectedProduct?.category]); // eslint-disable-line
-  useEffect(()=>{const iv=setInterval(()=>setVisitCount(Math.floor(180+Math.random()*140)),9000);return()=>clearInterval(iv);},[]);
-  useEffect(()=>{if(!sp.length)return;const NS=["Ahmed","Sara","Mohammed","Fatima","Omar","Layla","Khalid","Nora"],CS=["Riyadh","Jeddah","Dammam","Mecca","Khobar"];let tid;const show=()=>{const prod=sp[Math.floor(Math.random()*sp.length)];setRecentPurchaseMsg({name:NS[~~(Math.random()*NS.length)],city:CS[~~(Math.random()*CS.length)],product:prod.name.substring(0,28)});tid=setTimeout(()=>{setRecentPurchaseMsg(null);tid=setTimeout(show,30000+Math.random()*15000);},5000);};tid=setTimeout(show,30000+Math.random()*15000);return()=>clearTimeout(tid);},[sp.length]); // eslint-disable-line
-  useEffect(()=>{if(!selectedProduct)return;const iv=setInterval(()=>setPdViewers(Math.floor(8+Math.random()*17)),6000);return()=>clearInterval(iv);},[selectedProduct?.id]); // eslint-disable-line
   useEffect(()=>{const h=()=>setScrollY(window.scrollY);window.addEventListener('scroll',h,{passive:true});return()=>window.removeEventListener('scroll',h);},[]);
   useEffect(()=>{if(!annVisible||annPhrases.length<=1)return;const iv=setInterval(()=>{setAnnPhraseFading(true);setTimeout(()=>{setAnnPhraseIdx(i=>(i+1)%annPhrases.length);setAnnPhraseFading(false);},320);},4000);return()=>clearInterval(iv);},[annVisible,annPhrases.length]); // eslint-disable-line
   useEffect(()=>{if(!selectedProduct||view!=="product")return;const init=2*3600+(selectedProduct.id%6)*20*60;let secs=init;setPdCountdown(secs);const iv=setInterval(()=>{secs=secs<=0?init:secs-1;setPdCountdown(secs);},1000);return()=>{clearInterval(iv);setPdCountdown(null);};},[selectedProduct?.id,view]); // eslint-disable-line
@@ -1522,7 +1519,6 @@ useEffect(()=>{const id=setInterval(()=>setPlaceholderIdx(i=>i+1),2500);return()
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap",marginBottom:"16px"}}>
             {geoSupplier?.available&&<span style={{fontSize:"10px",fontWeight:"600",color:c.muted}}>🌍 Ships from {geoSupplier.ships_from} · Est. {geoSupplier.estimated_days} days</span>}
-            <span style={{fontSize:"10px",fontWeight:"500",color:"#e05555"}}>🔥 {pdViewers} viewing now</span>
             {p.sold_count>0&&<span style={{fontSize:"10px",color:c.muted}}>✓ {p.sold_count} sold</span>}
           </div>
 
@@ -3027,11 +3023,7 @@ useEffect(()=>{const id=setInterval(()=>setPlaceholderIdx(i=>i+1),2500);return()
       </div>
     </footer>
 
-    {/* RECENT PURCHASE POPUP — Feature 5B */}
-    {recentPurchaseMsg&&<div className="slide-up2" style={{position:"fixed",bottom:"24px",left:"24px",zIndex:996,background:"#fff",borderRadius:"12px",border:"1px solid #d8d2c8",boxShadow:"0 4px 16px rgba(26,36,36,0.08)",padding:"12px 14px",display:"flex",alignItems:"center",gap:"10px",maxWidth:"260px",pointerEvents:"none"}}>
-      <i className="ti ti-shopping-bag" style={{fontSize:"20px",color:"#2a7d7b",flexShrink:0}}/>
-      <div><p style={{fontWeight:600,fontSize:"12px",color:"#1a2424",lineHeight:1.3}}><b>{recentPurchaseMsg.name}</b> from {recentPurchaseMsg.city} just bought</p><p style={{fontSize:"11px",color:"#5a6e6e",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"160px"}}>{recentPurchaseMsg.product}</p><p style={{fontSize:"10px",color:"#8fa5a5",marginTop:"2px"}}>2 minutes ago</p></div>
-    </div>}
+    
 
     {/* AI SHOPPING ASSISTANT BUTTON */}
     <div style={{position:"fixed",bottom:"22px",right:"22px",zIndex:998,display:"flex",alignItems:"center",justifyContent:"center"}}>
